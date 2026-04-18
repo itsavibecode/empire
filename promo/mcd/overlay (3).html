@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sobriety Overlay</title>
+<style>
+  /* ---------- transparent background is mandatory for browser sources ---------- */
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    overflow: hidden;
+    font-family: 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    transform-origin: top left;
+    animation: popIn 700ms cubic-bezier(.2,1.2,.3,1) both;
+  }
+
+  @keyframes popIn {
+    0%   { opacity: 0; transform: scale(.6) translateY(-10px); }
+    60%  { opacity: 1; transform: scale(1.04) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ---------- achievement card ---------- */
+  .achievement {
+    width: 320px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 10px 30px rgba(0,0,0,.45),
+      0 0 0 2px rgba(255,255,255,.08) inset;
+  }
+  .achievement img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* ---------- counter row ---------- */
+  .counter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px 12px 14px;
+    background: #DA291C; /* McDonald's red, matches the achievement art */
+    border-radius: 12px;
+    box-shadow:
+      0 8px 24px rgba(0,0,0,.45),
+      0 0 0 2px rgba(0,0,0,.35) inset,
+      0 0 0 3px #FFC72C; /* golden arches yellow border */
+    color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,.25);
+  }
+
+  .count-num {
+    font-size: 78px;
+    line-height: .9;
+    font-weight: 900;
+    letter-spacing: -2px;
+    color: #FFC72C;
+    text-shadow:
+      0 3px 0 rgba(0,0,0,.35),
+      0 0 18px rgba(255,199,44,.35);
+    min-width: 1ch; /* keeps layout stable at 1→99→100+ */
+    font-variant-numeric: tabular-nums;
+  }
+
+  .count-labels {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;   /* left-aligned stack, as requested */
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .count-labels .days  { font-size: 32px; }
+  .count-labels .sober { font-size: 32px; margin-top: 4px; }
+
+  /* small pulse when day rolls over */
+  .count-num.pulse {
+    animation: pulse 1.2s ease-out 1;
+  }
+  @keyframes pulse {
+    0%   { transform: scale(1);   filter: drop-shadow(0 0 0 rgba(255,199,44,0)); }
+    40%  { transform: scale(1.15); filter: drop-shadow(0 0 18px rgba(255,199,44,.9)); }
+    100% { transform: scale(1);   filter: drop-shadow(0 0 0 rgba(255,199,44,0)); }
+  }
+
+  /* ---------- position helpers via ?pos=tl|tr|bl|br ---------- */
+  body[data-pos="tr"] .stage { top: 16px; right: 16px; left: auto;  transform-origin: top right; align-items: flex-end; }
+  body[data-pos="bl"] .stage { bottom: 16px; left: 16px; top: auto;  transform-origin: bottom left; }
+  body[data-pos="br"] .stage { bottom: 16px; right: 16px; top: auto; left: auto; transform-origin: bottom right; align-items: flex-end; }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="achievement">
+      <img src="achievement.png" alt="McDonald's Sobriety Achievement" />
+    </div>
+    <div class="counter" aria-live="polite">
+      <div class="count-num" id="count">0</div>
+      <div class="count-labels">
+        <span class="days">Days</span>
+        <span class="sober">Sober</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /* -----------------------------------------------------------
+     Day counter
+     - Anchors to a start date so the number auto-increments
+       at local midnight and keeps counting indefinitely, even
+       if the overlay is reloaded or the PC is restarted.
+     - Defaults to a start date that makes "today = 12" so the
+       overlay reads "12 Days Sober" on first load and ticks to
+       13 tomorrow, as requested.
+     - Overridable via URL params:
+         ?start=YYYY-MM-DD   explicit start date
+         ?days=NN            shortcut: "today should read NN"
+         ?pos=tl|tr|bl|br    corner position (default tl)
+         ?scale=1.0          overall size multiplier
+  ----------------------------------------------------------- */
+
+  const qs = new URLSearchParams(location.search);
+
+  // position
+  const pos = (qs.get('pos') || 'tl').toLowerCase();
+  document.body.setAttribute('data-pos', pos);
+
+  // scale
+  const scale = parseFloat(qs.get('scale') || '1');
+  if (!Number.isNaN(scale) && scale > 0 && scale !== 1) {
+    document.getElementById('stage').style.transform = `scale(${scale})`;
+  }
+
+  // midnight-local helper: returns a Date set to 00:00:00.000 local time
+  function midnight(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  // work out the start date
+  let startDate;
+  if (qs.get('start')) {
+    // explicit start date wins
+    const [y, m, d] = qs.get('start').split('-').map(Number);
+    startDate = new Date(y, (m || 1) - 1, d || 1);
+  } else if (qs.get('days')) {
+    // "today should read N" shortcut
+    const n = Math.max(0, parseInt(qs.get('days'), 10) || 0);
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - n);
+  } else {
+    // default: today reads 12
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 12);
+  }
+
+  const countEl = document.getElementById('count');
+  let lastValue = -1;
+
+  function computeDays() {
+    const MS_PER_DAY = 86400000;
+    const diff = midnight(new Date()) - midnight(startDate);
+    return Math.max(0, Math.floor(diff / MS_PER_DAY));
+  }
+
+  function render() {
+    const n = computeDays();
+    if (n !== lastValue) {
+      countEl.textContent = n;
+      if (lastValue !== -1) {
+        // day just rolled over — play a quick pulse
+        countEl.classList.remove('pulse');
+        // force reflow to restart the animation
+        void countEl.offsetWidth;
+        countEl.classList.add('pulse');
+      }
+      lastValue = n;
+    }
+  }
+
+  render();
+
+  // tick every 30s — cheap, and guarantees we catch the midnight rollover
+  // within half a minute without relying on long-running timeouts.
+  setInterval(render, 30 * 1000);
+
+  // also re-check when the tab becomes visible again (OBS scene switches etc.)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) render();
+  });
+</script>
+</body>
+</html>
