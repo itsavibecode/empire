@@ -21,10 +21,6 @@
     position: fixed;
     top: 16px;
     left: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
     transform-origin: top left;
     animation: popIn 700ms cubic-bezier(.2,1.2,.3,1) both;
   }
@@ -35,35 +31,33 @@
     100% { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  /* ---------- achievement card ---------- */
-  .achievement {
+  /* ---------- unified card (achievement + counter share one red box) ---------- */
+  .card {
     width: 320px;
+    background: #DA291C;               /* McDonald's red — same as the art */
     border-radius: 14px;
     overflow: hidden;
     box-shadow:
-      0 10px 30px rgba(0,0,0,.45),
-      0 0 0 2px rgba(255,255,255,.08) inset;
+      0 12px 32px rgba(0,0,0,.5),
+      0 0 0 3px #FFC72C,               /* yellow border wraps the entire card */
+      0 0 0 5px rgba(0,0,0,.35);
+    color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,.25);
   }
+
   .achievement img {
     display: block;
     width: 100%;
     height: auto;
   }
 
-  /* ---------- counter row ---------- */
+  /* ---------- counter row (inside the card, centered beneath the art) ---------- */
   .counter {
     display: flex;
     align-items: center;
+    justify-content: center;           /* center number + labels as a group */
     gap: 14px;
-    padding: 12px 18px 12px 14px;
-    background: #DA291C; /* McDonald's red, matches the achievement art */
-    border-radius: 12px;
-    box-shadow:
-      0 8px 24px rgba(0,0,0,.45),
-      0 0 0 2px rgba(0,0,0,.35) inset,
-      0 0 0 3px #FFC72C; /* golden arches yellow border */
-    color: #fff;
-    text-shadow: 0 2px 0 rgba(0,0,0,.25);
+    padding: 6px 18px 18px;            /* tight top gap, red flows from art into counter */
   }
 
   .count-num {
@@ -109,14 +103,16 @@
 </head>
 <body>
   <div class="stage" id="stage">
-    <div class="achievement">
-      <img src="achievement.png" alt="McDonald's Sobriety Achievement" />
-    </div>
-    <div class="counter" aria-live="polite">
-      <div class="count-num" id="count">0</div>
-      <div class="count-labels">
-        <span class="days">Days</span>
-        <span class="sober">Sober</span>
+    <div class="card">
+      <div class="achievement">
+        <img src="achievement.png" alt="McDonald's Sobriety Achievement" />
+      </div>
+      <div class="counter" aria-live="polite">
+        <div class="count-num" id="count">0</div>
+        <div class="count-labels">
+          <span class="days">Days</span>
+          <span class="sober">Sober</span>
+        </div>
       </div>
     </div>
   </div>
