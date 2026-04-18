@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EmpireX Stream Overlay — For Partnered Kick Creators</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Official EmpireX countdown overlay for Kick.com streamers partnered with Our Empire. One-line setup for OBS, Streamlabs, and Kick browser sources.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#D4A843;
+    --gold-light:#F0D68A;
+    --gold-dark:#A17A28;
+    --black:#0A0A0A;
+    --black-card:#111111;
+    --black-lighter:#1A1A1A;
+    --white:#F5F1EB;
+    --green-kick:#53FC18;
+    --border:rgba(212,168,67,0.22);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,168,67,0.08), transparent 70%),
+      var(--black);
+    color:var(--white);
+    font-family:'Space Grotesk',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  /* subtle diamond mesh, same texture as ourempirex.com */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='%23D4A84308' stroke-width='.5'/%3E%3C/svg%3E") repeat;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  main{
+    position:relative;
+    z-index:1;
+    max-width:980px;
+    margin:0 auto;
+    padding:80px 28px 120px;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    text-align:center;
+    margin-bottom:72px;
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-size:10px;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:24px;
+    font-weight:500;
+  }
+  .eyebrow::before, .eyebrow::after{
+    content:"";
+    width:30px;
+    height:1px;
+    background:var(--gold);
+    opacity:.5;
+  }
+
+  h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:clamp(38px, 6vw, 68px);
+    line-height:1.05;
+    letter-spacing:.01em;
+    margin-bottom:18px;
+  }
+  h1 em{
+    font-style:italic;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold) 45%,var(--gold-dark));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:var(--gold);
+  }
+
+  .subhead{
+    max-width:620px;
+    margin:0 auto;
+    font-size:17px;
+    color:rgba(245,241,235,0.72);
+    line-height:1.6;
+  }
+
+  .event-strip{
+    margin-top:32px;
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 22px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    background:rgba(255,255,255,0.02);
+    font-size:13px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--white);
+  }
+  .event-strip .diamond{color:var(--gold);font-size:8px}
+
+  /* ---------- LIVE PREVIEW ---------- */
+  .preview-section{margin-bottom:80px}
+
+  .section-label{
+    font-size:10px;
+    letter-spacing:.34em;
+    text-transform:uppercase;
+    color:var(--gold);
+    text-align:center;
+    margin-bottom:14px;
+  }
+  .section-title{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:32px;
+    text-align:center;
+    margin-bottom:32px;
+    letter-spacing:.01em;
+  }
+
+  .preview-frame{
+    position:relative;
+    height:360px;
+    border:1px solid var(--border);
+    border-radius:16px;
+    overflow:hidden;
+    background:
+      linear-gradient(135deg,#1a2540 0%, #0a0f1a 100%);
+    box-shadow:
+      0 20px 60px -20px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .preview-frame::before{
+    content:"STREAM PREVIEW";
+    position:absolute;
+    bottom:14px; right:18px;
+    font-size:9px;
+    letter-spacing:.3em;
+    color:rgba(245,241,235,0.35);
+  }
+  .preview-frame iframe{
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+  }
+
+  /* ---------- THE URL — THE STAR OF THE PAGE ---------- */
+  .url-block{
+    margin-bottom:80px;
+    padding:40px 32px;
+    border:1px solid var(--border);
+    border-radius:18px;
+    background:linear-gradient(180deg,rgba(212,168,67,0.04),transparent 60%),var(--black-card);
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .url-block::before{
+    content:"";
+    position:absolute;
+    top:-1px; left:20%; right:20%; height:1px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    opacity:.6;
+  }
+
+  .url-label{
+    font-size:11px;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:14px;
+  }
+
+  .url-box{
+    display:flex;
+    align-items:stretch;
+    max-width:680px;
+    margin:0 auto;
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--black);
+  }
+
+  .url-box code{
+    flex:1;
+    padding:16px 20px;
+    font-family:'Space Grotesk',monospace;
+    font-size:15px;
+    color:var(--white);
+    text-align:left;
+    overflow-x:auto;
+    white-space:nowrap;
+    letter-spacing:.02em;
+  }
+
+  .copy-btn{
+    border:0;
+    border-left:1px solid var(--border);
+    padding:0 24px;
+    background:transparent;
+    color:var(--gold);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .25s ease, color .25s ease;
+  }
+  .copy-btn:hover{background:var(--gold);color:var(--black)}
+  .copy-btn.copied{background:var(--green-kick);color:var(--black);border-left-color:var(--green-kick)}
+
+  .url-specs{
+    margin-top:22px;
+    display:flex;
+    justify-content:center;
+    gap:36px;
+    flex-wrap:wrap;
+    font-size:12px;
+    color:rgba(245,241,235,0.55);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .url-specs span strong{
+    color:var(--white);
+    font-weight:600;
+    margin-right:6px;
+  }
+
+  /* ---------- INSTRUCTION CARDS ---------- */
+  .steps-wrap{margin-bottom:80px}
+
+  .tabs{
+    display:flex;
+    justify-content:center;
+    gap:4px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .tab{
+    border:1px solid var(--border);
+    background:transparent;
+    color:rgba(245,241,235,0.6);
+    padding:10px 22px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+    border-radius:8px;
+    transition:all .25s ease;
+  }
+  .tab:hover{color:var(--white)}
+  .tab.active{
+    background:var(--gold);
+    color:var(--black);
+    border-color:var(--gold);
+  }
+
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  .steps{
+    counter-reset:step;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .step{
+    counter-increment:step;
+    display:flex;
+    gap:20px;
+    padding:22px 26px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--black-card);
+    transition:border-color .3s ease;
+  }
+  .step:hover{border-color:rgba(212,168,67,0.5)}
+
+  .step::before{
+    content:counter(step,decimal-leading-zero);
+    flex-shrink:0;
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:28px;
+    color:var(--gold);
+    line-height:1;
+    letter-spacing:.02em;
+    min-width:44px;
+  }
+
+  .step-body{flex:1}
+  .step-body strong{
+    display:block;
+    font-size:15px;
+    color:var(--white);
+    margin-bottom:4px;
+    font-weight:600;
+  }
+  .step-body p{
+    font-size:14px;
+    color:rgba(245,241,235,0.7);
+    line-height:1.55;
+  }
+  .step-body code{
+    font-family:'Space Grotesk',monospace;
+    background:rgba(212,168,67,0.1);
+    color:var(--gold);
+    padding:1px 6px;
+    border-radius:3px;
+    font-size:13px;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    text-align:center;
+    padding-top:40px;
+    border-top:1px solid rgba(212,168,67,0.12);
+    color:rgba(245,241,235,0.4);
+    font-size:12px;
+    letter-spacing:.12em;
+  }
+  footer a{
+    color:var(--gold);
+    text-decoration:none;
+    letter-spacing:.18em;
+  }
+  footer a:hover{color:var(--gold-light)}
+
+  /* ---------- SMALL ---------- */
+  @media (max-width:600px){
+    main{padding:56px 20px 80px}
+    .preview-frame{height:260px}
+    .url-block{padding:28px 20px}
+    .url-box code{font-size:12px;padding:14px}
+    .copy-btn{padding:0 14px;font-size:10px}
+    .step{flex-direction:column;gap:8px;padding:18px}
+  }
+</style>
+</head>
+<body>
+
+<main>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero">
+    <div class="eyebrow">Official Partner Overlay</div>
+    <h1>Put the Empire<br>on your <em>stream.</em></h1>
+    <p class="subhead">
+      A minimal gold-on-black countdown widget for Kick.com creators partnered
+      with Our Empire. Drop one URL into OBS, Streamlabs, or any browser
+      source — it stays perfectly synced to the event and swaps to a
+      live indicator on June 11.
+    </p>
+    <div class="event-strip">
+      <span class="diamond">◆</span>
+      June 11 — 15, 2026
+      <span class="diamond">◆</span>
+      Brooklyn, NY
+      <span class="diamond">◆</span>
+    </div>
+  </section>
+
+  <!-- ========== LIVE PREVIEW ========== -->
+  <section class="preview-section">
+    <div class="section-label">Live Preview</div>
+    <h2 class="section-title">What your viewers see</h2>
+    <div class="preview-frame">
+      <iframe src="overlay.html" title="EmpireX overlay live preview" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- ========== THE URL ========== -->
+  <section class="url-block">
+    <div class="url-label">The Overlay URL</div>
+    <div class="url-box">
+      <code id="overlay-url">https://itsavibecode.github.io/empire/overlay.html</code>
+      <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
+    </div>
+    <div class="url-specs">
+      <span><strong>Size</strong> 1920 × 1080</span>
+      <span><strong>Background</strong> Transparent</span>
+      <span><strong>Position</strong> Top-Left Anchored</span>
+    </div>
+  </section>
+
+  <!-- ========== INSTRUCTIONS ========== -->
+  <section class="steps-wrap">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">Three minutes. One browser source.</h2>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="obs">OBS Studio</button>
+      <button class="tab" data-tab="slobs">Streamlabs</button>
+      <button class="tab" data-tab="other">Other / Kick Direct</button>
+    </div>
+
+    <!-- OBS -->
+    <div class="panel active" id="panel-obs">
+      <ol class="steps">
+        <li class="step"><div class="step-body">
+          <strong>Select the scene you stream from.</strong>
+          <p>Usually called "Live", "Main", or "IRL Cam" in your scenes list.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Add a Browser source.</strong>
+          <p>In <em>Sources</em>, click <code>+</code> → <code>Browser</code>. Name it <code>EmpireX Countdown</code> and hit OK.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Paste the URL.</strong>
+          <p>Paste the overlay URL above into the <code>URL</code> field. Set <code>Width: 1920</code> and <code>Height: 1080</code>. Leave custom CSS empty. Click OK.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Don't resize it.</strong>
+          <p>The widget anchors itself to the top-left corner of the 1920×1080 canvas. If you shrink the source, the widget shrinks too — keep it at full stream resolution and it'll sit exactly where it should.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Right-click → "Refresh cache of current page" any time.</strong>
+          <p>If the countdown freezes after a scene change, this rebuilds it instantly.</p>
+        </div></li>
+      </ol>
+    </div>
+
+    <!-- Streamlabs -->
+    <div class="panel" id="panel-slobs">
+      <ol class="steps">
+        <li class="step"><div class="step-body">
+          <strong>Go to your live scene.</strong>
+          <p>Same place you added your webcam and game capture.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Add Source → Browser Source.</strong>
+          <p>Click the <code>+</code> under Sources, pick <code>Browser Source</code>, name it <code>EmpireX</code>, click <em>Add Source</em>.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Paste the URL. Width 1920, Height 1080.</strong>
+          <p>Everything else stays default. Click <em>Done</em>.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Don't drag to resize.</strong>
+          <p>The widget positions itself — it's the full canvas with transparency. Resizing it will move the countdown off-axis.</p>
+        </div></li>
+      </ol>
+    </div>
+
+    <!-- Other -->
+    <div class="panel" id="panel-other">
+      <ol class="steps">
+        <li class="step"><div class="step-body">
+          <strong>Any software that accepts a browser source works.</strong>
+          <p>vMix, XSplit, Restream Studio, Lightstream, Kick's native studio — all of them support a URL-based overlay.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Point it at the overlay URL.</strong>
+          <p>Use <code>1920×1080</code> and a transparent background. The widget draws itself in the top-left of that canvas.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Kick mobile streaming?</strong>
+          <p>Kick mobile doesn't support browser overlays directly — route your phone through OBS on desktop via a capture app, or use Streamlabs Mobile → Custom Widgets → add the URL there.</p>
+        </div></li>
+        <li class="step"><div class="step-body">
+          <strong>Problems?</strong>
+          <p>DM @ourempirex on IG or ping Frank in the partner Discord. We'll get you live fast.</p>
+        </div></li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    © 2026 Our Empire · EmpireX · <a href="https://ourempirex.com" target="_blank" rel="noopener">OUREMPIREX.COM</a>
+  </footer>
+
+</main>
+
+<script>
+  // Copy URL to clipboard with graceful fallback
+  function copyUrl(){
+    const url = document.getElementById('overlay-url').textContent;
+    const btn = document.getElementById('copy-btn');
+    const done = () => {
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(done).catch(() => fallback(url, done));
+    } else {
+      fallback(url, done);
+    }
+  }
+  function fallback(text, cb){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
