@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EmpireX Overlay — Stream Widget</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     EMPIREX STREAM OVERLAY WIDGET
+     Event: EmpireX — June 11, 2026, 4:00 PM EDT
+     Source of truth: https://ourempirex.com
+     Position: top-left, 1920x1080 canvas
+     Background: fully transparent (for OBS/Kick browser source)
+     ============================================================ */
+
+  :root{
+    --gold:#D4A843;
+    --gold-light:#F0D68A;
+    --gold-dark:#A17A28;
+    --black:#0A0A0A;
+    --white:#F5F1EB;
+    --card-bg:rgba(10,10,10,0.78);
+    --card-border:rgba(212,168,67,0.35);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  html,body{
+    width:100%;
+    height:100%;
+    background:transparent !important;   /* critical for overlay use */
+    overflow:hidden;
+    font-family:'Space Grotesk',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- widget container ---------- */
+  .widget{
+    position:fixed;
+    top:28px;
+    left:28px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:14px 22px 14px 16px;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:14px;
+    backdrop-filter:blur(10px) saturate(140%);
+    -webkit-backdrop-filter:blur(10px) saturate(140%);
+    box-shadow:
+      0 0 0 1px rgba(212,168,67,0.08) inset,
+      0 10px 40px -10px rgba(0,0,0,0.6),
+      0 0 60px -20px rgba(212,168,67,0.25);     /* subtle gold glow */
+    animation:slide-in 900ms cubic-bezier(.22,.68,.2,1) 200ms both;
+  }
+
+  /* hairline gold top-line accent */
+  .widget::before{
+    content:"";
+    position:absolute;
+    top:-1px; left:14%; right:14%;
+    height:1px;
+    background:linear-gradient(90deg,
+      transparent 0%,
+      var(--gold) 50%,
+      transparent 100%);
+    opacity:.8;
+  }
+
+  @keyframes slide-in{
+    from{opacity:0;transform:translate(-14px,-6px)}
+    to  {opacity:1;transform:translate(0,0)}
+  }
+
+  /* ---------- logo ---------- */
+  .logo{
+    width:56px;
+    height:56px;
+    flex-shrink:0;
+    object-fit:contain;
+    filter:
+      drop-shadow(0 0 6px rgba(212,168,67,0.35))
+      drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    animation:logo-breathe 4.5s ease-in-out infinite;
+  }
+  @keyframes logo-breathe{
+    0%,100%{filter:drop-shadow(0 0 6px rgba(212,168,67,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+    50%    {filter:drop-shadow(0 0 14px rgba(212,168,67,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+  }
+
+  /* ---------- text block ---------- */
+  .info{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:210px;
+  }
+
+  .brand{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:22px;
+    line-height:1;
+    letter-spacing:.12em;
+    background:linear-gradient(135deg,
+      var(--gold-light) 0%,
+      var(--gold) 45%,
+      var(--gold-dark) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:var(--gold);   /* fallback */
+  }
+
+  .brand .x{
+    font-style:italic;
+    font-weight:700;
+  }
+
+  .tagline{
+    font-size:9.5px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:rgba(245,241,235,0.55);
+    font-weight:500;
+  }
+
+  /* ---------- countdown ---------- */
+  .countdown{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-top:6px;
+  }
+
+  .cd-unit{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-width:30px;
+  }
+
+  .cd-num{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:26px;
+    line-height:1;
+    color:var(--white);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.01em;
+  }
+
+  .cd-lbl{
+    font-size:8px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--gold);
+    opacity:.85;
+    margin-top:3px;
+    font-weight:500;
+  }
+
+  .cd-sep{
+    color:var(--gold);
+    opacity:.4;
+    font-size:20px;
+    font-family:'Cormorant Garamond',serif;
+    transform:translateY(-5px);
+  }
+
+  /* ---------- live state (event day / after start) ---------- */
+  .widget.live .countdown{display:none}
+
+  .live-badge{
+    display:none;
+    align-items:center;
+    gap:8px;
+    margin-top:6px;
+  }
+  .widget.live .live-badge{display:flex}
+
+  .live-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#C0392B;
+    box-shadow:0 0 10px rgba(192,57,43,0.8);
+    animation:pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%    {opacity:.55;transform:scale(1.25)}
+  }
+  .live-text{
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--white);
+  }
+  .live-text em{
+    font-style:normal;
+    color:var(--gold);
+  }
+</style>
+</head>
+<body>
+
+<div class="widget" id="widget">
+
+  <!-- Logo: the crown+handshake PNG, referenced externally to keep file small.
+       Replace src with a local file or keep this URL when hosting on GitHub Pages. -->
+  <img
+    class="logo"
+    src="https://itsavibecode.github.io/empire/logo.png"
+    alt="Our Empire"
+    onerror="this.style.display='none'">
+
+  <div class="info">
+    <div class="brand">EMPIRE<span class="x">X</span></div>
+    <div class="tagline">Where ProjectX Meets IRL</div>
+
+    <!-- pre-event countdown -->
+    <div class="countdown" id="countdown">
+      <div class="cd-unit"><span class="cd-num" id="d">--</span><span class="cd-lbl">Days</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><span class="cd-num" id="h">--</span><span class="cd-lbl">Hrs</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><span class="cd-num" id="m">--</span><span class="cd-lbl">Min</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><span class="cd-num" id="s">--</span><span class="cd-lbl">Sec</span></div>
+    </div>
+
+    <!-- swaps in automatically on June 11, 2026 -->
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      <span class="live-text">EVENT <em>LIVE</em> · JUNE 11–15</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* Target matches ourempirex.com exactly:
+     new Date('2026-06-11T16:00:00-04:00')  (4:00 PM EDT) */
+  const TARGET = new Date('2026-06-11T16:00:00-04:00').getTime();
+  const EVENT_END = new Date('2026-06-15T23:59:59-04:00').getTime();
+
+  const el = {
+    widget: document.getElementById('widget'),
+    d: document.getElementById('d'),
+    h: document.getElementById('h'),
+    m: document.getElementById('m'),
+    s: document.getElementById('s'),
+  };
+  const pad = n => String(n).padStart(2,'0');
+
+  function tick(){
+    const now = Date.now();
+    const diff = TARGET - now;
+
+    if (diff <= 0){
+      // Event is happening (through June 15) — show LIVE badge
+      if (now <= EVENT_END){
+        el.widget.classList.add('live');
+      } else {
+        // Event ended — hide widget gracefully
+        el.widget.style.opacity = '0';
+        el.widget.style.transition = 'opacity 1s ease';
+      }
+      return;
+    }
+
+    el.widget.classList.remove('live');
+    const days  = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins  = Math.floor((diff % 3600000) / 60000);
+    const secs  = Math.floor((diff % 60000) / 1000);
+
+    el.d.textContent = pad(days);
+    el.h.textContent = pad(hours);
+    el.m.textContent = pad(mins);
+    el.s.textContent = pad(secs);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
