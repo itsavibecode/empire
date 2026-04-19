@@ -551,8 +551,8 @@
   <div class="content" id="content">
     <div class="waiting">
       <div class="spinner"></div>
-      <div class="big">Tuning Into The Network</div>
-      <div class="sub-line">Checking which streamers are live right now…</div>
+      <div class="big">400.</div>
+      <div class="sub-line">Checking for other streams live…</div>
     </div>
   </div>
 
@@ -878,41 +878,6 @@
   // Initial poll + periodic refresh
   poll();
   setInterval(poll, CONFIG.POLL_MS);
-
-  /* ==================================================================
-     AUDIO UNLOCK — browsers (and some OBS CEF configs) block autoplay
-     with sound until there's a user gesture. We can't fake a gesture
-     from inside the page, but two things help:
-       1. OBS browser sources support "Page permissions" with an autoplay
-          policy that lets audio play without interaction. See README.
-       2. We still try to nudge the featured iframe via postMessage once
-          it loads, in case Kick's player accepts an unmute message.
-  ================================================================== */
-  function nudgeFeaturedAudio() {
-    const iframe = document.querySelector('iframe[data-featured="true"]');
-    if (!iframe) return;
-    try {
-      // Kick's player doesn't officially document a postMessage API, but
-      // these are the common patterns used by HLS-based players. If any
-      // of them work, the tile goes audible. If none work, OBS's CEF
-      // autoplay policy (set in README) is the reliable fallback.
-      iframe.contentWindow?.postMessage({ method: 'unmute' }, '*');
-      iframe.contentWindow?.postMessage({ type: 'unmute' }, '*');
-      iframe.contentWindow?.postMessage({ event: 'command', func: 'unMute' }, '*');
-      iframe.contentWindow?.postMessage('unmute', '*');
-    } catch (_) {}
-  }
-
-  // Nudge every time content changes + a few times on first load to catch
-  // the iframe fully booting up.
-  const nudgeObserver = new MutationObserver(() => {
-    // Iframe was just (re)inserted — wait a moment for it to bootstrap,
-    // then nudge.
-    setTimeout(nudgeFeaturedAudio, 2500);
-    setTimeout(nudgeFeaturedAudio, 5000);
-    setTimeout(nudgeFeaturedAudio, 8000);
-  });
-  nudgeObserver.observe(content, { childList: true, subtree: true });
 </script>
 
 </body>
