@@ -245,20 +245,47 @@
     align-content: center;
   }
 
-  /* 1 live → one huge hero tile */
+  /* 1 live → one big hero tile at natural 16:9, centered in the space
+     so it doesn't stretch into wide black bars on an ultra-wide cell. */
   .grid[data-count="1"] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
+    justify-items: center;
+    align-items: center;
   }
-  /* 2 live → two side-by-side, full height */
+  .grid[data-count="1"] > .tile {
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+  }
+  /* 2 live → two side-by-side, each at natural 16:9 height, centered */
   .grid[data-count="2"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: 22px;
   }
-  /* 3 live → three in a row, full height */
+  .grid[data-count="2"] > .tile {
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+  }
+  /* 3 live → three across, each at natural 16:9, centered */
   .grid[data-count="3"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: 22px;
+  }
+  .grid[data-count="3"] > .tile {
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
   }
   /* 4 live → 2x2 grid */
   .grid[data-count="4"] {
@@ -537,7 +564,7 @@
   <header>
     <div class="eyebrow">The Party Never Stops</div>
     <div class="mark">EMPIREX</div>
-    <div class="sub">Ourempirex · Confirmed Streamers</div>
+    <div class="sub">PROJECTX MEETS IRL STREAMING LIVE</div>
   </header>
 
   <div class="subtitle-bar">
@@ -656,57 +683,85 @@
      (null if offline) with `viewer_count`, `session_title`, etc.
   ================================================================== */
   const PROXIES = [
-    s => `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
-    s => `https://corsproxy.io/?${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+    // allorigins /raw — returns the target response directly (no JSON wrapper).
+    // More reliable than /get when the response is already JSON.
+    s => ({
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+      wrapped: false,
+    }),
+    // corsproxy.io — uses explicit ?url= param per current docs. Direct raw pass-through.
+    s => ({
+      url: `https://corsproxy.io/?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+      wrapped: false,
+    }),
+    // allorigins /get — JSON wrapper. Last resort since it's slower and has lower rate limits.
+    s => ({
+      url: `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+      wrapped: true,
+    }),
   ];
 
   async function fetchChannelLive(slug) {
-    // Try each proxy in order; bail as soon as one works.
     const lower = slug.toLowerCase();
+
     for (const build of PROXIES) {
+      const { url, wrapped } = build(lower);
       try {
-        const res = await fetch(build(lower), { signal: AbortSignal.timeout(10000) });
+        const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
         if (!res.ok) continue;
 
-        // allorigins wraps the real response in { contents: "..." }.
-        // corsproxy just returns the raw response.
-        const ct = res.headers.get('content-type') || '';
+        const text = await res.text();
+        if (!text) continue;
+
+        // Figure out the actual Kick JSON from whatever the proxy returned.
         let data;
-        if (ct.includes('application/json')) {
-          const j = await res.json();
-          data = j.contents ? JSON.parse(j.contents) : j;
+        if (wrapped) {
+          // allorigins /get: { contents: "<json string>", status: {...} }
+          let wrapper;
+          try { wrapper = JSON.parse(text); } catch { continue; }
+          if (!wrapper || !wrapper.contents) continue;
+          try { data = JSON.parse(wrapper.contents); } catch { continue; }
         } else {
-          const text = await res.text();
-          try {
-            const maybe = JSON.parse(text);
-            data = maybe.contents ? JSON.parse(maybe.contents) : maybe;
-          } catch {
-            continue;
-          }
+          // Direct pass-through: text IS the Kick JSON.
+          try { data = JSON.parse(text); } catch { continue; }
         }
 
-        if (!data) continue;
+        if (!data || typeof data !== 'object') continue;
 
+        // Sanity check: real Kick channel responses have an `id` or `slug` field.
+        // If they don't, this proxy returned an error page disguised as JSON.
+        if (data.id == null && data.slug == null && data.user_id == null) continue;
+
+        // Kick's `livestream` field is non-null when live, null when offline.
+        // We accept EITHER an explicit is_live flag OR just the presence of
+        // the livestream object with a viewer_count — some responses omit
+        // is_live but always include viewer_count when live.
         const ls = data.livestream;
+        const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
+
         return {
           username: slug,
-          isLive: !!(ls && ls.is_live),
-          viewers: ls ? Number(ls.viewer_count || 0) : 0,
-          title: ls ? (ls.session_title || '') : '',
+          isLive,
+          viewers: isLive ? Number(ls.viewer_count || 0) : 0,
+          title: isLive ? (ls.session_title || '') : '',
+          known: true,
         };
       } catch (_) {
-        // try next proxy
+        // Network error, timeout, parse failure — try next proxy.
       }
     }
-    // Both proxies failed — return a graceful unknown result.
-    return { username: slug, isLive: false, viewers: 0, unknown: true };
+
+    // All proxies failed. Return unknown (caller can decide what to do).
+    // Crucially: DO NOT claim they're offline — we just don't know.
+    return { username: slug, isLive: false, viewers: 0, known: false };
   }
 
-  // Small concurrency limit so we don't hit 21 proxy requests at once.
+  // Concurrency limit — keep low to be polite to the free public proxies,
+  // which rate-limit aggressively and silently drop excess requests.
   async function fetchAllLive() {
     const results = new Array(CONFIG.ROSTER.length);
     let cursor = 0;
-    const WORKERS = 5;
+    const WORKERS = 3;
 
     async function worker() {
       while (cursor < CONFIG.ROSTER.length) {
