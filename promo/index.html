@@ -5,6 +5,8 @@
 <title>EmpireX Stream Overlay — For Partnered Kick Creators</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Official EmpireX countdown overlay for Kick.com streamers partnered with Our Empire. One-line setup for OBS, Streamlabs, and Kick browser sources.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -143,11 +145,32 @@
     border:1px solid var(--border);
     border-radius:16px;
     overflow:hidden;
-    background:
-      linear-gradient(135deg,#1a2540 0%, #0a0f1a 100%);
+    background:#000;
     box-shadow:
       0 20px 60px -20px rgba(0,0,0,0.8),
       inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  /* Stream footage background (GIF) */
+  .preview-frame .stream-bg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    z-index:0;
+  }
+  /* Subtle darkening tint so overlay stays legible */
+  .preview-frame::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+      135deg,
+      rgba(0,0,0,0.15) 0%,
+      rgba(0,0,0,0) 40%,
+      rgba(0,0,0,0.1) 100%);
+    z-index:1;
+    pointer-events:none;
   }
   .preview-frame::before{
     content:"STREAM PREVIEW";
@@ -155,13 +178,18 @@
     bottom:14px; right:18px;
     font-size:9px;
     letter-spacing:.3em;
-    color:rgba(245,241,235,0.35);
+    color:rgba(245,241,235,0.75);
+    text-shadow:0 1px 3px rgba(0,0,0,0.8);
+    z-index:3;
   }
   .preview-frame iframe{
+    position:absolute;
+    inset:0;
     width:100%;
     height:100%;
     border:0;
     display:block;
+    z-index:2;
   }
 
   /* ---------- THE URL — THE STAR OF THE PAGE ---------- */
@@ -246,6 +274,100 @@
     color:var(--white);
     font-weight:600;
     margin-right:6px;
+  }
+
+  /* ---------- CREATOR URL BLOCK (Kick-green accent) ---------- */
+  .url-block.creator{
+    margin-top:24px;
+    border-color:rgba(83,252,24,0.28);
+    background:
+      linear-gradient(180deg,rgba(83,252,24,0.035),transparent 60%),
+      var(--black-card);
+  }
+  .url-block.creator::before{
+    background:linear-gradient(90deg,transparent,var(--green-kick),transparent);
+    opacity:.55;
+  }
+  .url-block.creator .url-label{color:var(--green-kick)}
+  .url-block.creator .url-box{border-color:rgba(83,252,24,0.3)}
+  .url-block.creator .copy-btn{
+    color:var(--green-kick);
+    border-left-color:rgba(83,252,24,0.3);
+  }
+  .url-block.creator .copy-btn:hover{
+    background:var(--green-kick);
+    color:var(--black);
+  }
+
+  .creator-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+    padding:4px 12px;
+    border:1px solid rgba(83,252,24,0.3);
+    border-radius:999px;
+    font-size:9px;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--green-kick);
+    background:rgba(83,252,24,0.05);
+  }
+  .creator-tag::before{
+    content:"";
+    width:6px;height:6px;
+    background:var(--green-kick);
+    border-radius:50%;
+    box-shadow:0 0 8px var(--green-kick);
+  }
+
+  /* position chips */
+  .pos-picker{
+    margin-top:22px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .pos-picker-label{
+    font-size:10px;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:rgba(245,241,235,0.5);
+  }
+  .pos-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .pos-chip{
+    border:1px solid rgba(83,252,24,0.22);
+    background:transparent;
+    color:rgba(245,241,235,0.65);
+    padding:8px 16px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:10px;
+    font-weight:500;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+    border-radius:6px;
+    transition:all .2s ease;
+  }
+  .pos-chip:hover{color:var(--white);border-color:rgba(83,252,24,0.4)}
+  .pos-chip.active{
+    background:var(--green-kick);
+    color:var(--black);
+    border-color:var(--green-kick);
+    font-weight:600;
+  }
+
+  /* gold variant — lives in the gold URL block */
+  .pos-picker-gold .pos-chip{border-color:rgba(212,168,67,0.25)}
+  .pos-picker-gold .pos-chip:hover{
+    color:var(--white);
+    border-color:rgba(212,168,67,0.5);
+  }
+  .pos-picker-gold .pos-chip.active{
+    background:var(--gold);
+    color:var(--black);
+    border-color:var(--gold);
   }
 
   /* ---------- INSTRUCTION CARDS ---------- */
@@ -390,6 +512,7 @@
     <div class="section-label">Live Preview</div>
     <h2 class="section-title">What your viewers see</h2>
     <div class="preview-frame">
+      <img class="stream-bg" src="stream-bg.gif" alt="" aria-hidden="true">
       <iframe src="overlay.html" title="EmpireX overlay live preview" loading="lazy"></iframe>
     </div>
   </section>
@@ -404,7 +527,41 @@
     <div class="url-specs">
       <span><strong>Size</strong> 1920 × 1080</span>
       <span><strong>Background</strong> Transparent</span>
-      <span><strong>Position</strong> Top-Left Anchored</span>
+    </div>
+
+    <div class="pos-picker pos-picker-gold">
+      <div class="pos-picker-label">Overlay Position</div>
+      <div class="pos-chips">
+        <button class="pos-chip active" data-target="overlay-url" data-base="https://ourempirex.com/promo/overlay.html" data-pos="tl">Top Left</button>
+        <button class="pos-chip" data-target="overlay-url" data-base="https://ourempirex.com/promo/overlay.html" data-pos="tr">Top Right</button>
+        <button class="pos-chip" data-target="overlay-url" data-base="https://ourempirex.com/promo/overlay.html" data-pos="bl">Bottom Left</button>
+        <button class="pos-chip" data-target="overlay-url" data-base="https://ourempirex.com/promo/overlay.html" data-pos="br">Bottom Right</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CREATOR URL (confirmed streamers only) ========== -->
+  <section class="url-block creator">
+    <div class="creator-tag">Confirmed Creators</div>
+    <div class="url-label">Your "Watch Me Live" Overlay</div>
+    <div class="url-box">
+      <code id="creator-url">https://ourempirex.com/promo/overlay-creator.html</code>
+      <button class="copy-btn" id="creator-copy-btn" onclick="copyCreatorUrl()">Copy</button>
+    </div>
+
+    <div class="pos-picker">
+      <div class="pos-picker-label">Overlay Position</div>
+      <div class="pos-chips">
+        <button class="pos-chip active" data-target="creator-url" data-base="https://ourempirex.com/promo/overlay-creator.html" data-pos="tl">Top Left</button>
+        <button class="pos-chip" data-target="creator-url" data-base="https://ourempirex.com/promo/overlay-creator.html" data-pos="tr">Top Right</button>
+        <button class="pos-chip" data-target="creator-url" data-base="https://ourempirex.com/promo/overlay-creator.html" data-pos="bl">Bottom Left</button>
+        <button class="pos-chip" data-target="creator-url" data-base="https://ourempirex.com/promo/overlay-creator.html" data-pos="br">Bottom Right</button>
+      </div>
+    </div>
+
+    <div class="url-specs" style="margin-top:22px">
+      <span><strong>Includes</strong> Countdown + "Watch Me Live on Kick"</span>
+      <span><strong>For</strong> Partnered Streamers Only</span>
     </div>
   </section>
 
@@ -484,7 +641,7 @@
         </div></li>
         <li class="step"><div class="step-body">
           <strong>Problems?</strong>
-          <p>DM @ourempirex on IG.</p>
+          <p>DM @ourempirex on IG or ping Frank in the partner Discord. We'll get you live fast.</p>
         </div></li>
       </ol>
     </div>
@@ -499,9 +656,20 @@
 <script>
   // Copy URL to clipboard with graceful fallback
   function copyUrl(){
-    const url = document.getElementById('overlay-url').textContent;
-    const btn = document.getElementById('copy-btn');
+    copyToClipboard(
+      document.getElementById('overlay-url').textContent,
+      document.getElementById('copy-btn')
+    );
+  }
+  function copyCreatorUrl(){
+    copyToClipboard(
+      document.getElementById('creator-url').textContent,
+      document.getElementById('creator-copy-btn')
+    );
+  }
+  function copyToClipboard(text, btn){
     const done = () => {
+      const original = btn.textContent;
       btn.textContent = 'Copied ✓';
       btn.classList.add('copied');
       setTimeout(() => {
@@ -510,9 +678,9 @@
       }, 2000);
     };
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(done).catch(() => fallback(url, done));
+      navigator.clipboard.writeText(text).then(done).catch(() => fallback(text, done));
     } else {
-      fallback(url, done);
+      fallback(text, done);
     }
   }
   function fallback(text, cb){
@@ -524,6 +692,20 @@
     try { document.execCommand('copy'); cb(); } catch(e){}
     document.body.removeChild(ta);
   }
+
+  // Position chips → update target URL (works for both pickers)
+  document.querySelectorAll('.pos-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      // Only deactivate siblings in the same picker group
+      chip.closest('.pos-chips').querySelectorAll('.pos-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const pos = chip.dataset.pos;
+      const base = chip.dataset.base;
+      const targetId = chip.dataset.target;
+      const url = pos === 'tl' ? base : `${base}?pos=${pos}`;
+      document.getElementById(targetId).textContent = url;
+    });
+  });
 
   // Tabs
   document.querySelectorAll('.tab').forEach(t => {
