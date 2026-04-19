@@ -75,19 +75,7 @@ Recommended: H.264 MP4s, 1920x1080, 20–60s each, under ~20 MB per file. Audio 
 5. ✅ **Shutdown source when not visible** (saves CPU)
 6. ✅ **Refresh browser when scene becomes active**
 7. ✅ **Control audio via OBS** (so OBS picks up the featured streamer's audio)
-8. In the advanced settings, add this to **Custom CSS** (optional, leave blank)
-9. Hotkey the BRB scene for easy switching
-
-### 4. Enable audio autoplay (important for the featured streamer)
-
-The streamer with the most viewers plays with audio on. Browsers normally block this by default. To allow it in OBS:
-
-**OBS 28+ (Windows/Mac/Linux):**
-1. Edit the browser source → advanced settings
-2. Set **"Page permissions"** or add this command line flag to OBS's browser: `--autoplay-policy=no-user-gesture-required`
-3. Alternatively, edit `%APPDATA%\obs-studio\plugin_config\obs-browser\Local State` (on Windows) and add `"autoplay_policy": "no-user-gesture-required"` to the `browser` settings
-
-**Quickest method that works for most people:** right-click the Browser Source → **Interact** → click anywhere once inside the preview window. That one click is the "user gesture" the browser needed, and audio will play from then on. You can also do this mid-stream if audio ever drops.
+8. Hotkey the BRB scene for easy switching
 
 That's it. No API keys, no credentials, no GitHub Actions. Works immediately.
 
