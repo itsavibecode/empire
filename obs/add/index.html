@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Empire X — Add The BRB Screen To Your Stream</title>
+<meta name="description" content="Add the Empire X BRB overlay to your OBS or Streamlabs stream in under two minutes. One URL, one browser source, and your BRB screen is a live wall of the whole network." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg-0:       #070608;
+    --bg-1:       #0d0b10;
+    --bg-2:       #141118;
+    --bg-3:       #1d1826;
+    --ink:        #f5efe1;
+    --ink-dim:    #8a8275;
+    --ink-sub:    #5c5548;
+    --gold:       #d4a94a;
+    --gold-hot:   #f2c764;
+    --gold-dark:  #7a5f20;
+    --kick:       #53fc18;
+    --kick-glow:  #53fc1880;
+    --danger:     #ff3b3b;
+    --rule:       #2a2530;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-0);
+    color: var(--ink);
+    font-family: 'Inter Tight', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(212,169,74,.10), transparent 50%),
+      radial-gradient(ellipse at 90% 100%, rgba(212,169,74,.08), transparent 55%),
+      linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 40%, var(--bg-0) 100%);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.8 0 0 0 0 0.5 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+    opacity: .05;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  main {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 72px 32px 120px;
+  }
+
+  /* ---------- HEADER ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    padding-bottom: 44px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 72px;
+  }
+  .topbar a {
+    color: var(--gold);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .topbar a:hover { color: var(--gold-hot); }
+
+  .hero {
+    text-align: center;
+    padding-bottom: 80px;
+  }
+  .hero .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .5em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: clamp(48px, 8vw, 92px);
+    letter-spacing: .06em;
+    line-height: 1;
+    background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold) 40%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 30px rgba(212,169,74,.25));
+    margin-bottom: 24px;
+  }
+  .hero h1 span { display: block; font-size: .46em; letter-spacing: .12em; margin-top: 12px; color: transparent;
+    background: linear-gradient(180deg, var(--ink) 0%, var(--ink-dim) 100%);
+    -webkit-background-clip: text; background-clip: text; }
+  .hero p.lede {
+    font-size: 19px;
+    max-width: 680px;
+    margin: 0 auto;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  .hero p.lede strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .hero .meta-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 36px;
+    padding: 14px 28px;
+    border: 1px solid var(--gold-dark);
+    background: rgba(7,6,8,.55);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .35em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  .hero .meta-strip .dot {
+    display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--kick);
+    box-shadow: 0 0 8px var(--kick-glow);
+    animation: pulse-green 1.4s ease-in-out infinite;
+  }
+  .hero .meta-strip .sep { color: var(--gold-dark); }
+  .hero .meta-strip strong { color: var(--gold); font-weight: 500; }
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .4; }
+  }
+
+  /* ---------- SECTION COMMONS ---------- */
+  section.block { padding: 72px 0; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .5em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 32px; height: 1px;
+    background: var(--gold);
+  }
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: clamp(32px, 4vw, 44px);
+    letter-spacing: .04em;
+    color: var(--ink);
+    margin-bottom: 24px;
+    line-height: 1.15;
+  }
+  .section-desc {
+    font-size: 17px;
+    color: var(--ink-dim);
+    max-width: 680px;
+    line-height: 1.6;
+    margin-bottom: 48px;
+  }
+
+  /* ---------- URL BLOCK ---------- */
+  .url-block {
+    padding: 48px 0 8px;
+  }
+  .url-frame {
+    position: relative;
+    padding: 44px 40px;
+    background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-1) 100%);
+    border: 1px solid var(--gold-dark);
+    box-shadow:
+      0 0 0 1px rgba(212,169,74,.08) inset,
+      0 28px 60px -20px rgba(0,0,0,.7);
+  }
+  .url-frame::before {
+    content: '';
+    position: absolute; inset: 8px;
+    border: 1px solid rgba(212,169,74,.22);
+    pointer-events: none;
+  }
+  .url-frame .url-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .45em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .url-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .url-value {
+    flex: 1;
+    min-width: 320px;
+    display: flex;
+    align-items: center;
+    padding: 18px 24px;
+    background: rgba(7,6,8,.8);
+    border: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    letter-spacing: .02em;
+    color: var(--ink);
+    word-break: break-all;
+  }
+  .copy-btn {
+    padding: 0 32px;
+    border: 1px solid var(--gold);
+    background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold) 60%, var(--gold-dark) 100%);
+    color: #1a1208;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s ease;
+    min-width: 140px;
+  }
+  .copy-btn:hover {
+    box-shadow: 0 0 24px rgba(242,199,100,.5);
+    transform: translateY(-1px);
+  }
+  .copy-btn:active { transform: translateY(0); }
+  .copy-btn.copied {
+    background: var(--kick);
+    border-color: var(--kick);
+    color: #0a1a04;
+  }
+
+  .url-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 28px;
+    padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .25em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  .url-specs span strong {
+    color: var(--gold);
+    font-weight: 500;
+    margin-right: 10px;
+  }
+
+  /* ---------- TABS ---------- */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 48px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 18px 32px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ---------- STEPS ---------- */
+  .steps {
+    list-style: none;
+    counter-reset: step;
+    display: grid;
+    gap: 20px;
+  }
+  .step {
+    position: relative;
+    display: flex;
+    gap: 24px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, rgba(20,17,24,.6) 0%, rgba(13,11,16,.8) 100%);
+    border: 1px solid var(--rule);
+    counter-increment: step;
+    transition: border-color .3s;
+  }
+  .step:hover { border-color: var(--gold-dark); }
+  .step::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 32px;
+    color: var(--gold);
+    min-width: 58px;
+    padding-top: 2px;
+    letter-spacing: .08em;
+    flex-shrink: 0;
+  }
+  .step-body {
+    flex: 1;
+  }
+  .step-body h3 {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 19px;
+    letter-spacing: .01em;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .step-body p {
+    font-size: 15px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  .step-body code {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 2px 8px;
+    background: rgba(212,169,74,.1);
+    border: 1px solid var(--gold-dark);
+    color: var(--gold);
+    border-radius: 2px;
+  }
+  .step-body em { color: var(--ink); font-style: normal; font-weight: 600; }
+  .step-body ul {
+    margin-top: 12px;
+    padding-left: 18px;
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .step-body ul li strong { color: var(--ink); }
+
+  /* ---------- SETTINGS GRID ---------- */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 20px;
+  }
+  .setting {
+    padding: 18px 22px;
+    background: var(--bg-1);
+  }
+  .setting .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .setting .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  /* ---------- PREVIEW ---------- */
+  .preview-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-0);
+    border: 1px solid var(--gold-dark);
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(212,169,74,.12) inset,
+      0 32px 80px -24px rgba(0,0,0,.8);
+  }
+  .preview-frame iframe {
+    position: absolute; inset: 0;
+    width: 1920px; height: 1080px;
+    border: 0;
+    transform-origin: top left;
+  }
+  .preview-label {
+    position: absolute;
+    top: 14px; left: 14px;
+    z-index: 5;
+    padding: 6px 14px;
+    background: rgba(7,6,8,.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--gold-dark);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .35em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  /* ---------- FAQ ---------- */
+  .faq {
+    display: grid;
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  details.faq-item {
+    background: var(--bg-1);
+    transition: background .2s;
+  }
+  details.faq-item[open] { background: var(--bg-2); }
+  details.faq-item summary {
+    padding: 24px 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    list-style: none;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink);
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after {
+    content: '+';
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    color: var(--gold);
+    font-weight: 300;
+    transition: transform .3s;
+    flex-shrink: 0;
+  }
+  details.faq-item[open] summary::after {
+    content: '−';
+  }
+  details.faq-item .answer {
+    padding: 0 28px 28px;
+    color: var(--ink-dim);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  details.faq-item .answer code {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 2px 8px;
+    background: rgba(212,169,74,.08);
+    border: 1px solid var(--gold-dark);
+    color: var(--gold);
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    margin-top: 96px;
+    padding-top: 40px;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .4em;
+    color: var(--ink-sub);
+    text-transform: uppercase;
+  }
+  footer a { color: var(--gold); text-decoration: none; }
+  footer .mark {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    color: var(--gold);
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  /* ---------- TOAST ---------- */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    padding: 14px 28px;
+    background: var(--kick);
+    color: #0a1a04;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    font-weight: 600;
+    box-shadow: 0 12px 40px rgba(83,252,24,.4);
+    z-index: 200;
+    transition: transform .35s cubic-bezier(.2,.9,.2,1);
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 720px) {
+    main { padding: 48px 20px 80px; }
+    .topbar { font-size: 10px; flex-wrap: wrap; gap: 16px; }
+    .url-frame { padding: 28px 22px; }
+    .url-value { font-size: 14px; padding: 14px 16px; }
+    .copy-btn { width: 100%; padding: 16px; }
+    .step { padding: 20px; flex-direction: column; gap: 12px; }
+    .step::before { font-size: 26px; min-width: 0; }
+  }
+</style>
+</head>
+
+<body>
+
+<main>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="https://ourempirex.com">← ourempirex.com</a>
+    <span>◆ Setup Guide ◆</span>
+  </div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">— For Confirmed Streamers</div>
+    <h1>
+      EMPIREX
+      <span>Add The BRB Screen</span>
+    </h1>
+    <p class="lede">
+      A <strong>full-screen BRB overlay</strong> for when you step away mid-stream. Shows the top 6 Confirmed Streamers currently live on Kick, with their streams embedded so your chat always has something to watch. Set it up once — takes about two minutes.
+    </p>
+    <div class="meta-strip">
+      <span class="dot"></span>
+      <span><strong>1920 × 1080</strong></span>
+      <span class="sep">◆</span>
+      <span><strong>One URL</strong></span>
+      <span class="sep">◆</span>
+      <span><strong>~2 min setup</strong></span>
+    </div>
+  </header>
+
+  <!-- URL BLOCK -->
+  <section class="url-block">
+    <div class="url-frame">
+      <div class="url-label">The Browser Source URL</div>
+      <div class="url-row">
+        <div class="url-value" id="overlayUrl">https://ourempirex.com/obs/</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyUrl()">Copy URL</button>
+      </div>
+      <div class="url-specs">
+        <span><strong>Width</strong> 1920</span>
+        <span><strong>Height</strong> 1080</span>
+        <span><strong>Refresh On Scene Show</strong> Yes</span>
+        <span><strong>Shutdown When Not Visible</strong> Yes</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETUP INSTRUCTIONS -->
+  <section class="block">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">Three steps. One browser source. One minute.</h2>
+    <p class="section-desc">
+      The BRB screen is a single URL you add to OBS (or Streamlabs, or any other broadcaster) as a browser source. Set it once, bind it to a hotkey, and you've got a professional BRB that promotes the whole network every time you step away.
+    </p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="obs">OBS Studio</button>
+      <button class="tab" data-tab="slobs">Streamlabs</button>
+      <button class="tab" data-tab="other">Kick Studio / Other</button>
+    </div>
+
+    <!-- OBS STUDIO -->
+    <div class="panel active" id="panel-obs">
+      <ol class="steps">
+        <li class="step">
+          <div class="step-body">
+            <h3>Create a new scene for the BRB screen</h3>
+            <p>In the <em>Scenes</em> panel (bottom-left), click <code>+</code> and name it <code>BRB</code>. Keep your existing scenes untouched — this one is just for when you step away.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Add a Browser source</h3>
+            <p>With the new <code>BRB</code> scene selected, click <code>+</code> in the <em>Sources</em> panel and choose <code>Browser</code>. Name it <code>Empire X BRB</code> and click OK.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Paste the URL and set the size</h3>
+            <p>Paste <code>https://ourempirex.com/obs/</code> into the <strong>URL</strong> field. Set <strong>Width</strong> to <code>1920</code> and <strong>Height</strong> to <code>1080</code>. Leave Custom CSS empty.</p>
+            <div class="settings-grid">
+              <div class="setting"><div class="name">URL</div><div class="value">ourempirex.com/obs/</div></div>
+              <div class="setting"><div class="name">Width</div><div class="value">1920</div></div>
+              <div class="setting"><div class="name">Height</div><div class="value">1080</div></div>
+              <div class="setting"><div class="name">FPS</div><div class="value">30</div></div>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Check two important boxes</h3>
+            <p>In the same source properties window, scroll down and enable both:</p>
+            <ul>
+              <li><strong>Shutdown source when not visible</strong> — saves CPU while you're live on your main scene.</li>
+              <li><strong>Refresh browser when scene becomes active</strong> — re-pulls the latest live streamers every time you switch to BRB.</li>
+            </ul>
+            <p style="margin-top:14px;">Click OK to save.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Assign a hotkey (optional but strongly recommended)</h3>
+            <p>Go to <em>File → Settings → Hotkeys</em>, scroll to your <code>BRB</code> scene, and bind a key to <strong>Switch to scene</strong>. Something like <code>F9</code> or a Stream Deck button is perfect — one tap and you're on BRB instantly.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Done. Test it.</h3>
+            <p>Hit your hotkey or click the <code>BRB</code> scene. You should see the full-screen Empire X overlay with live Kick embeds of whoever's streaming right now. When you come back, just switch to your main scene and the BRB source shuts down automatically.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- STREAMLABS -->
+    <div class="panel" id="panel-slobs">
+      <ol class="steps">
+        <li class="step">
+          <div class="step-body">
+            <h3>Create a new scene called BRB</h3>
+            <p>At the bottom of Streamlabs Desktop, in the <em>Scenes</em> panel, click the <code>+</code> button and name it <code>BRB</code>.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Add a Browser Source</h3>
+            <p>In <em>Sources</em>, click <code>+</code> → <code>Browser Source</code> → <code>Add Source</code>. Name it <code>Empire X BRB</code>.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Configure the source</h3>
+            <p>Paste <code>https://ourempirex.com/obs/</code> into the URL field. Set Width to <code>1920</code> and Height to <code>1080</code>. Enable both <strong>Shutdown source when not visible</strong> and <strong>Refresh browser when scene becomes active</strong>.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Hotkey it</h3>
+            <p>Go to <em>Settings → Hotkeys</em>, find your <code>BRB</code> scene under "Scenes", and bind a key to <strong>Switch to Scene</strong>.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- OTHER -->
+    <div class="panel" id="panel-other">
+      <ol class="steps">
+        <li class="step">
+          <div class="step-body">
+            <h3>Any browser-source-capable encoder works</h3>
+            <p>The BRB overlay is just a URL. If your streaming software can load a web page as a source, it'll work. This includes <em>Kick Studio</em>, <em>Twitch Studio</em>, <em>XSplit</em>, and most IRL encoders with "browser layer" support.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Add a browser / web source</h3>
+            <p>Find the "Add Source" or "Add Layer" option in your encoder. Choose <strong>Browser</strong>, <strong>Web Source</strong>, or <strong>HTML</strong>. Paste <code>https://ourempirex.com/obs/</code>.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Set the canvas to 1920 × 1080</h3>
+            <p>The overlay is designed for a 1920 × 1080 canvas. If your encoder only supports scaling (not canvas resolution), scale the browser source to fill the screen.</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Assign to a scene / layer</h3>
+            <p>Put the source on its own dedicated scene/layer so you can switch to it instantly without disturbing your main layout.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- LIVE PREVIEW -->
+  <section class="block">
+    <div class="section-label">Live Preview</div>
+    <h2 class="section-title">What your viewers will see.</h2>
+    <p class="section-desc">This is the actual overlay rendering at 1920 × 1080, scaled to fit this page. If streamers are live right now, you'll see their streams embedded in real time.</p>
+
+    <div class="preview-frame" id="previewFrame">
+      <div class="preview-label">◆ LIVE PREVIEW</div>
+      <iframe id="previewIframe" src="../" title="Empire X BRB overlay preview" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  <!-- FAQ / TROUBLESHOOTING -->
+  <section class="block">
+    <div class="section-label">Troubleshooting</div>
+    <h2 class="section-title">Common questions, handled.</h2>
+    <div class="faq">
+      <details class="faq-item">
+        <summary>The overlay is loading but no streamers show up</summary>
+        <div class="answer">
+          If nobody from the Confirmed Streamers list is live on Kick right now, the overlay shows a "WARMING UP" placeholder instead of an empty grid. As soon as anyone goes live, they'll populate automatically — the overlay re-checks Kick every 90 seconds.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>One streamer is live but not appearing in the grid</summary>
+        <div class="answer">
+          The overlay uses public CORS proxies (<code>allorigins.win</code>, <code>corsproxy.io</code>) to check Kick's API. Occasionally a single request gets rate-limited and silently drops. The overlay re-checks every 90 seconds, so the streamer will appear on the next cycle. If you see the same name missing for 5+ minutes, their Kick handle in the roster may not match their actual username exactly — check <code>kick.com/{handle}</code> loads their page.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>The featured streamer's audio isn't playing</summary>
+        <div class="answer">
+          Browser autoplay policy blocks audio from embedded players until there's a user gesture. In OBS, right-click the <em>Empire X BRB</em> browser source → <strong>Interact</strong> → click anywhere in the preview window. Audio will play from then on. Do this once per OBS session. For a permanent fix, launch OBS with the command-line flag <code>--autoplay-policy=no-user-gesture-required</code>.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>The background video isn't playing</summary>
+        <div class="answer">
+          Refresh the browser source (right-click → Refresh). OBS's browser engine sometimes blocks video autoplay on first load. If it still doesn't play after a refresh, check your internet connection — the overlay loads videos from the <code>/obs/videos/</code> directory, so they need to be reachable.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can I add my own stream to the featured grid?</summary>
+        <div class="answer">
+          The grid pulls from the Confirmed Streamers list on <a href="https://ourempirex.com" style="color:var(--gold); text-decoration:underline;">ourempirex.com</a>. To get added, DM <strong>@our.empire</strong> on Instagram — once you're listed, you'll appear in the BRB whenever you go live on Kick.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Does this cost anything? Any API keys needed?</summary>
+        <div class="answer">
+          No. The overlay is free, hosted on the Empire X site, and doesn't need any credentials. Just drop the URL into OBS and go.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Will this slow down my stream?</summary>
+        <div class="answer">
+          With <strong>Shutdown source when not visible</strong> enabled (step 4), the browser source uses zero CPU while you're on your main scene. It only spins up when you switch to the BRB scene. Load is minimal — a handful of Kick embeds and a looping background video. Even on modest hardware it runs fine.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Can I customize the look?</summary>
+        <div class="answer">
+          The hosted version at <code>ourempirex.com/obs/</code> stays consistent for the whole network. If you want a custom version (different colors, your logo, different rotation time), you can fork the source files — reach out on Instagram and we'll point you to the repo.
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="mark">EMPIREX</span>
+    <div>◆ <a href="https://ourempirex.com">ourempirex.com</a> ◆ <a href="https://instagram.com/our.empire">@our.empire</a> ◆</div>
+  </footer>
+
+</main>
+
+<div class="toast" id="toast">URL Copied</div>
+
+<script>
+  // ========================================================
+  // Tab switching
+  // ========================================================
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + target).classList.add('active');
+    });
+  });
+
+  // ========================================================
+  // Copy URL button
+  // ========================================================
+  function copyUrl() {
+    const url = document.getElementById('overlayUrl').textContent.trim();
+    const btn = document.getElementById('copyBtn');
+    const toast = document.getElementById('toast');
+
+    navigator.clipboard.writeText(url).then(() => {
+      btn.classList.add('copied');
+      btn.textContent = 'Copied ✓';
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = 'Copy URL';
+        toast.classList.remove('show');
+      }, 2400);
+    }).catch(() => {
+      // Fallback: select the URL text so the user can copy manually.
+      const range = document.createRange();
+      range.selectNode(document.getElementById('overlayUrl'));
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    });
+  }
+
+  // ========================================================
+  // Scale the preview iframe so the 1920x1080 content fits the
+  // preview container. Recalculates on resize.
+  // ========================================================
+  function scalePreview() {
+    const frame = document.getElementById('previewFrame');
+    const iframe = document.getElementById('previewIframe');
+    if (!frame || !iframe) return;
+    const w = frame.clientWidth;
+    const scale = w / 1920;
+    iframe.style.transform = `scale(${scale})`;
+    iframe.style.height = (1080) + 'px';
+    iframe.style.width = '1920px';
+  }
+  scalePreview();
+  window.addEventListener('resize', scalePreview);
+  // Re-scale after fonts / images load in case layout shifted.
+  window.addEventListener('load', scalePreview);
+</script>
+
+</body>
+</html>
