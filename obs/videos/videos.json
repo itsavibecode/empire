@@ -1,0 +1,6 @@
+{
+  "_comment": "List the video filenames in obs/videos/ you want to shuffle as backgrounds. Edit this file instead of index.html when adding/removing videos.",
+  "videos": [
+    "mike_xena.mp4","HORSE_TAP_DANCING.mp4","mike_ice_dance.mp4"
+  ]
+}
