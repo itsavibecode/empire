@@ -14,8 +14,8 @@
   const CONFIG = {
     // -------- ROSTER --------
     // All 21 Confirmed Streamers from ourempirex.com.
-    // Must match the handle used on kick.com exactly (case-insensitive,
-    // no spaces). Casing here is used for display on screen.
+    // The Kick API is case-insensitive on slug lookup, but we preserve
+    // the casing here for on-screen display.
     ROSTER: [
       'MikeSmallsJr', 'SaltyGummiBear', 'XenaTheWitch', 'Kimmee',
       'JJStream', 'WoodBaby', 'TaylorStarlight', 'AshWilder',
@@ -24,24 +24,24 @@
       'Jackie', 'IamTalanya', 'KennyHoopz', 'KikiKrazy', 'Cobbruvs',
     ],
 
-    // How long each "page" of 6 streamers stays visible before rotating (ms).
+    // How often to re-check live status + viewer counts (ms).
+    // 90 seconds is a good balance — responsive enough to catch streamers
+    // going live without hammering the API.
+    POLL_MS: 90_000,
+
+    // If any streamers are live, how often the grid rotates through them
+    // in groups of 6 (ms). Set high so viewers can settle in on a page.
     ROTATE_MS: 45_000,
 
     // -------- BACKGROUND VIDEOS --------
-    // Directory where videos live. The overlay plays them full-screen
-    // with transparency, on shuffle, looping through the whole list.
     VIDEOS_DIR: './videos/',
-
-    // The overlay tries to fetch './videos/videos.json' first so you can
-    // drop any number of videos in the folder without editing HTML.
-    // This list is used as a fallback if the manifest is missing.
-    VIDEOS_FALLBACK: [
-      'empirexvideo.mp4',
-    ],
-
-    // Video dimness (0 = invisible, 1 = full brightness). ~35% lets the
-    // party energy come through while keeping the grid readable.
+    VIDEOS_FALLBACK: ['empirexvideo.mp4'],
     VIDEO_OPACITY: 0.35,
+
+    // -------- HEADER STAT --------
+    // Shown between the top header and the grid. Right now it's a static
+    // placeholder ("400 IN THE CHAT") until you wire it to real data.
+    CHAT_COUNT_TEXT: '400 IN THE CHAT',
   };
 </script>
 
@@ -82,14 +82,12 @@
     width: 100%; height: 100%;
     object-fit: cover;
     z-index: 0;
-    opacity: 0;             /* fades in on 'canplay' */
+    opacity: 0;
     transition: opacity .9s ease;
     pointer-events: none;
   }
   .bg-video.visible { opacity: var(--video-opacity, .35); }
 
-  /* Dark vignette + gold tint layered over the video so text stays
-     readable and the scene keeps the Empire X look. */
   .bg-veil {
     position: fixed;
     inset: 0;
@@ -102,7 +100,6 @@
       linear-gradient(180deg, rgba(7,6,8,.35) 0%, rgba(13,11,16,.15) 50%, rgba(7,6,8,.45) 100%);
   }
 
-  /* Subtle film grain for texture */
   .bg-grain {
     position: fixed;
     inset: 0;
@@ -113,7 +110,6 @@
     mix-blend-mode: overlay;
   }
 
-  /* Art-deco corners */
   .corner {
     position: fixed;
     width: 180px; height: 180px;
@@ -139,16 +135,16 @@
     width: 100%; height: 100%;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 168px 1fr 88px;
+    /* rows: header · subtitle bar · content · footer */
+    grid-template-rows: 132px 52px 1fr 88px;
     padding: 52px 88px 36px;
+    gap: 12px;
   }
 
   /* ---------- HEADER ---------- */
   header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 40px;
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
   }
 
   .eyebrow {
@@ -160,8 +156,7 @@
     text-shadow: 0 0 10px rgba(0,0,0,.8);
   }
 
-  .headline { text-align: center; }
-  .headline .mark {
+  .mark {
     font-family: 'Cinzel', serif;
     font-weight: 900;
     font-size: 64px;
@@ -173,14 +168,13 @@
     color: transparent;
     filter: drop-shadow(0 0 20px rgba(212,169,74,.3)) drop-shadow(0 2px 6px rgba(0,0,0,.9));
   }
-  .headline .mark .x {
+  .mark .x {
     display: inline-block;
     font-size: 72px;
     transform: translateY(4px);
     margin-left: 8px;
   }
-  .headline .sub {
-    margin-top: 10px;
+  .sub {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     letter-spacing: .5em;
@@ -189,60 +183,60 @@
     text-shadow: 0 0 8px rgba(0,0,0,.9);
   }
 
-  .status {
-    text-align: right;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  /* ---------- SUBTITLE BAR ("ON THE NETWORK · 400 IN THE CHAT") ---------- */
+  .subtitle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
   }
-  .status .label {
+  .subtitle-bar .divider {
+    width: 1px; height: 28px; background: var(--gold-dark);
+  }
+  .subtitle-bar .label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; letter-spacing: .35em; color: var(--ink-dim);
+    font-size: 13px;
+    letter-spacing: .45em;
+    color: var(--ink-dim);
     text-transform: uppercase;
     text-shadow: 0 0 8px rgba(0,0,0,.9);
+    display: inline-flex; align-items: center; gap: 10px;
   }
-  .status .brb {
-    font-family: 'Cinzel', serif;
-    font-weight: 700;
-    font-size: 28px;
-    letter-spacing: .3em;
-    color: var(--ink);
-    text-shadow: 0 2px 8px rgba(0,0,0,.9);
-  }
-  .status .brb .dot {
-    display: inline-block;
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--danger);
-    margin-right: 12px; transform: translateY(-3px);
-    box-shadow: 0 0 14px var(--danger);
-    animation: pulse-red 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse-red {
-    0%, 100% { opacity: 1;   transform: translateY(-3px) scale(1); }
-    50%      { opacity: .45; transform: translateY(-3px) scale(.85); }
-  }
-
-  /* Section label over the grid */
-  .section-label {
-    display: flex; align-items: center; justify-content: space-between;
-    margin: 22px 0 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; letter-spacing: .4em; color: var(--ink-dim);
-    text-transform: uppercase;
-  }
-  .section-label .lhs { display: flex; align-items: center; gap: 14px; }
-  .section-label .chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px;
+  .subtitle-bar .chip {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
     border: 1px solid var(--gold-dark);
-    color: var(--gold);
-    letter-spacing: .3em;
     background: rgba(7,6,8,.55);
     backdrop-filter: blur(4px);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .3em;
+    color: var(--gold);
+    text-transform: uppercase;
   }
-  .section-label .count { color: var(--ink); font-weight: 600; }
-  .section-label .lhs > span:not(.chip) { text-shadow: 0 0 8px rgba(0,0,0,.9); }
-  .section-label > div:last-child { text-shadow: 0 0 8px rgba(0,0,0,.9); }
+  .subtitle-bar .chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--kick);
+    box-shadow: 0 0 8px var(--kick-glow);
+    animation: pulse-green 1.4s ease-in-out infinite;
+  }
+  .subtitle-bar .chat-count {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 24px;
+    letter-spacing: .2em;
+    color: var(--gold-hot);
+    text-shadow: 0 0 14px rgba(242,199,100,.4), 0 2px 6px rgba(0,0,0,.9);
+  }
 
-  /* ---------- GRID ---------- */
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .4; }
+  }
+
+  /* ---------- CONTENT (grid or waiting state) ---------- */
+  .content { min-height: 0; display: grid; }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -250,6 +244,9 @@
     gap: 22px;
     min-height: 0;
   }
+
+  /* When only 1-3 are live, we still use the 3-column grid but let tiles
+     collapse naturally — bordered with a subtle dashed placeholder for empties. */
 
   .tile {
     position: relative;
@@ -281,20 +278,6 @@
     pointer-events: none; z-index: 2;
   }
 
-  .tile .rank {
-    position: absolute; top: 12px; left: 12px;
-    z-index: 4;
-    font-family: 'Cinzel', serif;
-    font-weight: 900;
-    font-size: 20px;
-    color: var(--gold);
-    background: rgba(7,6,8,.85);
-    backdrop-filter: blur(6px);
-    padding: 4px 10px;
-    border: 1px solid var(--gold-dark);
-    letter-spacing: .1em;
-  }
-
   .tile .live-badge {
     position: absolute; top: 12px; right: 12px;
     z-index: 4;
@@ -314,9 +297,24 @@
     box-shadow: 0 0 8px var(--kick-glow);
     animation: pulse-green 1.4s ease-in-out infinite;
   }
-  @keyframes pulse-green {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: .4; }
+
+  .tile .viewers-badge {
+    position: absolute; top: 12px; left: 12px;
+    z-index: 4;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(7,6,8,.85);
+    backdrop-filter: blur(6px);
+    padding: 5px 10px;
+    border: 1px solid var(--gold-dark);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .2em;
+    color: var(--gold);
+  }
+  .tile .viewers-badge::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold);
   }
 
   .tile .embed {
@@ -381,6 +379,37 @@
   }
   .tile .meta .platform { color: var(--kick); }
 
+  /* ---------- LOADING / WAITING STATES ---------- */
+  .waiting {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px;
+    color: var(--ink-dim);
+    text-align: center;
+    padding: 60px;
+  }
+  .waiting .big {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 44px;
+    letter-spacing: .25em;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(212,169,74,.4);
+  }
+  .waiting .sub-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; letter-spacing: .3em;
+    text-transform: uppercase;
+    max-width: 900px; line-height: 1.8;
+  }
+  .waiting .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid var(--gold-dark);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ---------- FOOTER ---------- */
   footer {
     display: grid;
@@ -404,7 +433,6 @@
   }
   footer .right { text-align: right; }
 
-  /* Rotation progress bar along the very top of the page */
   .rotation-progress {
     position: fixed;
     top: 0; left: 0;
@@ -418,7 +446,7 @@
 </head>
 <body>
 
-<!-- Two video elements so we can crossfade between clips. -->
+<!-- Two video elements for crossfade shuffle -->
 <video class="bg-video" id="bgA" muted playsinline preload="auto"></video>
 <video class="bg-video" id="bgB" muted playsinline preload="auto"></video>
 
@@ -435,29 +463,25 @@
 <div class="stage">
 
   <header>
-    <div class="eyebrow">— The Network Roll Call</div>
-
-    <div class="headline">
-      <div class="mark">EMPIRE<span class="x">X</span></div>
-      <div class="sub">Ourempirex · Confirmed Streamers</div>
-    </div>
-
-    <div class="status">
-      <div class="label">The Emperor Is Away</div>
-      <div class="brb"><span class="dot"></span>BE RIGHT BACK</div>
-    </div>
+    <div class="eyebrow">— The Party Never Stops</div>
+    <div class="mark">EMPIRE<span class="x">X</span></div>
+    <div class="sub">Ourempirex · Confirmed Streamers</div>
   </header>
 
-  <div>
-    <div class="section-label">
-      <div class="lhs">
-        <span class="chip">● ON THE NETWORK</span>
-        <span>Six Streamers At A Time · Rotating Every 45s</span>
-      </div>
-      <div><span id="currentPage">Page 1</span></div>
-    </div>
+  <div class="subtitle-bar">
+    <span class="chip"><span class="dot"></span>ON THE NETWORK</span>
+    <span class="divider"></span>
+    <span class="chat-count" id="chatCount">400 IN THE CHAT</span>
+    <span class="divider"></span>
+    <span class="label" id="liveSummary">— Live —</span>
+  </div>
 
-    <div class="grid" id="grid"></div>
+  <div class="content" id="content">
+    <div class="waiting">
+      <div class="spinner"></div>
+      <div class="big">Tuning Into The Network</div>
+      <div class="sub-line">Checking which streamers are live right now…</div>
+    </div>
   </div>
 
   <footer>
@@ -480,11 +504,16 @@
     return a;
   }
 
+  function fmtViewers(n) {
+    if (n == null) return '—';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000)     return (n / 1_000).toFixed(n >= 10_000 ? 0 : 1) + 'K';
+    return String(n);
+  }
+
   /* ==================================================================
-     BACKGROUND VIDEO — shuffle through files in VIDEOS_DIR, crossfade
-     between two <video> elements so there's no black flash between
-     clips. All videos are muted (required for autoplay + polite to
-     any audio the streamer has playing elsewhere).
+     BACKGROUND VIDEO — shuffle through videos/*.mp4, crossfade between
+     two <video> elements so there's never a black flash.
   ================================================================== */
   const videoA = document.getElementById('bgA');
   const videoB = document.getElementById('bgB');
@@ -494,22 +523,18 @@
   let videoList = [];
 
   async function discoverVideos() {
-    // Try the manifest first so users can drop any number of videos in
-    // the folder without editing HTML.
     try {
       const r = await fetch(`${CONFIG.VIDEOS_DIR}videos.json?t=${Date.now()}`, { cache: 'no-store' });
       if (r.ok) {
         const j = await r.json();
         if (Array.isArray(j.videos) && j.videos.length) return j.videos;
       }
-    } catch (_) { /* fall through */ }
+    } catch (_) {}
     return CONFIG.VIDEOS_FALLBACK;
   }
 
   function nextVideoSrc() {
-    if (videoQueue.length === 0) {
-      videoQueue = shuffle(videoList);
-    }
+    if (videoQueue.length === 0) videoQueue = shuffle(videoList);
     const filename = videoQueue.shift();
     return filename ? `${CONFIG.VIDEOS_DIR}${filename}` : null;
   }
@@ -525,7 +550,6 @@
       inactiveVideo.classList.add('visible');
       activeVideo.classList.remove('visible');
 
-      // After crossfade, flip roles and free the old one.
       setTimeout(() => {
         activeVideo.pause();
         activeVideo.removeAttribute('src');
@@ -537,13 +561,9 @@
 
   async function startBackgroundVideos() {
     videoList = await discoverVideos();
-    if (!videoList || videoList.length === 0) {
-      console.warn('[BRB] No videos found. Drop files into obs/videos/ or add videos.json.');
-      return;
-    }
+    if (!videoList || videoList.length === 0) return;
     videoQueue = shuffle(videoList);
 
-    // First video: no crossfade, just fade in.
     const first = nextVideoSrc();
     activeVideo.src = first;
     activeVideo.load();
@@ -559,13 +579,81 @@
   startBackgroundVideos();
 
   /* ==================================================================
-     STREAMER GRID — rotate through the roster, 6 at a time. No live
-     API calls needed; Kick's player shows its own offline screen for
-     any streamer who isn't live. This fits the "whole network in one
-     place" party vibe — not a viewer-count leaderboard.
+     KICK LIVE STATUS — uses the same method as ourempirex.com's
+     Confirmed Streamers section: fetch `kick.com/api/v2/channels/{slug}`
+     through a public CORS proxy. The response has a `livestream` object
+     (null if offline) with `viewer_count`, `session_title`, etc.
   ================================================================== */
-  const grid = document.getElementById('grid');
-  const currentPageEl = document.getElementById('currentPage');
+  const PROXIES = [
+    s => `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+    s => `https://corsproxy.io/?${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
+  ];
+
+  async function fetchChannelLive(slug) {
+    // Try each proxy in order; bail as soon as one works.
+    const lower = slug.toLowerCase();
+    for (const build of PROXIES) {
+      try {
+        const res = await fetch(build(lower), { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) continue;
+
+        // allorigins wraps the real response in { contents: "..." }.
+        // corsproxy just returns the raw response.
+        const ct = res.headers.get('content-type') || '';
+        let data;
+        if (ct.includes('application/json')) {
+          const j = await res.json();
+          data = j.contents ? JSON.parse(j.contents) : j;
+        } else {
+          const text = await res.text();
+          try {
+            const maybe = JSON.parse(text);
+            data = maybe.contents ? JSON.parse(maybe.contents) : maybe;
+          } catch {
+            continue;
+          }
+        }
+
+        if (!data) continue;
+
+        const ls = data.livestream;
+        return {
+          username: slug,
+          isLive: !!(ls && ls.is_live),
+          viewers: ls ? Number(ls.viewer_count || 0) : 0,
+          title: ls ? (ls.session_title || '') : '',
+        };
+      } catch (_) {
+        // try next proxy
+      }
+    }
+    // Both proxies failed — return a graceful unknown result.
+    return { username: slug, isLive: false, viewers: 0, unknown: true };
+  }
+
+  // Small concurrency limit so we don't hit 21 proxy requests at once.
+  async function fetchAllLive() {
+    const results = new Array(CONFIG.ROSTER.length);
+    let cursor = 0;
+    const WORKERS = 5;
+
+    async function worker() {
+      while (cursor < CONFIG.ROSTER.length) {
+        const i = cursor++;
+        results[i] = await fetchChannelLive(CONFIG.ROSTER[i]);
+      }
+    }
+
+    await Promise.all(Array.from({ length: WORKERS }, worker));
+    return results;
+  }
+
+  /* ==================================================================
+     GRID — render only live streamers, ordered by viewer count desc.
+     No ranking numbers. If more than 6 live, rotate through pages of 6.
+  ================================================================== */
+  const content = document.getElementById('content');
+  const liveSummary = document.getElementById('liveSummary');
   const rotationProgress = document.getElementById('rotationProgress');
 
   const KICK_SVG = `
@@ -573,24 +661,13 @@
       <path fill="#000" d="M3 3h5v6h3V6h3V3h5v6h-3v3h-3v3h3v3h3v3h-5v-3h-3v-3H8v6H3z"/>
     </svg>`;
 
-  // Shuffle roster once per load so the order feels fresh each session
-  // but stays stable during the current session.
-  const shuffledRoster = shuffle(CONFIG.ROSTER);
-
-  // Split into pages of 6.
-  const pages = [];
-  for (let i = 0; i < shuffledRoster.length; i += 6) {
-    pages.push(shuffledRoster.slice(i, i + 6));
-  }
-
-  let currentPageIdx = 0;
-
-  function tileHTML(name, i) {
+  function tileHTML(s) {
+    const name = s.username;
     const src = `https://player.kick.com/${encodeURIComponent(name)}?autoplay=true&muted=true`;
     return `
       <div class="tile">
-        <div class="rank">#${i + 1}</div>
-        <div class="live-badge">KICK</div>
+        <div class="viewers-badge">${fmtViewers(s.viewers)} VIEWERS</div>
+        <div class="live-badge">LIVE</div>
         <div class="embed">
           <div class="placeholder">Loading ${name}…</div>
           <iframe
@@ -610,33 +687,111 @@
       </div>`;
   }
 
+  function renderWaiting(msg, sub) {
+    content.innerHTML = `
+      <div class="waiting">
+        <div class="spinner"></div>
+        <div class="big">${msg}</div>
+        <div class="sub-line">${sub}</div>
+      </div>`;
+  }
+
+  function renderNoneLive() {
+    // Party vibe — no "Arena is Quiet" doom. Keep it light.
+    content.innerHTML = `
+      <div class="waiting">
+        <div class="big">WARMING UP</div>
+        <div class="sub-line">
+          The network is live soon. Hang tight — the first streamers go live any minute.
+        </div>
+      </div>`;
+  }
+
+  // Pagination state
+  let livePages = [];           // array of arrays (each of length ≤ 6)
+  let currentPageIdx = 0;
+  let rotateTimer = null;
+
   function renderPage(idx) {
-    const page = pages[idx];
-    if (!page) return;
-    grid.innerHTML = page.map(tileHTML).join('');
-    currentPageEl.textContent = `Page ${idx + 1} of ${pages.length}`;
+    const page = livePages[idx];
+    if (!page || page.length === 0) return;
+    content.innerHTML = `<div class="grid">${page.map(tileHTML).join('')}</div>`;
+  }
+
+  function startRotation() {
+    if (rotateTimer) clearInterval(rotateTimer);
+    renderPage(currentPageIdx);
+    resetProgressBar();
+
+    if (livePages.length > 1) {
+      rotateTimer = setInterval(() => {
+        currentPageIdx = (currentPageIdx + 1) % livePages.length;
+        renderPage(currentPageIdx);
+        resetProgressBar();
+      }, CONFIG.ROTATE_MS);
+    }
   }
 
   function resetProgressBar() {
+    if (livePages.length <= 1) {
+      rotationProgress.style.width = '0%';
+      return;
+    }
     rotationProgress.style.transition = 'none';
     rotationProgress.style.width = '0%';
-    void rotationProgress.offsetWidth; // force reflow so transition restarts
+    void rotationProgress.offsetWidth;
     rotationProgress.style.transition = `width ${CONFIG.ROTATE_MS}ms linear`;
     rotationProgress.style.width = '100%';
   }
 
-  function startRotation() {
-    renderPage(currentPageIdx);
-    resetProgressBar();
-
-    setInterval(() => {
-      currentPageIdx = (currentPageIdx + 1) % pages.length;
-      renderPage(currentPageIdx);
-      resetProgressBar();
-    }, CONFIG.ROTATE_MS);
+  function updateSummary(liveCount, totalViewers) {
+    const viewers = fmtViewers(totalViewers);
+    liveSummary.textContent = liveCount === 0
+      ? '— Warming Up —'
+      : `— ${liveCount} Live · ${viewers} Viewers —`;
   }
 
-  startRotation();
+  async function poll() {
+    try {
+      const results = await fetchAllLive();
+      const live = results.filter(r => r && r.isLive);
+      live.sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
+
+      const totalViewers = live.reduce((sum, s) => sum + (s.viewers || 0), 0);
+      updateSummary(live.length, totalViewers);
+
+      if (live.length === 0) {
+        livePages = [];
+        currentPageIdx = 0;
+        if (rotateTimer) clearInterval(rotateTimer);
+        renderNoneLive();
+        rotationProgress.style.width = '0%';
+        return;
+      }
+
+      // Split into pages of 6
+      const pages = [];
+      for (let i = 0; i < live.length; i += 6) {
+        pages.push(live.slice(i, i + 6));
+      }
+
+      // If the set of live streamers is the same as before, keep current
+      // page position to avoid jumpiness. Otherwise reset.
+      const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.username))) ===
+                           JSON.stringify(livePages.map(p => p.map(x => x.username)));
+      livePages = pages;
+      if (!sameAsBefore) currentPageIdx = 0;
+
+      startRotation();
+    } catch (err) {
+      console.warn('[BRB] poll failed:', err);
+      // Keep showing whatever we had last time; don't crash the UI.
+    }
+  }
+
+  // Initial poll + periodic refresh
+  poll();
+  setInterval(poll, CONFIG.POLL_MS);
 </script>
 
 </body>
