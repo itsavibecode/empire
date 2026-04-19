@@ -137,8 +137,10 @@
     grid-template-columns: 1fr;
     /* rows: header · subtitle bar · content · footer */
     grid-template-rows: 132px 52px 1fr 88px;
-    padding: 52px 88px 36px;
-    gap: 12px;
+    /* Padding clears the 32px corner offset + 180px corner size,
+       giving content a symmetric safe zone inside the gold frame. */
+    padding: 64px 88px 64px;
+    gap: 16px;
   }
 
   /* ---------- HEADER ---------- */
@@ -245,8 +247,9 @@
     align-content: center;
   }
 
-  /* 1 live → one big hero tile at natural 16:9, centered in the space
-     so it doesn't stretch into wide black bars on an ultra-wide cell. */
+  /* 1 live → one big hero tile, 16:9 aspect, centered.
+     Constrain BY HEIGHT (the limiting dimension) so a single big tile
+     never exceeds the content row. Width scales from the height. */
   .grid[data-count="1"] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
@@ -254,12 +257,16 @@
     align-items: center;
   }
   .grid[data-count="1"] > .tile {
-    width: auto;
     height: 100%;
+    width: auto;
     aspect-ratio: 16 / 9;
     max-width: 100%;
+    /* If width hits max-width (100% of col), height becomes the fixed dimension */
   }
-  /* 2 live → two side-by-side, each at natural 16:9 height, centered */
+
+  /* 2 live → two side-by-side. For two tiles to not overflow, each
+     tile can be at most half the column width minus gap/2. We constrain
+     width primarily and let aspect-ratio shrink height accordingly. */
   .grid[data-count="2"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
@@ -268,12 +275,13 @@
     gap: 22px;
   }
   .grid[data-count="2"] > .tile {
-    width: auto;
-    height: 100%;
+    width: 100%;
+    height: auto;
     aspect-ratio: 16 / 9;
-    max-width: 100%;
+    max-height: 100%;
   }
-  /* 3 live → three across, each at natural 16:9, centered */
+
+  /* 3 live → three across. Same approach: width-first sizing. */
   .grid[data-count="3"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
@@ -282,10 +290,10 @@
     gap: 22px;
   }
   .grid[data-count="3"] > .tile {
-    width: auto;
-    height: 100%;
+    width: 100%;
+    height: auto;
     aspect-ratio: 16 / 9;
-    max-width: 100%;
+    max-height: 100%;
   }
   /* 4 live → 2x2 grid */
   .grid[data-count="4"] {
