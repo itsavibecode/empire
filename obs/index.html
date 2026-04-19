@@ -1,1 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, initial-scale=1" />
+<title>Empire X — Be Right Back</title>
 
+<!-- =====================================================================
+     EMPIRE X · BRB OVERLAY
+     Hosted at https://ourempirex.com/obs/
+     Add as a 1920x1080 Browser Source in OBS.
+===================================================================== -->
+<script>
+  const CONFIG = {
+    // -------- ROSTER --------
+    // All 21 Confirmed Streamers from ourempirex.com.
+    // Must match the handle used on kick.com exactly (case-insensitive,
+    // no spaces). Casing here is used for display on screen.
+    ROSTER: [
+      'MikeSmallsJr', 'SaltyGummiBear', 'XenaTheWitch', 'Kimmee',
+      'JJStream', 'WoodBaby', 'TaylorStarlight', 'AshWilder',
+      'FloridaBoy', 'AdrianahLee', 'Feef', 'BlackAssDave',
+      'NanaPips', 'BrieWylde', 'Fanos', 'IDuncle',
+      'Jackie', 'IamTalanya', 'KennyHoopz', 'KikiKrazy', 'Cobbruvs',
+    ],
+
+    // How long each "page" of 6 streamers stays visible before rotating (ms).
+    ROTATE_MS: 45_000,
+
+    // -------- BACKGROUND VIDEOS --------
+    // Directory where videos live. The overlay plays them full-screen
+    // with transparency, on shuffle, looping through the whole list.
+    VIDEOS_DIR: './videos/',
+
+    // The overlay tries to fetch './videos/videos.json' first so you can
+    // drop any number of videos in the folder without editing HTML.
+    // This list is used as a fallback if the manifest is missing.
+    VIDEOS_FALLBACK: [
+      'empirexvideo.mp4',
+    ],
+
+    // Video dimness (0 = invisible, 1 = full brightness). ~35% lets the
+    // party energy come through while keeping the grid readable.
+    VIDEO_OPACITY: 0.35,
+  };
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;600&family=Inter+Tight:wght@400;500;700&display=swap');
+
+  :root {
+    --bg-0:       #070608;
+    --bg-1:       #0d0b10;
+    --bg-2:       #141118;
+    --ink:        #f5efe1;
+    --ink-dim:    #8a8275;
+    --gold:       #d4a94a;
+    --gold-hot:   #f2c764;
+    --gold-dark:  #7a5f20;
+    --kick:       #53fc18;
+    --kick-glow:  #53fc1880;
+    --danger:     #ff3b3b;
+    --rule:       #2a2530;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: var(--bg-0);
+    color: var(--ink);
+    font-family: 'Inter Tight', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- BACKGROUND VIDEO LAYER ---------- */
+  .bg-video {
+    position: fixed;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0;             /* fades in on 'canplay' */
+    transition: opacity .9s ease;
+    pointer-events: none;
+  }
+  .bg-video.visible { opacity: var(--video-opacity, .35); }
+
+  /* Dark vignette + gold tint layered over the video so text stays
+     readable and the scene keeps the Empire X look. */
+  .bg-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(212,169,74,.18), transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(212,169,74,.12), transparent 50%),
+      radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(7,6,8,.55) 80%, rgba(7,6,8,.85) 100%),
+      linear-gradient(180deg, rgba(7,6,8,.35) 0%, rgba(13,11,16,.15) 50%, rgba(7,6,8,.45) 100%);
+  }
+
+  /* Subtle film grain for texture */
+  .bg-grain {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.8 0 0 0 0 0.5 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+    opacity: .06;
+    mix-blend-mode: overlay;
+  }
+
+  /* Art-deco corners */
+  .corner {
+    position: fixed;
+    width: 180px; height: 180px;
+    border: 1px solid var(--gold-dark);
+    z-index: 4;
+    pointer-events: none;
+  }
+  .corner::before {
+    content: ''; position: absolute; background: var(--gold);
+  }
+  .corner.tl { top: 32px; left: 32px; border-right: 0; border-bottom: 0; }
+  .corner.tr { top: 32px; right: 32px; border-left: 0; border-bottom: 0; }
+  .corner.bl { bottom: 32px; left: 32px; border-right: 0; border-top: 0; }
+  .corner.br { bottom: 32px; right: 32px; border-left: 0; border-top: 0; }
+  .corner.tl::before { top: -1px; left: 40px; width: 60px; height: 3px; }
+  .corner.tr::before { top: -1px; right: 40px; width: 60px; height: 3px; }
+  .corner.bl::before { bottom: -1px; left: 40px; width: 60px; height: 3px; }
+  .corner.br::before { bottom: -1px; right: 40px; width: 60px; height: 3px; }
+
+  .stage {
+    position: relative;
+    z-index: 5;
+    width: 100%; height: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 168px 1fr 88px;
+    padding: 52px 88px 36px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    letter-spacing: .4em;
+    color: var(--gold);
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0,0,0,.8);
+  }
+
+  .headline { text-align: center; }
+  .headline .mark {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 64px;
+    letter-spacing: .18em;
+    line-height: 1;
+    background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold) 40%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 20px rgba(212,169,74,.3)) drop-shadow(0 2px 6px rgba(0,0,0,.9));
+  }
+  .headline .mark .x {
+    display: inline-block;
+    font-size: 72px;
+    transform: translateY(4px);
+    margin-left: 8px;
+  }
+  .headline .sub {
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .5em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(0,0,0,.9);
+  }
+
+  .status {
+    text-align: right;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  }
+  .status .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: .35em; color: var(--ink-dim);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(0,0,0,.9);
+  }
+  .status .brb {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: .3em;
+    color: var(--ink);
+    text-shadow: 0 2px 8px rgba(0,0,0,.9);
+  }
+  .status .brb .dot {
+    display: inline-block;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--danger);
+    margin-right: 12px; transform: translateY(-3px);
+    box-shadow: 0 0 14px var(--danger);
+    animation: pulse-red 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1;   transform: translateY(-3px) scale(1); }
+    50%      { opacity: .45; transform: translateY(-3px) scale(.85); }
+  }
+
+  /* Section label over the grid */
+  .section-label {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 22px 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: .4em; color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  .section-label .lhs { display: flex; align-items: center; gap: 14px; }
+  .section-label .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--gold-dark);
+    color: var(--gold);
+    letter-spacing: .3em;
+    background: rgba(7,6,8,.55);
+    backdrop-filter: blur(4px);
+  }
+  .section-label .count { color: var(--ink); font-weight: 600; }
+  .section-label .lhs > span:not(.chip) { text-shadow: 0 0 8px rgba(0,0,0,.9); }
+  .section-label > div:last-child { text-shadow: 0 0 8px rgba(0,0,0,.9); }
+
+  /* ---------- GRID ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 22px;
+    min-height: 0;
+  }
+
+  .tile {
+    position: relative;
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow:
+      0 0 0 1px rgba(212,169,74,.12) inset,
+      0 24px 48px -24px rgba(0,0,0,.9);
+    opacity: 0;
+    animation: tile-in .7s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .tile:nth-child(1) { animation-delay: .05s; }
+  .tile:nth-child(2) { animation-delay: .12s; }
+  .tile:nth-child(3) { animation-delay: .19s; }
+  .tile:nth-child(4) { animation-delay: .26s; }
+  .tile:nth-child(5) { animation-delay: .33s; }
+  .tile:nth-child(6) { animation-delay: .40s; }
+  @keyframes tile-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tile::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border: 1px solid rgba(212,169,74,.22);
+    pointer-events: none; z-index: 2;
+  }
+
+  .tile .rank {
+    position: absolute; top: 12px; left: 12px;
+    z-index: 4;
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 20px;
+    color: var(--gold);
+    background: rgba(7,6,8,.85);
+    backdrop-filter: blur(6px);
+    padding: 4px 10px;
+    border: 1px solid var(--gold-dark);
+    letter-spacing: .1em;
+  }
+
+  .tile .live-badge {
+    position: absolute; top: 12px; right: 12px;
+    z-index: 4;
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(7,6,8,.85);
+    backdrop-filter: blur(6px);
+    padding: 5px 10px;
+    border: 1px solid var(--kick);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .2em;
+    color: var(--kick);
+  }
+  .tile .live-badge::before {
+    content: '';
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--kick);
+    box-shadow: 0 0 8px var(--kick-glow);
+    animation: pulse-green 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .4; }
+  }
+
+  .tile .embed {
+    position: relative;
+    flex: 1;
+    background: #000;
+    overflow: hidden;
+  }
+  .tile .embed iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+
+  .tile .placeholder {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a1520 0%, #0c0a10 100%);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: .25em;
+    text-transform: uppercase;
+  }
+
+  .tile .bar {
+    position: relative;
+    z-index: 3;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, rgba(15,12,19,.95) 0%, rgba(9,7,11,.98) 100%);
+    border-top: 1px solid var(--rule);
+  }
+
+  .tile .kick-logo {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    background: var(--kick);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 14px var(--kick-glow);
+  }
+  .tile .kick-logo svg { width: 20px; height: 20px; }
+
+  .tile .who {
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 0;
+  }
+  .tile .name {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: .02em;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .2em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  .tile .meta .platform { color: var(--kick); }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(0,0,0,.9);
+  }
+  footer .center {
+    font-family: 'Cinzel', serif;
+    letter-spacing: .5em;
+    color: var(--gold);
+    font-size: 14px;
+  }
+  footer .right { text-align: right; }
+
+  /* Rotation progress bar along the very top of the page */
+  .rotation-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-hot));
+    width: 0%;
+    z-index: 10;
+    box-shadow: 0 0 8px rgba(212,169,74,.6);
+  }
+</style>
+</head>
+<body>
+
+<!-- Two video elements so we can crossfade between clips. -->
+<video class="bg-video" id="bgA" muted playsinline preload="auto"></video>
+<video class="bg-video" id="bgB" muted playsinline preload="auto"></video>
+
+<div class="bg-veil"></div>
+<div class="bg-grain"></div>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div class="rotation-progress" id="rotationProgress"></div>
+
+<div class="stage">
+
+  <header>
+    <div class="eyebrow">— The Network Roll Call</div>
+
+    <div class="headline">
+      <div class="mark">EMPIRE<span class="x">X</span></div>
+      <div class="sub">Ourempirex · Confirmed Streamers</div>
+    </div>
+
+    <div class="status">
+      <div class="label">The Emperor Is Away</div>
+      <div class="brb"><span class="dot"></span>BE RIGHT BACK</div>
+    </div>
+  </header>
+
+  <div>
+    <div class="section-label">
+      <div class="lhs">
+        <span class="chip">● ON THE NETWORK</span>
+        <span>Six Streamers At A Time · Rotating Every 45s</span>
+      </div>
+      <div><span id="currentPage">Page 1</span></div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer>
+    <div class="left">ourempirex.com</div>
+    <div class="center">◆ A D   A S T R A ◆</div>
+    <div class="right">Stream switches back shortly</div>
+  </footer>
+
+</div>
+
+<script>
+  document.documentElement.style.setProperty('--video-opacity', CONFIG.VIDEO_OPACITY);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /* ==================================================================
+     BACKGROUND VIDEO — shuffle through files in VIDEOS_DIR, crossfade
+     between two <video> elements so there's no black flash between
+     clips. All videos are muted (required for autoplay + polite to
+     any audio the streamer has playing elsewhere).
+  ================================================================== */
+  const videoA = document.getElementById('bgA');
+  const videoB = document.getElementById('bgB');
+  let activeVideo = videoA;
+  let inactiveVideo = videoB;
+  let videoQueue = [];
+  let videoList = [];
+
+  async function discoverVideos() {
+    // Try the manifest first so users can drop any number of videos in
+    // the folder without editing HTML.
+    try {
+      const r = await fetch(`${CONFIG.VIDEOS_DIR}videos.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        if (Array.isArray(j.videos) && j.videos.length) return j.videos;
+      }
+    } catch (_) { /* fall through */ }
+    return CONFIG.VIDEOS_FALLBACK;
+  }
+
+  function nextVideoSrc() {
+    if (videoQueue.length === 0) {
+      videoQueue = shuffle(videoList);
+    }
+    const filename = videoQueue.shift();
+    return filename ? `${CONFIG.VIDEOS_DIR}${filename}` : null;
+  }
+
+  function swapToNextVideo() {
+    const src = nextVideoSrc();
+    if (!src) return;
+
+    inactiveVideo.src = src;
+    inactiveVideo.load();
+    inactiveVideo.oncanplay = () => {
+      inactiveVideo.play().catch(() => {});
+      inactiveVideo.classList.add('visible');
+      activeVideo.classList.remove('visible');
+
+      // After crossfade, flip roles and free the old one.
+      setTimeout(() => {
+        activeVideo.pause();
+        activeVideo.removeAttribute('src');
+        activeVideo.load();
+        [activeVideo, inactiveVideo] = [inactiveVideo, activeVideo];
+      }, 1000);
+    };
+  }
+
+  async function startBackgroundVideos() {
+    videoList = await discoverVideos();
+    if (!videoList || videoList.length === 0) {
+      console.warn('[BRB] No videos found. Drop files into obs/videos/ or add videos.json.');
+      return;
+    }
+    videoQueue = shuffle(videoList);
+
+    // First video: no crossfade, just fade in.
+    const first = nextVideoSrc();
+    activeVideo.src = first;
+    activeVideo.load();
+    activeVideo.oncanplay = () => {
+      activeVideo.play().catch(() => {});
+      activeVideo.classList.add('visible');
+    };
+
+    videoA.addEventListener('ended', swapToNextVideo);
+    videoB.addEventListener('ended', swapToNextVideo);
+  }
+
+  startBackgroundVideos();
+
+  /* ==================================================================
+     STREAMER GRID — rotate through the roster, 6 at a time. No live
+     API calls needed; Kick's player shows its own offline screen for
+     any streamer who isn't live. This fits the "whole network in one
+     place" party vibe — not a viewer-count leaderboard.
+  ================================================================== */
+  const grid = document.getElementById('grid');
+  const currentPageEl = document.getElementById('currentPage');
+  const rotationProgress = document.getElementById('rotationProgress');
+
+  const KICK_SVG = `
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="#000" d="M3 3h5v6h3V6h3V3h5v6h-3v3h-3v3h3v3h3v3h-5v-3h-3v-3H8v6H3z"/>
+    </svg>`;
+
+  // Shuffle roster once per load so the order feels fresh each session
+  // but stays stable during the current session.
+  const shuffledRoster = shuffle(CONFIG.ROSTER);
+
+  // Split into pages of 6.
+  const pages = [];
+  for (let i = 0; i < shuffledRoster.length; i += 6) {
+    pages.push(shuffledRoster.slice(i, i + 6));
+  }
+
+  let currentPageIdx = 0;
+
+  function tileHTML(name, i) {
+    const src = `https://player.kick.com/${encodeURIComponent(name)}?autoplay=true&muted=true`;
+    return `
+      <div class="tile">
+        <div class="rank">#${i + 1}</div>
+        <div class="live-badge">KICK</div>
+        <div class="embed">
+          <div class="placeholder">Loading ${name}…</div>
+          <iframe
+            src="${src}"
+            allow="autoplay; fullscreen; encrypted-media"
+            allowfullscreen
+            scrolling="no"
+            frameborder="0"></iframe>
+        </div>
+        <div class="bar">
+          <div class="kick-logo" title="Kick">${KICK_SVG}</div>
+          <div class="who">
+            <div class="name">${name}</div>
+            <div class="meta">Live on <span class="platform">Kick</span></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderPage(idx) {
+    const page = pages[idx];
+    if (!page) return;
+    grid.innerHTML = page.map(tileHTML).join('');
+    currentPageEl.textContent = `Page ${idx + 1} of ${pages.length}`;
+  }
+
+  function resetProgressBar() {
+    rotationProgress.style.transition = 'none';
+    rotationProgress.style.width = '0%';
+    void rotationProgress.offsetWidth; // force reflow so transition restarts
+    rotationProgress.style.transition = `width ${CONFIG.ROTATE_MS}ms linear`;
+    rotationProgress.style.width = '100%';
+  }
+
+  function startRotation() {
+    renderPage(currentPageIdx);
+    resetProgressBar();
+
+    setInterval(() => {
+      currentPageIdx = (currentPageIdx + 1) % pages.length;
+      renderPage(currentPageIdx);
+      resetProgressBar();
+    }, CONFIG.ROTATE_MS);
+  }
+
+  startRotation();
+</script>
+
+</body>
+</html>
