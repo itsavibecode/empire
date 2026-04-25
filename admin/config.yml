@@ -152,3 +152,43 @@ collections:
                 media_folder: '/houses'
                 public_folder: '/houses'
                 hint: 'Wide aspect (16:9 or similar) works best. JPG or PNG. Will be saved under /houses/.'
+
+  - name: socials
+    label: Social Bar (top-right)
+    description: |
+      The icons in the floating top-right social bar on every page.
+      Pick a platform from the dropdown — the icon and styling are fixed
+      (designed for visual consistency); just paste the link.
+
+      Drag rows to reorder — left-to-right matches top-to-bottom here.
+      Adding new platforms requires a code change (the icon library is curated);
+      ask the dev to wire one up if you need something not in the dropdown.
+    files:
+      - file: socials.json
+        label: Social links
+        name: socials_file
+        format: json
+        fields:
+          - name: socials
+            label: Links
+            label_singular: Link
+            widget: list
+            collapsed: false
+            summary: '{{fields.platform}} → {{fields.url}}'
+            fields:
+              - name: platform
+                label: 'Platform'
+                widget: select
+                options:
+                  - { label: 'Kick', value: 'kick' }
+                  - { label: 'Instagram', value: 'instagram' }
+                  - { label: 'Discord', value: 'discord' }
+                  - { label: 'YouTube', value: 'youtube' }
+                  - { label: 'X (Twitter)', value: 'x' }
+                  - { label: 'OBS Overlay (links to /obs/)', value: 'obs' }
+                hint: 'The platform determines which icon appears. Icon designs are fixed.'
+              - name: url
+                label: 'URL'
+                widget: string
+                hint: 'Full https:// URL for external platforms (e.g. https://kick.com/empirex). For OBS, use /obs/ (the on-site overlay page).'
+                pattern: ['^(https?://|/).+', 'Must be a full URL or a path starting with /']

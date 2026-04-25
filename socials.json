@@ -1,0 +1,10 @@
+{
+  "socials": [
+    { "platform": "kick", "url": "https://kick.com/empirex" },
+    { "platform": "instagram", "url": "https://www.instagram.com/our.empire" },
+    { "platform": "obs", "url": "/obs/" },
+    { "platform": "discord", "url": "https://discord.gg/kYaxxeAeHy" },
+    { "platform": "youtube", "url": "https://www.youtube.com/channel/UCR8tIHowJXVGGZLukojOs4Q/videos" },
+    { "platform": "x", "url": "https://x.com/OurEmpire1" }
+  ]
+}
