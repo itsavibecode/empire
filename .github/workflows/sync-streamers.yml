@@ -1,4 +1,4 @@
-name: Sync content (streamers + properties + socials + about)
+name: Sync content (streamers + properties + socials + about + seo)
 
 # When any *.json content file changes (typically from a Decap CMS commit),
 # regenerate the derived blocks in index.html and llms.txt.
@@ -12,6 +12,7 @@ on:
       - properties.json
       - socials.json
       - about.json
+      - seo.json
 
 permissions:
   contents: write
@@ -50,6 +51,11 @@ jobs:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-about.py
 
+      - name: Sync SEO meta tags + title in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-seo.py
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -58,6 +64,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing to sync."
           else
-            git commit -m "chore: regenerate streamer/property/social/about derived blocks"
+            git commit -m "chore: regenerate streamer/property/social/about/seo derived blocks"
             git push
           fi

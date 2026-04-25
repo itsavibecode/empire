@@ -242,3 +242,46 @@ collections:
                 label: 'Body'
                 widget: text
                 hint: 'The text shown beneath the heading.'
+
+  - name: seo
+    label: SEO & Sharing
+    description: |
+      Search engine and social-share metadata for the homepage.
+      "Page title" appears in browser tabs and search results, and is
+      reused for social-share titles. Each description targets a specific
+      audience: search crawlers, link previews on Facebook/LinkedIn, and
+      link previews on X (Twitter). The share image is what shows up
+      when someone pastes the link into a chat or social post.
+
+      Other technical metadata (canonical URL, og:type, locale, image
+      dimensions, JSON-LD structured data, keywords meta) stays
+      code-managed and isn't editable here.
+    files:
+      - file: seo.json
+        label: SEO content
+        name: seo_file
+        format: json
+        fields:
+          - name: page_title
+            label: 'Page title'
+            widget: string
+            hint: 'Shown in browser tabs, Google results, and social-share previews. Aim for 50-60 characters.'
+          - name: meta_description
+            label: 'Description for search engines'
+            widget: text
+            hint: 'Shown in Google search snippets. Aim for 150-160 characters. Often starts with the brand name.'
+          - name: og_description
+            label: 'Description for social shares (Facebook, LinkedIn, etc.)'
+            widget: text
+            hint: 'Shown in link previews when someone shares the URL on Facebook, LinkedIn, Discord, etc. Can be a bit longer and more marketing-flavored than the search description.'
+          - name: twitter_description
+            label: 'Description for X (Twitter) previews'
+            widget: text
+            hint: 'Shown in link previews on X / Twitter. Keep it punchy — under 200 characters works best.'
+          - name: share_image
+            label: 'Share image'
+            widget: image
+            choose_url: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'The image that appears in link previews on Facebook, LinkedIn, X, Discord, etc. 1200x630 is the recommended size; square (1024x1024) also works. Saved at the repo root.'

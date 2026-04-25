@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.8.0 — 2026-04-25
+
+Minor — SEO and share metadata exposed to CMS.
+
+- **`seo.json` at the repo root** — the user-facing SEO copy is now CMS-editable: page title (drives `<title>`, `og:title`, `twitter:title`), three platform-tuned descriptions (search / Facebook+LinkedIn / X), and a share image (drives `og:image` and `twitter:image`).
+- **`.github/scripts/sync-seo.py`** — regenerates the eight relevant meta tags + `<title>` from `seo.json`. Idempotent. The `share_image` filename is auto-prefixed with `https://ourempirex.com/` for the absolute URL the OG/Twitter specs require.
+- **What stays code-managed** (intentionally not exposed): canonical URL, `og:type`, `og:locale`, `og:image:width/height`, `twitter:card` type, charset/viewport, `keywords` meta, JSON-LD structured data. Either too technical or too risky to let drift.
+- **Workflow** updated to also trigger on `seo.json` and run `sync-seo.py`.
+- **`/admin/` CMS** has a fifth collection: **"SEO & Sharing"** with hint text on character limits per platform.
+
 ### v0.7.0 — 2026-04-25
 
 Minor — About The Event section moved to CMS.
