@@ -16,6 +16,12 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.2.1 — 2026-04-25
+
+Patch — wristband copy tweak.
+
+- **Wristband section** — reframed access scope from "every house, every party, and every event" to "all our.empire hosted parties & content events" so the language doesn't overpromise access to streamer-private spaces.
+
 ### v0.2.0 — 2026-04-25
 
 Minor — SEO and machine-readability infrastructure.
