@@ -16,6 +16,12 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.1.3 — 2026-04-24
+
+Patch — gave the Promo Video a real preview frame.
+
+- **Promo Video poster** — extracted the EmpireX logo frame (~2 s into `empirexvideo.mp4`) as `promo-poster.jpg` and wired it as the `poster=` attribute. Section now shows the branded title card at rest instead of a black box, without the page-load cost of `preload="auto"`.
+
 ### v0.1.2 — 2026-04-24
 
 Patch — collapsed the Confirmed Streamers featured row into the main grid.
