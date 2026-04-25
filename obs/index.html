@@ -13,16 +13,11 @@
 <script>
   const CONFIG = {
     // -------- ROSTER --------
-    // All 21 Confirmed Streamers from ourempirex.com.
-    // The Kick API is case-insensitive on slug lookup, but we preserve
-    // the casing here for on-screen display.
-    ROSTER: [
-      'MikeSmallsJr', 'SaltyGummiBear', 'XenaTheWitch', 'Kimmee',
-      'JJStream', 'WoodBaby', 'TaylorStarlight', 'AshWilder',
-      'FloridaBoy', 'AdrianahLee', 'Feef', 'BlackAssDave',
-      'NanaPips', 'BrieWylde', 'Fanos', 'IDuncle',
-      'Jackie', 'IamTalanya', 'KennyHoopz', 'KikiKrazy', 'Cobbruvs',
-    ],
+    // Populated at runtime by fetch('/streamers.json') — see kickoff at the
+    // bottom of this script. The JSON is the single source of truth for the
+    // Confirmed Streamers list across ourempirex.com, /obs/, and /promo/.
+    // To change the list, edit streamers.json (or use the admin CMS).
+    ROSTER: [],
 
     // How often to re-check live status + viewer counts (ms).
     // 90 seconds is a good balance — responsive enough to catch streamers
@@ -938,9 +933,18 @@
     }
   }
 
-  // Initial poll + periodic refresh
-  poll();
-  setInterval(poll, CONFIG.POLL_MS);
+  // Load roster from /streamers.json (single source of truth), then start polling.
+  // If the fetch fails, the grid stays empty and we log to console rather than crash.
+  fetch('/streamers.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(data => {
+      CONFIG.ROSTER = data.map(s => s.name);
+      poll();
+      setInterval(poll, CONFIG.POLL_MS);
+    })
+    .catch(err => {
+      console.error('[BRB] Failed to load /streamers.json:', err);
+    });
 </script>
 
 </body>

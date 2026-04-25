@@ -8,7 +8,7 @@ Lives at **`https://ourempirex.com/obs/`**.
 
 ## What it does
 
-Every 90 seconds, the overlay checks all 21 confirmed streamers against Kick's API (via the same public CORS proxies ourempirex.com uses) and rebuilds the grid with only those who are live, ordered by viewer count (highest first). Offline streamers never appear. Background videos shuffle behind everything at ~35% opacity for atmosphere.
+Every 90 seconds, the overlay checks every confirmed streamer (loaded from `/streamers.json`) against Kick's API (via the same public CORS proxies ourempirex.com uses) and rebuilds the grid with only those who are live, ordered by viewer count (highest first). Offline streamers never appear. Background videos shuffle behind everything at ~35% opacity for atmosphere.
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -97,7 +97,7 @@ All config is in the `CONFIG` block at the top of `obs/index.html`:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `ROSTER` | 21 names | List of Confirmed Streamers to check |
+| `ROSTER` | (loaded at runtime) | The roster is fetched from `/streamers.json` on every page load — that file is the single source of truth across the site. To change the list, edit `streamers.json` at the repo root (or use the admin CMS). |
 | `POLL_MS` | `90_000` | How often to re-check live status (ms) |
 | `ROTATE_MS` | `45_000` | How long each page of 6 shows before rotating (ms) |
 | `VIDEO_OPACITY` | `0.35` | Background video brightness (0–1) |
