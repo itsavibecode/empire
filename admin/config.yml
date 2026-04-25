@@ -2,18 +2,44 @@
 # Reference: https://decapcms.org/docs/configuration-options/
 #
 # Login flow:
-#   visitor -> /admin/  -> Decap Bridge (https://decapbridge.com) -> GitHub OAuth
-#   The bridge handles the OAuth callback so we don't need our own auth server.
-#   Only users with write access to itsavibecode/empire can actually commit.
+#   visitor -> /admin/  -> Decap Bridge (PKCE) -> Google/Microsoft/password
+#   The Bridge holds a fine-grained GitHub PAT (set up in the Bridge
+#   dashboard, never in this repo) and uses git-gateway to commit on
+#   our behalf. Only users authorized in the Bridge dashboard can log in.
 
 backend:
-  name: github
+  name: git-gateway
   repo: itsavibecode/empire
   branch: main
-  base_url: https://decapbridge.com
-  auth_endpoint: oauth
+  auth_type: pkce
+  base_url: https://auth.decapbridge.com
+  auth_endpoint: /sites/09e3b7b9-9d79-4fca-ae0f-9a6177bb81b4/pkce
+  auth_token_endpoint: /sites/09e3b7b9-9d79-4fca-ae0f-9a6177bb81b4/token
+  gateway_url: https://gateway.decapbridge.com
 
-# Avatar image uploads land in /avatars/ (same folder index.html reads from)
+  # Commit message templates.
+  # Intentionally generic — Decap Bridge's defaults interpolate
+  # {{author-name}} (the admin's Google profile name), which would
+  # leak a real name into the public git history. These templates
+  # keep the audit trail (the "admin:" prefix) without that.
+  commit_messages:
+    create: 'admin: add {{collection}} entry "{{slug}}"'
+    update: 'admin: update {{collection}}'
+    delete: 'admin: remove {{collection}} entry "{{slug}}"'
+    uploadMedia: 'admin: upload {{path}}'
+    deleteMedia: 'admin: delete {{path}}'
+    openAuthoring: 'admin: {{message}}'
+
+# PKCE auth claims — map JWT fields from the Google login back to
+# the Decap CMS user-info display (top-right "logged in as ..." chrome).
+# Only visible to the logged-in user inside the CMS, not exposed publicly.
+auth:
+  email_claim: email
+  first_name_claim: first_name
+  last_name_claim: last_name
+  avatar_url_claim: avatar_url
+
+# Avatar uploads land in /avatars/ (same folder index.html reads from)
 media_folder: avatars
 public_folder: /avatars
 

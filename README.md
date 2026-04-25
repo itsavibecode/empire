@@ -16,6 +16,15 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.4.1 — 2026-04-25
+
+Patch — wired up Decap Bridge auth, finalized admin login.
+
+- **`admin/config.yml` — backend changed from `github` to `git-gateway`** and pointed at the registered Decap Bridge site (PKCE flow, Google login). The Bridge dashboard holds a fine-grained GitHub PAT scoped to this repo only.
+- **Commit message templates customized to omit `{{author-name}}`** — Decap Bridge's defaults would interpolate the logged-in admin's Google profile name into every commit, which would leak a real name into the public git history. Templates now use generic `admin:` prefixes that keep the CMS audit trail without exposing personal info.
+- **PKCE auth claims** (email, first/last name, avatar) configured so the logged-in admin sees their own info in the CMS chrome — only visible to themselves, not in the public site or commit history.
+- After this push, `https://ourempirex.com/admin/` is fully functional: login → edit → save → GitHub Action regenerates everything → live in ~30s.
+
 ### v0.4.0 — 2026-04-25
 
 Minor — admin CMS scaffold + minor `streamers.json` shape change.
