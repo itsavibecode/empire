@@ -1,8 +1,8 @@
-name: Sync content (streamers + properties + socials)
+name: Sync content (streamers + properties + socials + about)
 
-# When streamers.json, properties.json, or socials.json changes (typically
-# from a Decap CMS commit), regenerate the derived blocks in index.html
-# and llms.txt. Path filter prevents this workflow from re-triggering itself.
+# When any *.json content file changes (typically from a Decap CMS commit),
+# regenerate the derived blocks in index.html and llms.txt.
+# Path filter prevents this workflow from re-triggering itself.
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
       - streamers.json
       - properties.json
       - socials.json
+      - about.json
 
 permissions:
   contents: write
@@ -44,6 +45,11 @@ jobs:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-socials.py
 
+      - name: Sync About The Event section in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-about.py
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -52,6 +58,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing to sync."
           else
-            git commit -m "chore: regenerate streamer/property/social derived blocks"
+            git commit -m "chore: regenerate streamer/property/social/about derived blocks"
             git push
           fi

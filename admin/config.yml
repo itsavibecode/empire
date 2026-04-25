@@ -192,3 +192,53 @@ collections:
                 widget: string
                 hint: 'Full https:// URL for external platforms (e.g. https://kick.com/empirex). For OBS, use /obs/ (the on-site overlay page).'
                 pattern: ['^(https?://|/).+', 'Must be a full URL or a path starting with /']
+
+  - name: about
+    label: About The Event
+    description: |
+      The "About The Event" section just below the hero — small uppercase
+      label, big title, descriptive paragraph, flyer image, and four detail
+      rows (When / Where / Streaming Partner / Access).
+      Saving here triggers the GitHub Action that regenerates this section
+      in index.html (~30 seconds after save).
+    files:
+      - file: about.json
+        label: About The Event content
+        name: about_file
+        format: json
+        fields:
+          - name: label
+            label: 'Section label (small uppercase pill above the title)'
+            widget: string
+            hint: 'e.g. "About The Event"'
+          - name: title
+            label: 'Section title'
+            widget: text
+            hint: 'Press Enter for a line break (the site renders newlines as <br>). e.g. "The World''s First Live-Streamed[Enter]Reality Experience"'
+          - name: description
+            label: 'Description paragraph'
+            widget: text
+            hint: 'The body text below the title. Plain text — no HTML.'
+          - name: flyer_image
+            label: 'Flyer image'
+            widget: image
+            choose_url: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'The promotional flyer shown next to the details. Saved at the repo root (e.g. about-flyer.jpg) so existing references keep working.'
+          - name: details
+            label: 'Detail rows'
+            label_singular: 'Detail row'
+            widget: list
+            collapsed: false
+            summary: '{{fields.heading}}: {{fields.body}}'
+            hint: 'Each row is a small heading + one line of text. Drag to reorder. Add or remove rows as needed.'
+            fields:
+              - name: heading
+                label: 'Heading'
+                widget: string
+                hint: 'Short label, e.g. "When", "Where", "Access".'
+              - name: body
+                label: 'Body'
+                widget: text
+                hint: 'The text shown beneath the heading.'

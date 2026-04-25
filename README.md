@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.7.0 — 2026-04-25
+
+Minor — About The Event section moved to CMS.
+
+- **`about.json` at the repo root** — the entire About section (label, title, description, flyer image, 4 detail rows) is now CMS-editable.
+- **About flyer migrated** — the inline base64 about-flyer image extracted to `about-flyer.jpg` at the repo root. ~440 KB shed from `index.html`.
+- **`.github/scripts/sync-about.py`** — regenerates the `<section class="about">` block in `index.html` from `about.json`. Idempotent.
+- **Workflow** updated to also trigger on `about.json` and run `sync-about.py`.
+- **`/admin/` CMS** has a fourth collection: **"About The Event"**. Title field accepts line breaks (rendered as `<br>` on the site); detail rows are drag-reorderable; flyer is an image upload.
+
 ### v0.6.0 — 2026-04-25
 
 Minor — social bar moved to CMS (curated dropdown of platforms), Linktree replaced with OBS shortcut.

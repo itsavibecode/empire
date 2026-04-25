@@ -1,0 +1,12 @@
+{
+  "label": "About The Event",
+  "title": "The World's First Live-Streamed\nReality Experience",
+  "description": "EmpireX is where live streaming groups from around the world come together in luxury Airbnbs, settle group rivalries, create content, and party — all broadcasted LIVE on Kick to thousands of viewers. Compete for social influence and a CASH PRIZE across 5 unforgettable days in Florida.",
+  "flyer_image": "about-flyer.jpg",
+  "details": [
+    { "heading": "When",              "body": "June 11–15, 2026" },
+    { "heading": "Where",             "body": "Kissimmee, Florida & surrounding cities within a 15–30 mile radius" },
+    { "heading": "Streaming Partner", "body": "Partnered with Kick — our first trip streaming live to thousands of viewers" },
+    { "heading": "Access",            "body": "Invite only. Follow @our.empire on Instagram to RSVP" }
+  ]
+}
