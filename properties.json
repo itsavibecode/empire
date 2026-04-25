@@ -1,0 +1,76 @@
+{
+  "properties": [
+    {
+      "id": "the-baddest-tb",
+      "title": "Townhouse in Kissimmee",
+      "host_group": "The Baddest (TB)",
+      "date_range": "Jun 12-16",
+      "badge": "Booked",
+      "image": "houses/the-baddest-tb.png"
+    },
+    {
+      "id": "the-vibe-gate-way",
+      "title": "Home in Davenport",
+      "host_group": "The Vibe Gate Way",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/the-vibe-gate-way.png"
+    },
+    {
+      "id": "dtb-part-2",
+      "title": "Home in Kissimmee",
+      "host_group": "DTB Part 2",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/dtb-part-2.png"
+    },
+    {
+      "id": "the-twinz",
+      "title": "Home in Kissimmee",
+      "host_group": "The Twinz",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/the-twinz.png"
+    },
+    {
+      "id": "blacks-united-bu",
+      "title": "Home in Kissimmee",
+      "host_group": "Blacks United (BU)",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/blacks-united-bu.png"
+    },
+    {
+      "id": "all-pursuit-ap",
+      "title": "Home in Kissimmee",
+      "host_group": "All Pursuit (AP)",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/all-pursuit-ap.png"
+    },
+    {
+      "id": "dynamic-dynasty",
+      "title": "Home in Kissimmee",
+      "host_group": "Dynamic Dynasty",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/dynamic-dynasty.png"
+    },
+    {
+      "id": "kozy",
+      "title": "Home in Four Corners",
+      "host_group": "Kozy",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/kozy.png"
+    },
+    {
+      "id": "pretty-reckless-pr",
+      "title": "Home in Kissimmee",
+      "host_group": "Pretty Reckless (PR)",
+      "date_range": "",
+      "badge": "Booked",
+      "image": "houses/pretty-reckless-pr.png"
+    }
+  ]
+}

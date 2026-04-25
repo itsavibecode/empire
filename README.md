@@ -16,6 +16,17 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.5.0 — 2026-04-25
+
+Minor — added "The Properties" as a CMS-editable section, same architecture as streamers.
+
+- **`properties.json` at the repo root** — single source of truth for the 9 Airbnb property cards (id, title, host group, optional date range, badge, image path).
+- **Inline base64 house images migrated** to `houses/*.png` files. The 9 inline images extracted from `index.html` shrunk it by another ~6 MB (down from ~11.8 MB to ~5.8 MB).
+- **`.github/scripts/sync-properties.py`** — regenerates the houses-grid block in `index.html` from `properties.json`. Idempotent.
+- **Workflow** (`.github/workflows/sync-streamers.yml`) renamed to "Sync content (streamers + properties)" and now triggers on either `streamers.json` or `properties.json`. Runs both sync scripts on every trigger; both are no-ops if their data didn't change.
+- **`/admin/` CMS** has a new collection: **"The Properties"**. Same edit/reorder/save UX as the streamer roster. Photo uploads land in `/houses/`.
+- After this push, the admin can add, remove, edit, or reorder properties from the CMS — exactly the same flow as streamers.
+
 ### v0.4.1 — 2026-04-25
 
 Patch — wired up Decap Bridge auth, finalized admin login.

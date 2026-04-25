@@ -99,3 +99,56 @@ collections:
                 media_folder: '/avatars'
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
+
+  - name: properties
+    label: The Properties
+    description: |
+      The Airbnb properties shown in the "20+ Luxury Airbnb Homes" section.
+      Each entry becomes one card on the live site.
+      Saving here triggers the GitHub Action that regenerates the houses
+      grid in index.html (~30 seconds after save).
+
+      Drag rows to reorder — order shown here is the order on the site.
+    files:
+      - file: properties.json
+        label: Property list
+        name: properties_file
+        format: json
+        fields:
+          - name: properties
+            label: Properties
+            label_singular: Property
+            widget: list
+            collapsed: false
+            summary: '{{fields.title}} — {{fields.host_group}}'
+            fields:
+              - name: id
+                label: 'Internal ID'
+                widget: string
+                hint: 'Used as the avatar filename. Lowercase, hyphens only (e.g. "the-baddest-tb"). Set once and leave alone — changing it after upload orphans the image file.'
+                pattern: ['^[a-z0-9-]+$', 'Lowercase letters, digits, and hyphens only']
+              - name: title
+                label: 'Property title'
+                widget: string
+                hint: 'Shown as the bold heading on the card (e.g. "Townhouse in Kissimmee", "Home in Davenport").'
+              - name: host_group
+                label: 'Host group'
+                widget: string
+                hint: 'The streaming group hosting this property. The "Hosted by Empire Group, " prefix is added automatically — just enter the group name (e.g. "The Baddest (TB)").'
+              - name: date_range
+                label: 'Date range (optional)'
+                widget: string
+                required: false
+                hint: 'Optional. If filled in, appears next to the host (e.g. "Jun 12-16"). Leave blank to omit.'
+              - name: badge
+                label: 'Status badge'
+                widget: string
+                default: 'Booked'
+                hint: 'The small label in the top-right of the card. Defaults to "Booked".'
+              - name: image
+                label: 'Property photo'
+                widget: image
+                choose_url: false
+                media_folder: '/houses'
+                public_folder: '/houses'
+                hint: 'Wide aspect (16:9 or similar) works best. JPG or PNG. Will be saved under /houses/.'
