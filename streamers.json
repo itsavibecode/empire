@@ -22,18 +22,18 @@
       "avatar": "avatars/xenathewitch.jpg"
     },
     {
-      "slug": "kimmee",
-      "name": "Kimmee",
-      "url": "https://kick.com/kimmee",
-      "initials": "KM",
-      "avatar": "avatars/kimmee.jpg"
-    },
-    {
       "slug": "iceposeidon",
       "name": "Ice Poseidon",
       "url": "https://kick.com/iceposeidon",
       "initials": "IP",
       "avatar": "avatars/iceposeidon.jpg"
+    },
+    {
+      "slug": "kimmee",
+      "name": "Kimmee",
+      "url": "https://kick.com/kimmee",
+      "initials": "KM",
+      "avatar": "avatars/kimmee.jpg"
     },
     {
       "slug": "jjstream",
