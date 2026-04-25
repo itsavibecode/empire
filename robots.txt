@@ -1,0 +1,5 @@
+# robots.txt for ourempirex.com
+User-agent: *
+Allow: /
+
+Sitemap: https://ourempirex.com/sitemap.xml

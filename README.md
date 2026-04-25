@@ -16,6 +16,18 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.2.0 — 2026-04-25
+
+Minor — SEO and machine-readability infrastructure.
+
+- **Promo Video heading removed** — section now just shows the embedded video, no h2 above it.
+- **Keywords meta** — appended the v0.1.0 streamer roster (Kimmee, Ice Poseidon, Dtan, Shangel, Ozemi, lifeismizzy, RiddaW) so the searchable terms match what's actually on the page.
+- **Canonical URL** — added `<link rel="canonical">` so duplicate-URL crawls collapse to the root.
+- **JSON-LD Event schema** — structured data for Google rich results: event name, dates, location, organizer, all 27 performers as `Person` nodes with their Kick URLs. Eligible for the Event SERP card.
+- **robots.txt** — allow-all + sitemap reference.
+- **sitemap.xml** — lists `/`, `/promo/`, `/disclaimer.html`, `/privacy.html` with priorities. `/obs/` is intentionally omitted (overlay tool, not a marketing page).
+- **llms.txt** — LLM-friendly summary at root per [llmstxt.org](https://llmstxt.org/) so ChatGPT / Claude / etc. can ingest the event details and streamer list cleanly when asked about EmpireX.
+
 ### v0.1.3 — 2026-04-24
 
 Patch — gave the Promo Video a real preview frame.
