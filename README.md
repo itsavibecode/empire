@@ -16,6 +16,13 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.2.2 — 2026-04-25
+
+Patch — roster + tagline tweak.
+
+- **Removed IDuncle** from Confirmed Streamers (HTML card, JSON-LD performer list, keywords meta, JS live-status poll list, llms.txt). Roster down to 26.
+- **Tagline** — "ProjectX Meets IRL Streaming" → "Project X Meets IRL Streaming Competition" everywhere it appears (title, OG, Twitter, hero tagline, structured data).
+
 ### v0.2.1 — 2026-04-25
 
 Patch — wristband copy tweak.
