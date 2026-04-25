@@ -1,5 +1,6 @@
 # robots.txt for ourempirex.com
 User-agent: *
 Allow: /
+Disallow: /game/
 
 Sitemap: https://ourempirex.com/sitemap.xml

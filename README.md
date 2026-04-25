@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.9.0 — 2026-04-25
+
+Minor — added `/game/` (slot machine mini-game, currently with placeholder artwork).
+
+- **`empire/game/`** — copied from `yada-yoda/gain-train` (the user's other GitHub account, so no third-party rights issue). Original code by Dario Corsi (CodePen `AXyxpp`); MIT-style license preserved at `game/license.txt`.
+- **Rebrand pass on `game/index.html`** — title changed to "EmpireX Spin", added `<meta name="robots" content="noindex">`, added the EmpireX favicon. Updated the dead-redirect `fb.me` React 15.1.0 CDN to a stable cdnjs URL.
+- **`robots.txt`** — `Disallow: /game/` so search engines skip the unlinked page (sitemap doesn't reference it either).
+- **Not linked from the homepage**, per user request — only reachable via `https://ourempirex.com/game/` direct.
+- **Placeholder artwork** — currently using the original CodePen S3-hosted SVG strips. To be swapped for EmpireX-themed symbols once the new artwork is provided.
+
 ### v0.8.0 — 2026-04-25
 
 Minor — SEO and share metadata exposed to CMS.
