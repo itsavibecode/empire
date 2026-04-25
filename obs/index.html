@@ -938,7 +938,8 @@
   fetch('/streamers.json', { cache: 'no-cache' })
     .then(r => r.json())
     .then(data => {
-      CONFIG.ROSTER = data.map(s => s.name);
+      const list = Array.isArray(data) ? data : (data.streamers || []);
+      CONFIG.ROSTER = list.map(s => s.name);
       poll();
       setInterval(poll, CONFIG.POLL_MS);
     })

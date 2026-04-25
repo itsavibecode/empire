@@ -1,0 +1,75 @@
+# Decap CMS configuration for the EmpireX admin
+# Reference: https://decapcms.org/docs/configuration-options/
+#
+# Login flow:
+#   visitor -> /admin/  -> Decap Bridge (https://decapbridge.com) -> GitHub OAuth
+#   The bridge handles the OAuth callback so we don't need our own auth server.
+#   Only users with write access to itsavibecode/empire can actually commit.
+
+backend:
+  name: github
+  repo: itsavibecode/empire
+  branch: main
+  base_url: https://decapbridge.com
+  auth_endpoint: oauth
+
+# Avatar image uploads land in /avatars/ (same folder index.html reads from)
+media_folder: avatars
+public_folder: /avatars
+
+# Commit straight to main — no editorial review workflow needed for solo admin
+publish_mode: simple
+
+# Display settings (visible inside the CMS UI)
+site_url: https://ourempirex.com
+display_url: https://ourempirex.com
+logo_url: https://ourempirex.com/logo.png
+
+collections:
+  - name: roster
+    label: Confirmed Streamers
+    description: |
+      The single source of truth for the streamer list shown across
+      ourempirex.com, /obs/ (BRB scene), /promo/, and the SEO data.
+      Saving here triggers a GitHub Action that regenerates the visible
+      cards, JSON-LD performer list, keywords meta, and live-status JS
+      automatically (~30 seconds after save).
+
+      Drag rows to reorder — order shown here is the order on the site.
+    files:
+      - file: streamers.json
+        label: Streamer roster
+        name: streamers_file
+        format: json
+        fields:
+          - name: streamers
+            label: Streamers
+            label_singular: Streamer
+            widget: list
+            collapsed: false
+            summary: '{{fields.name}} — {{fields.url}}'
+            fields:
+              - name: slug
+                label: 'Kick slug'
+                widget: string
+                hint: 'The part after kick.com/ — lowercase, no spaces. Used in DOM IDs and the live-status API call.'
+              - name: name
+                label: 'Display name'
+                widget: string
+                hint: "Shown on the cards. Use the streamer's preferred capitalization (e.g. lifeismizzy, MikeSmallsJr)."
+              - name: url
+                label: 'Kick URL'
+                widget: string
+                pattern: ['^https://kick\.com/.+', 'Must be an https://kick.com/... URL']
+              - name: initials
+                label: 'Initials'
+                widget: string
+                hint: '1–3 letters shown as fallback if the avatar image fails to load (e.g. "MS" for MikeSmallsJr).'
+                pattern: ['^.{1,3}$', '1 to 3 characters']
+              - name: avatar
+                label: 'Avatar image'
+                widget: image
+                choose_url: false
+                media_folder: '/avatars'
+                public_folder: '/avatars'
+                hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'

@@ -1,184 +1,186 @@
-[
-  {
-    "slug": "mikesmallsjr",
-    "name": "MikeSmallsJr",
-    "url": "https://kick.com/mikesmallsjr",
-    "initials": "MS",
-    "avatar": "avatars/mikesmallsjr.jpg"
-  },
-  {
-    "slug": "saltygummibear",
-    "name": "SaltyGummiBear",
-    "url": "https://kick.com/saltygummibear",
-    "initials": "SG",
-    "avatar": "avatars/saltygummibear.jpg"
-  },
-  {
-    "slug": "xenathewitch",
-    "name": "XenaTheWitch",
-    "url": "https://kick.com/xenathewitch",
-    "initials": "XT",
-    "avatar": "avatars/xenathewitch.jpg"
-  },
-  {
-    "slug": "kimmee",
-    "name": "Kimmee",
-    "url": "https://kick.com/kimmee",
-    "initials": "KM",
-    "avatar": "avatars/kimmee.jpg"
-  },
-  {
-    "slug": "iceposeidon",
-    "name": "Ice Poseidon",
-    "url": "https://kick.com/iceposeidon",
-    "initials": "IP",
-    "avatar": "avatars/iceposeidon.jpg"
-  },
-  {
-    "slug": "jjstream",
-    "name": "JJStream",
-    "url": "https://kick.com/jjstream",
-    "initials": "JJ",
-    "avatar": "avatars/jjstream.jpg"
-  },
-  {
-    "slug": "woodbaby",
-    "name": "WoodBaby",
-    "url": "https://kick.com/woodbaby",
-    "initials": "WB",
-    "avatar": "avatars/woodbaby.jpg"
-  },
-  {
-    "slug": "taylorstarlight",
-    "name": "TaylorStarlight",
-    "url": "https://kick.com/taylorstarlight",
-    "initials": "TS",
-    "avatar": "avatars/taylorstarlight.jpg"
-  },
-  {
-    "slug": "ashwilder",
-    "name": "AshWilder",
-    "url": "https://kick.com/ashwilder",
-    "initials": "AW",
-    "avatar": "avatars/ashwilder.jpg"
-  },
-  {
-    "slug": "floridaboy",
-    "name": "FloridaBoy",
-    "url": "https://kick.com/floridaboy",
-    "initials": "FB",
-    "avatar": "avatars/floridaboy.jpg"
-  },
-  {
-    "slug": "adrianahlee",
-    "name": "AdrianahLee",
-    "url": "https://kick.com/adrianahlee",
-    "initials": "AL",
-    "avatar": "avatars/adrianahlee.jpg"
-  },
-  {
-    "slug": "feef",
-    "name": "Feef",
-    "url": "https://kick.com/feef",
-    "initials": "FE",
-    "avatar": "avatars/feef.jpg"
-  },
-  {
-    "slug": "blackassdave",
-    "name": "BlackAssDave",
-    "url": "https://kick.com/blackassdave",
-    "initials": "BA",
-    "avatar": "avatars/blackassdave.jpg"
-  },
-  {
-    "slug": "nanapips",
-    "name": "NanaPips",
-    "url": "https://kick.com/nanapips",
-    "initials": "NP",
-    "avatar": "avatars/nanapips.jpg"
-  },
-  {
-    "slug": "briewylde",
-    "name": "BrieWylde",
-    "url": "https://kick.com/briewylde",
-    "initials": "BW",
-    "avatar": "avatars/briewylde.jpg"
-  },
-  {
-    "slug": "fanos",
-    "name": "Fanos",
-    "url": "https://kick.com/fanos",
-    "initials": "FA",
-    "avatar": "avatars/fanos.jpg"
-  },
-  {
-    "slug": "jackie",
-    "name": "Jackie",
-    "url": "https://kick.com/jackie",
-    "initials": "JA",
-    "avatar": "avatars/jackie.jpg"
-  },
-  {
-    "slug": "iamTalanya",
-    "name": "IamTalanya",
-    "url": "https://kick.com/iamTalanya",
-    "initials": "IT",
-    "avatar": "avatars/iamTalanya.jpg"
-  },
-  {
-    "slug": "kennyhoopz",
-    "name": "KennyHoopz",
-    "url": "https://kick.com/kennyhoopz",
-    "initials": "KH",
-    "avatar": "avatars/kennyhoopz.jpg"
-  },
-  {
-    "slug": "kikikrazy",
-    "name": "KikiKrazy",
-    "url": "https://kick.com/kikikrazy",
-    "initials": "KK",
-    "avatar": "avatars/kikikrazy.jpg"
-  },
-  {
-    "slug": "cobbruvs",
-    "name": "Cobbruvs",
-    "url": "https://kick.com/cobbruvs",
-    "initials": "CB",
-    "avatar": "avatars/cobbruvs.jpg"
-  },
-  {
-    "slug": "dtanmanb",
-    "name": "Dtan",
-    "url": "https://kick.com/dtanmanb",
-    "initials": "DT",
-    "avatar": "avatars/dtanmanb.png"
-  },
-  {
-    "slug": "shangel",
-    "name": "Shangel",
-    "url": "https://kick.com/shangel",
-    "initials": "SH",
-    "avatar": "avatars/shangel.jpg"
-  },
-  {
-    "slug": "ozemi",
-    "name": "Ozemi",
-    "url": "https://kick.com/ozemi",
-    "initials": "OZ",
-    "avatar": "avatars/ozemi.jpg"
-  },
-  {
-    "slug": "lifeismizzy",
-    "name": "lifeismizzy",
-    "url": "https://kick.com/lifeismizzy",
-    "initials": "LM",
-    "avatar": "avatars/lifeismizzy.jpg"
-  },
-  {
-    "slug": "riddaw",
-    "name": "RiddaW",
-    "url": "https://kick.com/riddaw",
-    "initials": "RW",
-    "avatar": "avatars/riddaw.jpg"
-  }
-]
+{
+  "streamers": [
+    {
+      "slug": "mikesmallsjr",
+      "name": "MikeSmallsJr",
+      "url": "https://kick.com/mikesmallsjr",
+      "initials": "MS",
+      "avatar": "avatars/mikesmallsjr.jpg"
+    },
+    {
+      "slug": "saltygummibear",
+      "name": "SaltyGummiBear",
+      "url": "https://kick.com/saltygummibear",
+      "initials": "SG",
+      "avatar": "avatars/saltygummibear.jpg"
+    },
+    {
+      "slug": "xenathewitch",
+      "name": "XenaTheWitch",
+      "url": "https://kick.com/xenathewitch",
+      "initials": "XT",
+      "avatar": "avatars/xenathewitch.jpg"
+    },
+    {
+      "slug": "kimmee",
+      "name": "Kimmee",
+      "url": "https://kick.com/kimmee",
+      "initials": "KM",
+      "avatar": "avatars/kimmee.jpg"
+    },
+    {
+      "slug": "iceposeidon",
+      "name": "Ice Poseidon",
+      "url": "https://kick.com/iceposeidon",
+      "initials": "IP",
+      "avatar": "avatars/iceposeidon.jpg"
+    },
+    {
+      "slug": "jjstream",
+      "name": "JJStream",
+      "url": "https://kick.com/jjstream",
+      "initials": "JJ",
+      "avatar": "avatars/jjstream.jpg"
+    },
+    {
+      "slug": "woodbaby",
+      "name": "WoodBaby",
+      "url": "https://kick.com/woodbaby",
+      "initials": "WB",
+      "avatar": "avatars/woodbaby.jpg"
+    },
+    {
+      "slug": "taylorstarlight",
+      "name": "TaylorStarlight",
+      "url": "https://kick.com/taylorstarlight",
+      "initials": "TS",
+      "avatar": "avatars/taylorstarlight.jpg"
+    },
+    {
+      "slug": "ashwilder",
+      "name": "AshWilder",
+      "url": "https://kick.com/ashwilder",
+      "initials": "AW",
+      "avatar": "avatars/ashwilder.jpg"
+    },
+    {
+      "slug": "floridaboy",
+      "name": "FloridaBoy",
+      "url": "https://kick.com/floridaboy",
+      "initials": "FB",
+      "avatar": "avatars/floridaboy.jpg"
+    },
+    {
+      "slug": "adrianahlee",
+      "name": "AdrianahLee",
+      "url": "https://kick.com/adrianahlee",
+      "initials": "AL",
+      "avatar": "avatars/adrianahlee.jpg"
+    },
+    {
+      "slug": "feef",
+      "name": "Feef",
+      "url": "https://kick.com/feef",
+      "initials": "FE",
+      "avatar": "avatars/feef.jpg"
+    },
+    {
+      "slug": "blackassdave",
+      "name": "BlackAssDave",
+      "url": "https://kick.com/blackassdave",
+      "initials": "BA",
+      "avatar": "avatars/blackassdave.jpg"
+    },
+    {
+      "slug": "nanapips",
+      "name": "NanaPips",
+      "url": "https://kick.com/nanapips",
+      "initials": "NP",
+      "avatar": "avatars/nanapips.jpg"
+    },
+    {
+      "slug": "briewylde",
+      "name": "BrieWylde",
+      "url": "https://kick.com/briewylde",
+      "initials": "BW",
+      "avatar": "avatars/briewylde.jpg"
+    },
+    {
+      "slug": "fanos",
+      "name": "Fanos",
+      "url": "https://kick.com/fanos",
+      "initials": "FA",
+      "avatar": "avatars/fanos.jpg"
+    },
+    {
+      "slug": "jackie",
+      "name": "Jackie",
+      "url": "https://kick.com/jackie",
+      "initials": "JA",
+      "avatar": "avatars/jackie.jpg"
+    },
+    {
+      "slug": "iamTalanya",
+      "name": "IamTalanya",
+      "url": "https://kick.com/iamTalanya",
+      "initials": "IT",
+      "avatar": "avatars/iamTalanya.jpg"
+    },
+    {
+      "slug": "kennyhoopz",
+      "name": "KennyHoopz",
+      "url": "https://kick.com/kennyhoopz",
+      "initials": "KH",
+      "avatar": "avatars/kennyhoopz.jpg"
+    },
+    {
+      "slug": "kikikrazy",
+      "name": "KikiKrazy",
+      "url": "https://kick.com/kikikrazy",
+      "initials": "KK",
+      "avatar": "avatars/kikikrazy.jpg"
+    },
+    {
+      "slug": "cobbruvs",
+      "name": "Cobbruvs",
+      "url": "https://kick.com/cobbruvs",
+      "initials": "CB",
+      "avatar": "avatars/cobbruvs.jpg"
+    },
+    {
+      "slug": "dtanmanb",
+      "name": "Dtan",
+      "url": "https://kick.com/dtanmanb",
+      "initials": "DT",
+      "avatar": "avatars/dtanmanb.png"
+    },
+    {
+      "slug": "shangel",
+      "name": "Shangel",
+      "url": "https://kick.com/shangel",
+      "initials": "SH",
+      "avatar": "avatars/shangel.jpg"
+    },
+    {
+      "slug": "ozemi",
+      "name": "Ozemi",
+      "url": "https://kick.com/ozemi",
+      "initials": "OZ",
+      "avatar": "avatars/ozemi.jpg"
+    },
+    {
+      "slug": "lifeismizzy",
+      "name": "lifeismizzy",
+      "url": "https://kick.com/lifeismizzy",
+      "initials": "LM",
+      "avatar": "avatars/lifeismizzy.jpg"
+    },
+    {
+      "slug": "riddaw",
+      "name": "RiddaW",
+      "url": "https://kick.com/riddaw",
+      "initials": "RW",
+      "avatar": "avatars/riddaw.jpg"
+    }
+  ]
+}

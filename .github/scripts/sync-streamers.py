@@ -52,7 +52,10 @@ def card_html(s):
 
 def main():
     with open(SJSON, 'r', encoding='utf-8') as f:
-        streamers = json.load(f)
+        data = json.load(f)
+    # streamers.json is wrapped in {"streamers": [...]} so the Decap CMS schema
+    # has a top-level object to bind to. Tolerate the unwrapped legacy form too.
+    streamers = data['streamers'] if isinstance(data, dict) else data
 
     if not streamers:
         sys.exit('streamers.json is empty')
