@@ -1,0 +1,15 @@
+# Windows shell metadata
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# macOS shell metadata
+.DS_Store
+
+# Editor crud
+*.swp
+*.tmp
+*~
+
+# Claude commit message scratch
+.git/COMMIT_MSG.tmp
