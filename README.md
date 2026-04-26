@@ -16,6 +16,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.2 — 2026-04-26
+
+Patch — HORSE pickup with art-aware Mike-or-Mike+Ice swap.
+
+- **New HORSE pickup type** (weight 1, same as 400 — rare). On collision: 8-second speed boost (`HORSE_SPEED_MULT = 1.7`× world scroll), centered text-burst `GIDDY UP!` in saddle-brown, celebratory jingle (placeholder until horse-neigh.mp3 lands).
+- **Mike's render swaps to horse-riding sprite** during the boost. Pre-cutscene: solo `mike-horse-01..08` (8-frame walk/run cycle). **Post-cutscene** (after Ice has joined): switches to `mike-ice-horse-01..14` (14-frame duo cycle with Ice riding behind Mike). Ice's separate alongside-runner sprite is hidden during the ride since the duo art already includes him.
+- **Horse art extracted** from your green-screen sources via the new flood-mode extractor with bumped `bg_tolerance: 40` to handle the slightly gradient chroma-key edges. 8 solo + 14 duo frames.
+- **HUD badge** added: `🐎 7.4s` countdown in saddle-brown when the boost is active. Joins the existing ham/weed badges.
+- **Sprite scale bump** during ride — horse-Mike renders at 1.4× the standard player height so the horse fits properly without looking miniature.
+
 ### Run v0.18.1 — 2026-04-26
 
 Patch — Ice Poseidon side-kick is alive in the world.

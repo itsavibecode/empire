@@ -39,6 +39,8 @@
   var HAM_FREEZE_MS = 600;          // Mario-1UP freeze on ham pickup
   var HAM_BONUS_MS = 6500;          // coin shower window
   var WEED_DEBUFF_MS = 10000;       // slow + red tint duration
+  var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
+  var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
   var JUMP_DURATION = 0.7;         // total seconds for a full jump arc
   var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
@@ -78,6 +80,10 @@
     { kind: 'h400', frames: _seq('h400-spin-', 20),  frameMs: 60,  weight: 1 },
     // WEED — debuff (slow + red tint). 16-frame spin.
     { kind: 'weed', frames: _seq('weed-spin-', 16),  frameMs: 70,  weight: 2 },
+    // HORSE — 8-sec speed boost. Static icon (will replace with proper
+    // spinning sheet later). Mike's run-cycle gets temporarily swapped
+    // for the horse-riding sprite during the boost window.
+    { kind: 'horse', frames: ['horse-icon'],         frameMs: 0,   weight: 1 },
   ];
   var PICKUP_TARGET_HEIGHT_FRAC = 0.09;
 
@@ -164,6 +170,18 @@
     var wk = 'weed-spin-' + (ws < 10 ? '0' + ws : ws);
     SPRITE_PATHS[wk] = 'img/sprites/' + wk + '.png';
   }
+  // Horse-riding sprite swaps (active during the HORSE pickup window).
+  // Solo-Mike version pre-cutscene; Mike+Ice version post-cutscene.
+  for (var mh = 1; mh <= 8; mh++) {
+    var mhk = 'mike-horse-' + (mh < 10 ? '0' + mh : mh);
+    SPRITE_PATHS[mhk] = 'img/sprites/' + mhk + '.png';
+  }
+  for (var mih = 1; mih <= 14; mih++) {
+    var mihk = 'mike-ice-horse-' + (mih < 10 ? '0' + mih : mih);
+    SPRITE_PATHS[mihk] = 'img/sprites/' + mihk + '.png';
+  }
+  // Horse pickup item icon — use the same horse-overhead frame as the item sprite
+  SPRITE_PATHS['horse-icon'] = 'img/sprites/mike-horse-05.png';
   // Cop car sprites (referenced by OBSTACLE_TYPES below)
   ['01', '02', '05', '09'].forEach(function (n) {
     SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
@@ -531,6 +549,7 @@
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
       weedDebuffUntil: 0, // slow + red tint until this timestamp
+      horseBoostUntil: 0, // 1.7x scroll + horse-riding sprite until this timestamp
       // Center-screen text overlay (Mario-1UP style for ham + brief
       // burst for 400 / weed pickups)
       textLabel: '',
@@ -852,6 +871,10 @@
       var mInst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
       if (mInst2) mInst2.playbackRate = 0.6;
       playSfx('damage');
+    } else if (kind === 'horse') {
+      state.effects.horseBoostUntil = now + HORSE_BOOST_MS;
+      showPickupText('GIDDY UP!', '#8B4513', 900);
+      playSfx('ham-pickup'); // reuse celebratory jingle until horse-neigh.mp3 lands
     }
   }
 
@@ -903,6 +926,8 @@
     if (nowMs > state.effects.hamFreezeUntil && nowMs < state.effects.hamBonusUntil) {
       effSpeed *= 1.7;
     }
+    // HORSE boost: 1.7x scroll for the duration of the ride
+    if (nowMs < state.effects.horseBoostUntil) effSpeed *= HORSE_SPEED_MULT;
 
     // Move obstacles + coins + pickups UP toward Mike.
     var i;
@@ -1064,6 +1089,10 @@
       if (nowMs < state.effects.weedDebuffUntil) {
         var weedRem = ((state.effects.weedDebuffUntil - nowMs) / 1000).toFixed(1);
         html += '<span class="eff eff-weed">🌿 ' + weedRem + 's</span>';
+      }
+      if (nowMs < state.effects.horseBoostUntil) {
+        var horseRem = ((state.effects.horseBoostUntil - nowMs) / 1000).toFixed(1);
+        html += '<span class="eff eff-horse">🐎 ' + horseRem + 's</span>';
       }
       effEl.innerHTML = html;
     }
@@ -1418,6 +1447,9 @@
   function drawIce(now) {
     if (!state.iceSidekickJoined) return;
     if (cutscene.active) return;
+    // During horse boost, Ice rides on Mike's horse (built into the
+    // mike-ice-horse-* sprite), so no separate Ice render needed.
+    if (performance.now() < state.effects.horseBoostUntil) return;
     var size = scaledSize('ice-13', PLAYER_TARGET_HEIGHT_FRAC * 0.85);
     var x = iceX();
     var y = playerY() - size.h;
@@ -1468,19 +1500,33 @@
     var x = laneX(fromLane) + (laneX(toLane) - laneX(fromLane)) * t;
     if (t >= 1) state.player.lane = toLane;
 
-    var size = scaledSize('mike-run-01', PLAYER_TARGET_HEIGHT_FRAC);
-    // Apply jump lift (negative Y offset = up) so Mike arcs over jump-only obstacles
-    var y = playerY() - size.h + jumpLiftPx(now);
-
-    // Run-cycle frame. While airborne, freeze on the mid-stride frame
-    // (frame 3) so it looks like a jumping pose rather than running legs.
-    var key;
-    if (isAirborne(now)) {
+    // Determine which sprite-set Mike uses right now:
+    // 1. HORSE boost active → horse-riding (solo if Ice hasn't joined,
+    //    Mike+Ice duo if Ice has joined post-cutscene)
+    // 2. Otherwise → standard run-cycle (with jump-pose freeze if airborne)
+    var nowMs = performance.now();
+    var onHorse = nowMs < state.effects.horseBoostUntil;
+    var key, sizingKey;
+    if (onHorse) {
+      // Cycle horse-riding frames. Use mike-ice-horse if Ice has joined.
+      var horsePrefix = state.iceSidekickJoined ? 'mike-ice-horse-' : 'mike-horse-';
+      var horseFrameCount = state.iceSidekickJoined ? 14 : 8;
+      var hframe = (Math.floor(now / RUN_FRAME_MS) % horseFrameCount) + 1;
+      key = horsePrefix + (hframe < 10 ? '0' + hframe : hframe);
+      sizingKey = horsePrefix + '01';
+    } else if (isAirborne(now)) {
       key = 'mike-run-03';
+      sizingKey = 'mike-run-01';
     } else {
       var frame = Math.floor(now / RUN_FRAME_MS) % 8 + 1;
       key = 'mike-run-' + (frame < 10 ? '0' + frame : frame);
+      sizingKey = 'mike-run-01';
     }
+    // Horse sprite is taller than the running Mike — bump scale slightly
+    var heightFrac = onHorse ? PLAYER_TARGET_HEIGHT_FRAC * 1.4 : PLAYER_TARGET_HEIGHT_FRAC;
+    var size = scaledSize(sizingKey, heightFrac);
+    // Apply jump lift (negative Y offset = up) so Mike arcs over jump-only obstacles
+    var y = playerY() - size.h + jumpLiftPx(now);
 
     // Flash on i-frames (after a hit)
     var flashAlpha = 1;
@@ -1524,6 +1570,7 @@
     state.effects.hamFreezeUntil = 0;
     state.effects.hamBonusUntil = 0;
     state.effects.weedDebuffUntil = 0;
+    state.effects.horseBoostUntil = 0;
     state.effects.textShownUntil = 0;
     state.effects.textLabel = '';
     // Cut scene resets: re-read the localStorage flag (so a run that

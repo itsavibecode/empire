@@ -131,6 +131,10 @@ SOURCES = [
     {'file': 'animals-goats.png',          'prefix': 'goat',         'min_area': 1500},
     # Vehicles
     {'file': 'cop_car_iso_transparent.png','prefix': 'cop-car',      'use_alpha': True, 'min_area': 3000},
+    # Horse-riding sheets — green-screen background (rgb ~ 76,233,41).
+    # Flood-fill mode handles the gradient edges cleanly.
+    {'file': 'mike-rides-horse.png',                  'prefix': 'mike-horse',     'bg_mode': 'flood', 'bg_tolerance': 40, 'min_area': 5000},
+    {'file': 'Mike-Ice-Ride-Horse-overhead-front-view.png', 'prefix': 'mike-ice-horse', 'bg_mode': 'flood', 'bg_tolerance': 40, 'min_area': 5000},
 ]
 
 
