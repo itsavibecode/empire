@@ -21,6 +21,21 @@ body:after {
   pointer-events: none;
 }
 
+/* ---- Debug click counter (v0.10.4) ---- */
+.click-debug {
+  position: fixed;
+  top: .5rem;
+  left: .8rem;
+  z-index: 200;
+  color: #FFD566;
+  font-family: monospace;
+  font-size: .9rem;
+  background: rgba(0,0,0,.6);
+  padding: .25rem .6rem;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
 /* ---- Tabs (Fun / More Fun) ---- */
 /* width: max-content so the container only covers the actual buttons,
    leaving the rest of the top strip clickable for spinning the reels. */

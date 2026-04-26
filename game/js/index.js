@@ -48,10 +48,18 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
 
   _createClass(App, [
     { key: 'handleClick', value: function handleClick(e) {
+      // === Debug counter (v0.10.4) ===
+      window.__clickDebugCount = (window.__clickDebugCount || 0) + 1;
+      var dbg = document.getElementById('click-debug');
+      if (dbg) {
+        var tgt = e && e.target ? (e.target.tagName || 'unknown').toLowerCase() : 'no-target';
+        dbg.textContent = 'clicks: ' + window.__clickDebugCount + ' | last: ' + (e ? e.type : 'unknown') + ' on ' + tgt;
+      }
+      // === End debug ===
+
       // For pointer events, ignore presses on tabs / bookhockeys link /
       // save button so they can do their own thing without also spinning.
-      // Key events always spin regardless of which element has focus
-      // (avoids the "tab still focused, key goes nowhere" bug).
+      // Key events always spin regardless of which element has focus.
       var isKey = e && (e.type === 'keydown' || e.type === 'keypress');
       if (e && !isKey && e.target && e.target.closest) {
         if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') || e.target.closest('.save-btn')) {

@@ -16,6 +16,15 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.4 — 2026-04-25
+
+Diagnostic — temporary on-screen click counter to track down why one user click is triggering all 3 reels at once on real-site usage (preview server can't reproduce the issue).
+
+- Added a small yellow `clicks: N | last: <event> on <element>` indicator at the top-left of `/game/`. Updates on every `handleClick` invocation.
+- If one user click bumps the counter by 1: handler is firing once, bug is elsewhere.
+- If one user click bumps the counter by 2 or 3: there are duplicate listeners attached or the browser is re-firing the event. Diagnosis would point at React mounting twice or a browser/extension quirk.
+- The counter will be removed once the bug is resolved.
+
 ### v0.10.3 — 2026-04-25
 
 Patch — defensive fixes for the game's input handling.
