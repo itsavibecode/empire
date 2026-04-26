@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.11">
+  <meta name="version" content="0.18.12">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -126,13 +126,9 @@
   <!-- Cut scene overlay — Pokemon-style first-encounter dialogue
        between Mike and Ice. Game-world is paused while this is up.
        Three player-choice buttons appear after the dialogue finishes
-       typing in. All choices funnel to "Ice has joined." The Mike+Ice
-       composition art has its sky-blue bg flood-keyed transparent so
-       the bg-chile-runner-01.png shows through behind them. The middle
-       blue band stays opaque (Ice's shirt is the same blue, can't be
-       algorithmically separated). -->
+       typing in. All choices funnel to "Ice has joined." -->
   <div class="overlay overlay-cutscene hidden" id="overlay-cutscene">
-    <img class="cutscene-bg" id="cutscene-bg" src="img/cutscene-closed-keyed.png" alt="">
+    <img class="cutscene-bg" id="cutscene-bg" src="img/cutscene-closed.jpg" alt="">
     <div class="cutscene-dialogue">
       <div class="cutscene-name" id="cutscene-name">ICE POSEIDON</div>
       <p class="cutscene-text" id="cutscene-text"></p>
@@ -175,7 +171,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.11</div>
+  <div class="game-version">Run v0.18.12</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

@@ -16,6 +16,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.12 — 2026-04-26
+
+Patch — reverted the cut scene background swap (kept the cop-car fix).
+
+- Per playtest, the v0.18.11 partial cut scene background swap (chile bg showing only through the top sky region while the middle blue band stayed opaque) wasn't worth shipping — it looked half-done because Ice's shirt is the exact same blue as the source middle band, so a clean full-bg replacement isn't algorithmically possible without manually masking Ice in an editor.
+- Reverted: cut scene HTML/JS now reference the original `cutscene-{closed,mid,open}.jpg` (full blue background) and the chile-bg CSS background is removed from `.overlay-cutscene`. Keyed PNG files deleted.
+- Cop car motion-blur crop from v0.18.11 stays in — that fix was unrelated and worked clean.
+
 ### Run v0.18.11 — 2026-04-26
 
 Patch — cop car motion blur trimmed + cut scene layered over chile bg (with caveat).

@@ -437,7 +437,7 @@
       var bg = document.getElementById('cutscene-bg');
       if (bg && bg.dataset.mouth !== mouthVariant) {
         bg.dataset.mouth = mouthVariant;
-        bg.src = 'img/cutscene-' + mouthVariant + '-keyed.png';
+        bg.src = 'img/cutscene-' + mouthVariant + '.jpg';
       }
       // Typewriter
       var elapsed = now - cutscene.startedAt;
@@ -453,7 +453,7 @@
       if (cutscene.typedChars >= CUTSCENE_LINE.length) {
         cutscene.showingChoices = true;
         var bg2 = document.getElementById('cutscene-bg');
-        if (bg2) { bg2.dataset.mouth = 'closed'; bg2.src = 'img/cutscene-closed-keyed.png'; }
+        if (bg2) { bg2.dataset.mouth = 'closed'; bg2.src = 'img/cutscene-closed.jpg'; }
         var ch2 = document.getElementById('cutscene-choices');
         if (ch2) ch2.classList.remove('hidden');
         playSfx('ice-neck'); // Ice's "neck stretch" cue marks the end of his line
