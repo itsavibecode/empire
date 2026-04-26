@@ -94,21 +94,39 @@ MERGE_GAP_DEFAULT = 0
 #   `bg_extra`  list of additional (r,g,b) tuples to also key out as
 #               background. Use for sheets with checker-pattern bgs
 #               where auto-detect only catches one of the two colors.
+#   `use_alpha` if True, ignore RGB-tolerance bg detection entirely and
+#               use the source's existing alpha channel. For sheets that
+#               were ALREADY alpha-keyed before being dropped in
+#               (user-cleaned `_alpha` / `_transparent` files). Avoids
+#               re-introducing the eyebrow/facial-hair eating problem
+#               that pure RGB-tolerance approach has on dark figures.
 SOURCES = [
-    {'file': 'mike-runs.png',         'prefix': 'mike-run'},
-    {'file': 'mike-actions.png',      'prefix': 'mike-action'},
-    {'file': 'mike-combat.png',       'prefix': 'mike-combat'},
-    {'file': 'ice-poseidon.png',      'prefix': 'ice'},
-    {'file': 'cx-coin.png',           'prefix': 'cx-coin'},
-    # NPC sheets — used for street obstacles, phone-thieves (the
-    # "reaching" poses), and individual mob members.
-    {'file': 'npcs-grid.png',         'prefix': 'npc-grid',       'min_area': 1200},
-    # Pedestrian sheet has a grey-and-white CHECKER background. Auto-
-    # detect picks the grey, but white checker squares survive without
-    # this override — they show as solid white halos around each sprite
-    # in-game. Adding (255,255,255) as an extra BG color keys those out.
-    {'file': 'npcs-pedestrians.png',  'prefix': 'npc-pedestrian', 'bg_extra': [(255, 255, 255)]},
-    {'file': 'npcs-protesters.png',   'prefix': 'npc-protester'},
+    # Mike + Ice — switched to user-pre-cleaned alpha sheets in v0.16.
+    # Original black-bg sheets (mike-runs.png etc.) had the eyebrow-
+    # eating bug because dark interior pixels were within tolerance of
+    # the near-black background. The _alpha versions have proper
+    # transparency baked in, so we just use the alpha channel.
+    {'file': 'mike_runs_alpha.png',        'prefix': 'mike-run',     'use_alpha': True},
+    {'file': 'mike_actions_true_alpha.png','prefix': 'mike-action',  'use_alpha': True},
+    {'file': 'mike_combat_alpha.png',      'prefix': 'mike-combat',  'use_alpha': True},
+    {'file': 'ice_poseidon_alpha.png',     'prefix': 'ice',          'use_alpha': True},
+    # Single-frame items + spin sheets
+    {'file': 'cx-coin.png',                'prefix': 'cx-coin'},
+    {'file': 'ham-spin.png',               'prefix': 'ham-spin'},
+    {'file': '400-spin.png',               'prefix': 'h400-spin'},
+    {'file': 'weed_spin_transparent.png',  'prefix': 'weed-spin',    'use_alpha': True},
+    # NPC sheets — street obstacles, phone-thieves, mob members.
+    {'file': 'npcs-grid.png',              'prefix': 'npc-grid',     'min_area': 1200},
+    {'file': 'npcs-pedestrians.png',       'prefix': 'npc-pedestrian', 'bg_extra': [(255, 255, 255)]},
+    {'file': 'npcs-protesters.png',        'prefix': 'npc-protester'},
+    # Background fauna (animal walk cycles for sidewalk ambient life)
+    {'file': 'animals-seagulls.png',       'prefix': 'seagull',      'min_area': 1500},
+    {'file': 'animals-pigeons.png',        'prefix': 'pigeon',       'min_area': 1500},
+    {'file': 'animals-cats.png',           'prefix': 'cat',          'min_area': 1500},
+    {'file': 'animals-dogs.png',           'prefix': 'dog',          'min_area': 1500},
+    {'file': 'animals-goats.png',          'prefix': 'goat',         'min_area': 1500},
+    # Vehicles
+    {'file': 'cop_car_iso_transparent.png','prefix': 'cop-car',      'use_alpha': True, 'min_area': 3000},
 ]
 
 
@@ -131,6 +149,16 @@ def detect_bg_color(img):
     return Counter(corners).most_common(1)[0][0]
 
 
+def make_is_bg_alpha():
+    """For sheets that ALREADY have proper alpha transparency baked in
+    (user-pre-cleaned files like *_alpha.png). Avoids the RGB-tolerance
+    approach which would eat dark interior pixels (eyebrows, facial hair,
+    black outlines on Mike) — just trusts the existing alpha channel."""
+    def is_bg(r, g, b, a):
+        return a < 50
+    return is_bg
+
+
 def make_is_bg(bg_rgbs):
     """Return a closure that tests if a pixel is within BG_TOLERANCE of
     ANY of the provided background colors in every channel.
@@ -138,9 +166,12 @@ def make_is_bg(bg_rgbs):
     bg_rgbs is a list of (r, g, b) tuples. This handles sheets whose
     "background" is actually two alternating colors — most commonly a
     grey-and-white checker pattern from image-editor 'transparent'
-    placeholders. For single-color backgrounds, pass a list of one."""
+    placeholders. For single-color backgrounds, pass a list of one.
+
+    Signature is (r, g, b, a) for compatibility with the alpha-mode
+    is_bg variant, but `a` is ignored here."""
     tol = BG_TOLERANCE
-    def is_bg(r, g, b):
+    def is_bg(r, g, b, a):
         for bg in bg_rgbs:
             if (abs(r - bg[0]) <= tol and
                 abs(g - bg[1]) <= tol and
@@ -170,8 +201,8 @@ def find_components(img, is_bg, min_area=MIN_SPRITE_AREA):
         for x0 in range(w):
             if visited[row_offset + x0]:
                 continue
-            r, g, b = px[x0, y0][:3]
-            if is_bg(r, g, b):
+            p = px[x0, y0]
+            if is_bg(p[0], p[1], p[2], p[3] if len(p) > 3 else 255):
                 visited[row_offset + x0] = 1
                 continue
             # Found a new component — flood-fill it
@@ -184,8 +215,8 @@ def find_components(img, is_bg, min_area=MIN_SPRITE_AREA):
                 idx = cy * w + cx
                 if visited[idx]:
                     continue
-                cr, cg, cb = px[cx, cy][:3]
-                if is_bg(cr, cg, cb):
+                cp = px[cx, cy]
+                if is_bg(cp[0], cp[1], cp[2], cp[3] if len(cp) > 3 else 255):
                     visited[idx] = 1
                     continue
                 visited[idx] = 1
@@ -296,8 +327,8 @@ def make_sprite(img, bbox, is_bg):
     w, h = region.size
     for y in range(h):
         for x in range(w):
-            r, g, b, _a = px[x, y]
-            if is_bg(r, g, b):
+            r, g, b, a = px[x, y]
+            if is_bg(r, g, b, a):
                 px[x, y] = (0, 0, 0, 0)
     return region
 
@@ -309,16 +340,21 @@ def process_file(spec):
         return 0
     print(f'  processing {spec["file"]}...')
     img = Image.open(src).convert('RGBA')
-    bg_rgb = detect_bg_color(img)
-    bg_colors = [bg_rgb]
-    extra = spec.get('bg_extra')
-    if extra:
-        bg_colors.extend(tuple(c) for c in extra)
-    is_bg = make_is_bg(bg_colors)
-    if len(bg_colors) > 1:
-        print(f'    detected BG color: rgb{bg_rgb} + extras: {bg_colors[1:]}')
+    if spec.get('use_alpha'):
+        # Source already has proper alpha-keyed transparency. Trust it.
+        is_bg = make_is_bg_alpha()
+        print(f'    using ALPHA mode (existing transparency)')
     else:
-        print(f'    detected BG color: rgb{bg_rgb}')
+        bg_rgb = detect_bg_color(img)
+        bg_colors = [bg_rgb]
+        extra = spec.get('bg_extra')
+        if extra:
+            bg_colors.extend(tuple(c) for c in extra)
+        is_bg = make_is_bg(bg_colors)
+        if len(bg_colors) > 1:
+            print(f'    detected BG color: rgb{bg_rgb} + extras: {bg_colors[1:]}')
+        else:
+            print(f'    detected BG color: rgb{bg_rgb}')
     min_area = spec.get('min_area', MIN_SPRITE_AREA)
     raw = find_components(img, is_bg, min_area=min_area)
     merge_gap = spec.get('merge_gap', MERGE_GAP_DEFAULT)

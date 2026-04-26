@@ -107,6 +107,16 @@
   for (var bgi = 1; bgi <= 4; bgi++) {
     SPRITE_PATHS['bg-road-' + bgi] = 'img/bg/bg-road-tile-' + bgi + '.png';
   }
+  // Title-screen background art (Mike + Ice on Chilean street). Stored
+  // as a JPEG (800 KB) instead of the 7 MB source PNG since it's a
+  // photographic-style image that compresses fine without quality loss.
+  SPRITE_PATHS['titlescreen'] = 'img/titlescreen.jpg';
+  // Seagull frames for animated title-screen flying birds (rows 3-4 of
+  // the source sheet are the wings-spread flight poses).
+  for (var sg = 9; sg <= 12; sg++) {
+    var sk = 'seagull-' + (sg < 10 ? '0' + sg : sg);
+    SPRITE_PATHS[sk] = 'img/sprites/' + sk + '.png';
+  }
 
   // ============================================================
   // Audio catalog. Three logical channels — music, sfx, dialogue —
@@ -124,6 +134,14 @@
     'mob-argue':           { src: 'audio/mob-argue.mp3',           channel: 'sfx' },
     'punch-phone-snatch':  { src: 'audio/punch-phone-snatch.mp3',  channel: 'sfx' },
     'ice-neck':            { src: 'audio/ice-neck.mp3',            channel: 'dialogue' },
+    // v0.16 audio additions
+    'coin-pickup':         { src: 'audio/coin-pickup.wav',         channel: 'sfx' },
+    'swoosh':              { src: 'audio/swoosh.flac',             channel: 'sfx' },
+    // Pre-loaded for v0.17 features (referenced when those land)
+    'ham-pickup':          { src: 'audio/1up/MP3/1up3.mp3',        channel: 'sfx' },
+    'bonus-end':           { src: 'audio/Blip/MP3/Blip2.mp3',      channel: 'sfx' },
+    'dialogue-beep':       { src: 'audio/Blip/MP3/Blip3.mp3',      channel: 'dialogue' },
+    'jump':                { src: 'audio/Jump/MP3/Jump1.mp3',      channel: 'sfx' },
   };
 
   var audioInstances = {};
@@ -330,6 +348,7 @@
     speed: SPEED_INITIAL,
     distance: 0,         // meters traveled (1 px ≈ 0.1 m for nicer numbers)
     distancePx: 0,       // raw pixel distance (used for procedural BG features)
+    elapsedMs: 0,        // ms of "playing" time (excludes paused time)
     coins: 0,
     multiplier: 1,
     lives: LIVES_INITIAL,
@@ -338,6 +357,8 @@
     obstacles: [],       // [{lane, y, type, spawnedAt, bobPhase, w, h, hit}]
     coinsArr: [],        // [{lane, y, w, h, picked}]
     spawnTimer: 0,
+    seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
+    seagullSpawnTimer: 0,
   };
 
   // ============================================================
@@ -346,12 +367,24 @@
   function loadOne(key, path) {
     return new Promise(function (resolve) {
       var img = new Image();
-      img.onload = function () { sprites[key] = img; resolve(); };
+      var done = false;
+      var settle = function () {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+      img.onload = function () { sprites[key] = img; settle(); };
       img.onerror = function () {
         console.warn('Failed to load sprite:', path);
-        resolve(); // don't block startup; missing sprite just won't render
+        settle(); // don't block startup; missing sprite just won't render
       };
       img.src = path;
+      // CRITICAL: timeout fallback. On mobile networks a single hung
+      // image request can stall the entire Promise.all forever, leaving
+      // the game stuck in loading phase and the canvas blank — exactly
+      // the bug reported on mobile. After 12 sec we resolve anyway so
+      // boot proceeds; the missing sprite just won't render.
+      setTimeout(settle, 12000);
     });
   }
 
@@ -369,17 +402,32 @@
     // Use device pixel ratio for crisp rendering on retina, but cap at
     // 2x so we don't murder mobile GPUs at 3x DPR.
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.floor(window.innerWidth * dpr);
-    canvas.height = Math.floor(window.innerHeight * dpr);
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
+    var w = viewW();
+    var h = viewH();
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
   }
 
-  // CSS-pixel dimensions (post-DPR transform) — use these everywhere
-  // for game logic so coordinates match what the player sees.
-  function viewW() { return window.innerWidth; }
-  function viewH() { return window.innerHeight; }
+  // CSS-pixel dimensions. Defensive on mobile: visualViewport tracks the
+  // ACTUAL visible region (excluding the address bar / soft keyboard),
+  // documentElement.clientWidth/Height ignores scrollbars and is the
+  // most reliable cross-browser measure. window.innerWidth/Height can
+  // be off by the scrollbar width on some mobile Safari versions.
+  function viewW() {
+    if (window.visualViewport && window.visualViewport.width) {
+      return Math.round(window.visualViewport.width);
+    }
+    return document.documentElement.clientWidth || window.innerWidth;
+  }
+  function viewH() {
+    if (window.visualViewport && window.visualViewport.height) {
+      return Math.round(window.visualViewport.height);
+    }
+    return document.documentElement.clientHeight || window.innerHeight;
+  }
 
   function laneX(lane) {
     return laneXOnRoad(lane);
@@ -404,6 +452,7 @@
     if (newLane < 0 || newLane >= LANES) return;
     state.player.targetLane = newLane;
     state.player.lerpX = 0; // restart lerp from current position
+    playSfx('swoosh');
   }
 
   function bindInput() {
@@ -530,6 +579,7 @@
     var pxThisFrame = state.speed * dt;
     state.distance += pxThisFrame * 0.1; // 0.1 = px-to-meters fudge
     state.distancePx += pxThisFrame;     // raw px counter for procedural BG
+    state.elapsedMs += dt * 1000;        // wall-clock playing time (excludes paused)
 
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
@@ -607,6 +657,7 @@
       if (Math.abs(coCenterY - pCenterY2) < (co.h * 0.6 + pHitH * 0.4)) {
         co.picked = true;
         state.coins++;
+        playSfx('coin-pickup');
         // Multiplier: 1x for first 5, 2x for next 10, 3x thereafter
         if (state.coins >= 16) state.multiplier = 3;
         else if (state.coins >= 6) state.multiplier = 2;
@@ -625,9 +676,11 @@
 
   function updateHUD() {
     var scoreEl = document.querySelector('.score');
+    var timeEl  = document.querySelector('.time');
     var coinsEl = document.querySelector('.coins');
     var livesEl = document.querySelector('.lives');
     if (scoreEl) scoreEl.textContent = Math.floor(state.distance) + ' m';
+    if (timeEl)  timeEl.textContent  = formatTime(state.elapsedMs);
     if (coinsEl) coinsEl.textContent = 'Cx ' + state.coins + ' ×' + state.multiplier;
     if (livesEl) {
       var hearts = '';
@@ -636,6 +689,12 @@
       }
       livesEl.textContent = hearts;
     }
+  }
+  function formatTime(ms) {
+    var totalSec = Math.floor(ms / 1000);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' + s : s);
   }
 
   // ============================================================
@@ -649,29 +708,30 @@
     ctx.fillStyle = '#1a1230';
     ctx.fillRect(0, 0, w, h);
 
+    if (state.phase === 'menu') {
+      // Title screen — draw the cover-art bg and let the seagulls fly
+      // across the sky. The HTML overlay (start panel with ON BABY!
+      // title + START button) sits on top of this.
+      drawTitleScreen(now);
+      return;
+    }
+
     // Road covers the WHOLE viewport — Mike is now near the top of the
     // playfield rather than the bottom, and the bg-road tile already
     // contains everything (asphalt, sidewalks, painted markings, manhole
-    // covers, shops on the edges). The previous separate skyline strip
-    // would have overlapped Mike's sprite, so we drop it for v0.14.
+    // covers, shops on the edges).
     drawRoad(0, h);
 
-    // Obstacles + coins. Sort by Y so the closer-to-Mike ones draw on
-    // top of farther ones (since Mike is at top, "closer to him" = lower Y).
-    // We sort DESCENDING by Y here — items with higher Y are farther
-    // away (further down the road) and should draw FIRST (under closer
-    // items). Closer items (lower Y) draw last, on top.
+    // Obstacles + coins, sorted so closer (lower-Y) ones draw on top.
     var allDrawables = state.obstacles.concat(state.coinsArr);
     allDrawables.sort(function (a, b) { return b.y - a.y; });
     for (var i = 0; i < allDrawables.length; i++) {
       var d = allDrawables[i];
       var spriteKey, drift = 0;
       if (d.type) {
-        // Animated obstacle with frame cycle + wobble
         spriteKey = getObstacleSprite(d, now);
         drift = getObstacleDrift(d, now);
       } else {
-        // Coin (spinning)
         spriteKey = pickCoinSprite(now);
       }
       drawAt(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h);
@@ -679,6 +739,68 @@
 
     // Player (last, on top)
     drawPlayer(now);
+  }
+
+  // ============================================================
+  // Title screen — cover art + animated seagull flock.
+  // ============================================================
+  var seagullLastTick = 0;
+  function drawTitleScreen(now) {
+    var w = viewW();
+    var h = viewH();
+    var ts = sprites['titlescreen'];
+    if (ts) {
+      // Cover-fit (fill viewport, may crop). Aspect-ratio aware.
+      var s = Math.max(w / ts.width, h / ts.height);
+      var iw = ts.width * s;
+      var ih = ts.height * s;
+      ctx.drawImage(ts, (w - iw) / 2, (h - ih) / 2, iw, ih);
+    }
+
+    // Tick seagull simulation in render (no separate update loop while in menu).
+    var dt = Math.min(0.1, (now - seagullLastTick) / 1000);
+    seagullLastTick = now;
+    updateSeagulls(dt, now);
+
+    // Draw seagulls (right→left flight)
+    for (var i = 0; i < state.seagulls.length; i++) {
+      drawSeagull(state.seagulls[i], now);
+    }
+  }
+
+  function updateSeagulls(dt, now) {
+    // Move existing seagulls
+    for (var i = 0; i < state.seagulls.length; i++) {
+      state.seagulls[i].x += state.seagulls[i].vx * dt;
+    }
+    // Cull off-screen left
+    state.seagulls = state.seagulls.filter(function (g) {
+      return g.x > -200;
+    });
+    // Spawn new ones periodically
+    state.seagullSpawnTimer += dt;
+    if (state.seagullSpawnTimer > 1.6 + Math.random() * 1.4) {
+      state.seagullSpawnTimer = 0;
+      state.seagulls.push({
+        x: viewW() + 60,
+        // Sky region — top 35% of viewport
+        y: viewH() * (0.04 + Math.random() * 0.30),
+        vx: -(60 + Math.random() * 90),       // px/sec leftward
+        scale: 0.8 + Math.random() * 0.7,
+        flapPhase: Math.random() * 1000,
+      });
+    }
+  }
+
+  function drawSeagull(g, now) {
+    // Cycle through flying frames 09-12 every 130 ms (wing-flap cadence)
+    var idx = 9 + Math.floor((now + g.flapPhase) / 130) % 4;
+    var key = 'seagull-' + (idx < 10 ? '0' + idx : idx);
+    var img = sprites[key];
+    if (!img) return;
+    var w = img.width * g.scale;
+    var hh = img.height * g.scale;
+    ctx.drawImage(img, g.x - w / 2, g.y - hh / 2, w, hh);
   }
 
   function drawRoad(yTop, yBot) {
@@ -838,6 +960,7 @@
     state.speed = SPEED_INITIAL;
     state.distance = 0;
     state.distancePx = 0;
+    state.elapsedMs = 0;
     state.coins = 0;
     state.multiplier = 1;
     state.lives = LIVES_INITIAL;
@@ -976,6 +1099,13 @@
     ctx = canvas.getContext('2d');
     resize();
     window.addEventListener('resize', resize);
+    // Mobile orientation change + visualViewport changes (address bar
+    // showing/hiding on iOS Safari changes the height). Both can leave
+    // the canvas at the wrong size if we don't re-measure.
+    window.addEventListener('orientationchange', resize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resize);
+    }
     bindInput();
     loadAudio();
     bindAudioUI();

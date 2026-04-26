@@ -43,6 +43,7 @@ html, body {
 }
 .hud-left { text-align: left; }
 .score { font-size: 2.4rem; line-height: 1; }
+.time { color: rgba(255,255,255,.7); margin-top: .15rem; font-size: 1.4rem; }
 .coins { color: #C9A4FF; margin-top: .2rem; }
 .lives {
   font-size: 2rem;
@@ -179,15 +180,34 @@ html, body {
   border-color: #fff;
 }
 
-/* Pause overlay — overlay base styles already cover positioning + fade */
+/* Pause overlay — overlay base styles already cover positioning + fade.
+   Chile-map SVG sits behind the title as ambient flavor (very low
+   opacity so PAUSED text remains the focal point). */
 .overlay-pause {
-  background: rgba(10, 10, 20, .55); /* lighter than the gameover/start overlays so the world peeks through */
+  background: rgba(10, 10, 20, .55);
   cursor: pointer;
 }
+.overlay-pause .pause-map {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+  height: 80%;
+  max-height: 600px;
+  width: auto;
+  opacity: .25;
+  pointer-events: none;
+}
 .overlay-pause h1 {
+  position: relative; /* sit on top of the map */
   font-size: 5rem;
   letter-spacing: .25em;
   color: #fff;
+  text-shadow: 0 0 12px rgba(0,0,0,.7), 4px 4px 0 rgba(142,92,203,.6);
+}
+.overlay-pause .hint {
+  position: relative;
 }
 
 /* ---- Settings (audio) panel — gear icon top-right + collapsible panel ---- */

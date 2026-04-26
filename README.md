@@ -16,6 +16,32 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.16.0 — 2026-04-26
+
+Minor — biggest visual + polish round. Mobile fix, Mike's eyebrows back, real title screen, animated seagulls, timer in HUD, lots of SFX wired.
+
+**Bug fixes:**
+
+- **Mobile rendering** finally working. Root causes: (1) `Promise.all` of sprite loads could hang forever if a single image timed out on a flaky mobile network, leaving the game stuck in `loading` phase forever. Added a 12 sec per-sprite timeout that resolves the promise even on hang. (2) `window.innerWidth` / `innerHeight` aren't always reliable on mobile (visualViewport changes when the address bar shows/hides on iOS Safari). Switched to `window.visualViewport.width/height` with `documentElement.clientWidth/Height` as fallback. Also added `orientationchange` and `visualViewport.resize` listeners so the canvas re-measures correctly when the device rotates.
+- **Mike's facial details restored.** The black-bg-removal extractor was eating dark interior pixels (eyebrows, facial hair, body outlines) because they were within `BG_TOLERANCE = 24` of the near-black detected background color. Solution: extractor gained a `use_alpha` per-source mode that ignores RGB tolerance entirely and trusts the source file's existing alpha channel. Switched all 4 Mike + Ice sources to the user-pre-cleaned `_alpha.png` versions. No more eyebrow eating.
+
+**New features:**
+
+- **Title screen** rebuilt — the new `titlescreen.jpg` (Mike + Ice on the Chilean street, optimized from a 7 MB PNG to an 800 KB JPEG) now serves as the canvas backdrop. **Animated seagulls** spawn periodically off-screen-right and drift across the sky in the upper 35% of the viewport, cycling through 4 wing-flap frames (extracted seagull-09 through seagull-12) at varying scale + speed for organic flock motion. The HTML overlay (ON BABY! cursive title + START button) sits on top.
+- **Pause overlay** redesigned — the SVG map of Chile (`Mapa Todas las regiones.svg`) sits behind the PAUSED text at 25% opacity for ambient flavor. PAUSED title now has a beefier glow + purple drop-shadow for contrast against the map.
+- **Timer in HUD** — `M:SS` format, sits between score and Cx counter on the left side of the HUD. Counts wall-clock playing time only (excludes paused time).
+- **Audio expansions wired:**
+    - `coin-pickup.wav` plays on every Cx coin collected
+    - `swoosh.flac` (picked from your 43-file pack) plays on every lane shift
+    - `1up3.mp3`, `Blip2.mp3`, `Blip3.mp3`, `Jump1.mp3` all preloaded for v0.17 features (ham-pickup / bonus-end / dialogue-beep / jump)
+
+**Extractor improvements:**
+
+- Added `use_alpha` per-source override (alpha-channel-only BG detection)
+- Pulled in 8 new source sheets: `ham-spin`, `400-spin`, `weed-spin`, animal sheets (cats/dogs/goats/seagulls/pigeons), cop-car
+- 217 individual sprites total (up from 129 in v0.15.1)
+- Some animal sheets (dogs, pigeons) had imperfect BG detection due to colored gradient backgrounds — those need bg_extra overrides in v0.17 when we wire fauna spawns
+
 ### Run v0.15.4 — 2026-04-26
 
 Patch — sound-unmute hint + smaller control buttons.
