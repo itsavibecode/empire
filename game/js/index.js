@@ -185,10 +185,18 @@ var Row = function (_React$Component2) {_inherits(Row, _React$Component2);
         // makes the visible cell deterministic (no mid-animation snapshot
         // captured by html2canvas during Save-as-PNG, which was the bug
         // where the saved image didn't show the win lined up).
+        //
+        // End-of-cycle positions per direction (from the keyframes):
+        //   ltr-V end: (V + 1) * 33.3333 vw       [33.3, 66.6, 100]
+        //   rtl-V end: -2 * (V + 1) * 33.3333 vw  [-66.6, -133.3, -200]
+        // Earlier (v0.10.8) the rtl formula was wrong (-(V+2)*33.3),
+        // which left the center row showing a different cell than the
+        // ltr rows — so visual wins didn't match the recorded endValues
+        // and you'd get LOSER even though the face looked aligned.
         var endV = this.props.data.rows[this.props.index].endValue;
         var pos = this.props.direction === 'ltr'
           ? ((endV + 1) * 33.3333) + 'vw'
-          : (-(endV + 2) * 33.3333) + 'vw';
+          : (-2 * (endV + 1) * 33.3333) + 'vw';
         style = { animationName: 'none', backgroundPosition: pos };
       }
 

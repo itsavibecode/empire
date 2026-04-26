@@ -16,6 +16,13 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.10 — 2026-04-25
+
+Patch — fixes the "won but got LOSER" bug + bumps 1symbol-b crop again.
+
+- **RTL background-position formula was wrong** (introduced in v0.10.8). The center reel scrolls right-to-left and its keyframe end positions are `[-66.6, -133.3, -200] vw` for values `[0, 1, 2]` — i.e., `-2 × (V + 1) × 33.3333`. My v0.10.8 formula used `-(V + 2) × 33.3333` which gave `[-66.6, -100, -133.3]`. Result: when the center row stopped, it showed the wrong cell visually compared to top/bottom — but the recorded `endValue` was still the row's actual value, so determinePrize correctly reported "no match". Visually the face could still look matched (faces are roughly symmetric so a misaligned slice can still seem to fit), giving the impression you'd won when you hadn't. Fixed.
+- **1symbol-b crop** moved to `crop_top: 0.05, crop_bottom: 0.55`. Trims a sliver off the top of the head and a lot more of the shoulders — face fills more of the strip, eyes + nose ride higher in the middle reel, mouth/chin in the bottom reel.
+
 ### v0.10.9 — 2026-04-25
 
 Patch — fix prize-message-to-symbol mapping + bump 1symbol-b crop.
