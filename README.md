@@ -16,6 +16,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.15.3 — 2026-04-26
+
+Patch — BookHockeys footer link.
+
+- Added the BookHockeys cross-link to the bottom of `/run/`, mirroring the `/game/` pattern. **Different visual treatment from the slot game** though: at rest the logo renders **grayscale at 35% opacity**, on hover it shifts to **full color at 65% opacity**. The transition is a 0.3 sec CSS ease on both `opacity` and `filter: grayscale()`. Logo height is 40 px (vs 70 px on the slot page — runner footer is more compact). Sits centered above the URL caption + version display. Re-uses the existing `/bookhockeys-logo.png` so no new asset.
+
 ### Run v0.15.2 — 2026-04-26
 
 Patch — HUD overlap + space-bar bug.
