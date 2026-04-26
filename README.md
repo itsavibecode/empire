@@ -16,6 +16,15 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.15.1 — 2026-04-26
+
+Patch — fixed white halos around walking pedestrians.
+
+- The `npcs-pedestrians.png` source sheet had a grey-and-white **checker-pattern background** (the typical "transparent" placeholder from image editors). The extraction script's auto-detection picked the grey checker squares as background, but the white squares were 48 RGB units away — outside the default ±24 tolerance — so they survived as **solid white halos** around each walking pedestrian sprite when rendered in-game.
+- **Extractor gained `bg_extra` per-source override** — a list of additional `(r, g, b)` colors to also key out as background. For `npcs-pedestrians.png`, `bg_extra: [(255, 255, 255)]` makes the script treat both the detected grey and pure white as background.
+- Re-extracted all 12 walking-pedestrian frames. Confirmed clean transparency on test pixels (top-left, mid-left, mid-right of the sprite all alpha=0).
+- Bonus side effect: pedestrian sprite count went 14 → 12. The 2 "extras" were empty grid cells the extractor was incorrectly counting as sprites because of the white-square boundaries — now correctly filtered out.
+
 ### Run v0.15.0 — 2026-04-26
 
 Polish round — pause + animated street people.

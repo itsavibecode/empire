@@ -87,21 +87,27 @@ ROW_TOLERANCE = 80
 # merge is less than the cost of split limbs.
 MERGE_GAP_DEFAULT = 0
 
-# Per-source-file extraction config. `merge_gap` is optional and
-# defaults to MERGE_GAP_DEFAULT. `min_area` overrides MIN_SPRITE_AREA
-# for sheets where sprites are smaller than the default minimum (e.g.
-# the 6x4 NPC grid sheet has ~140x140 sprites, well below the default
-# 4000-px-area threshold tuned for full-body Mike/Ice sprites).
+# Per-source-file extraction config.
+#   `merge_gap` overrides MERGE_GAP_DEFAULT.
+#   `min_area`  overrides MIN_SPRITE_AREA (use for sheets with smaller
+#               sprites than the default — e.g. the 6x4 chibi NPC grid).
+#   `bg_extra`  list of additional (r,g,b) tuples to also key out as
+#               background. Use for sheets with checker-pattern bgs
+#               where auto-detect only catches one of the two colors.
 SOURCES = [
     {'file': 'mike-runs.png',         'prefix': 'mike-run'},
     {'file': 'mike-actions.png',      'prefix': 'mike-action'},
     {'file': 'mike-combat.png',       'prefix': 'mike-combat'},
     {'file': 'ice-poseidon.png',      'prefix': 'ice'},
     {'file': 'cx-coin.png',           'prefix': 'cx-coin'},
-    # NPC pedestrian/protester sheets — used for street obstacles,
-    # phone-thieves (the "reaching" poses), and individual mob members.
+    # NPC sheets — used for street obstacles, phone-thieves (the
+    # "reaching" poses), and individual mob members.
     {'file': 'npcs-grid.png',         'prefix': 'npc-grid',       'min_area': 1200},
-    {'file': 'npcs-pedestrians.png',  'prefix': 'npc-pedestrian'},
+    # Pedestrian sheet has a grey-and-white CHECKER background. Auto-
+    # detect picks the grey, but white checker squares survive without
+    # this override — they show as solid white halos around each sprite
+    # in-game. Adding (255,255,255) as an extra BG color keys those out.
+    {'file': 'npcs-pedestrians.png',  'prefix': 'npc-pedestrian', 'bg_extra': [(255, 255, 255)]},
     {'file': 'npcs-protesters.png',   'prefix': 'npc-protester'},
 ]
 
@@ -125,15 +131,22 @@ def detect_bg_color(img):
     return Counter(corners).most_common(1)[0][0]
 
 
-def make_is_bg(bg_rgb):
+def make_is_bg(bg_rgbs):
     """Return a closure that tests if a pixel is within BG_TOLERANCE of
-    the detected background color in every channel."""
-    bg_r, bg_g, bg_b = bg_rgb
+    ANY of the provided background colors in every channel.
+
+    bg_rgbs is a list of (r, g, b) tuples. This handles sheets whose
+    "background" is actually two alternating colors — most commonly a
+    grey-and-white checker pattern from image-editor 'transparent'
+    placeholders. For single-color backgrounds, pass a list of one."""
     tol = BG_TOLERANCE
     def is_bg(r, g, b):
-        return (abs(r - bg_r) <= tol and
-                abs(g - bg_g) <= tol and
-                abs(b - bg_b) <= tol)
+        for bg in bg_rgbs:
+            if (abs(r - bg[0]) <= tol and
+                abs(g - bg[1]) <= tol and
+                abs(b - bg[2]) <= tol):
+                return True
+        return False
     return is_bg
 
 
@@ -297,8 +310,15 @@ def process_file(spec):
     print(f'  processing {spec["file"]}...')
     img = Image.open(src).convert('RGBA')
     bg_rgb = detect_bg_color(img)
-    is_bg = make_is_bg(bg_rgb)
-    print(f'    detected BG color: rgb{bg_rgb}')
+    bg_colors = [bg_rgb]
+    extra = spec.get('bg_extra')
+    if extra:
+        bg_colors.extend(tuple(c) for c in extra)
+    is_bg = make_is_bg(bg_colors)
+    if len(bg_colors) > 1:
+        print(f'    detected BG color: rgb{bg_rgb} + extras: {bg_colors[1:]}')
+    else:
+        print(f'    detected BG color: rgb{bg_rgb}')
     min_area = spec.get('min_area', MIN_SPRITE_AREA)
     raw = find_components(img, is_bg, min_area=min_area)
     merge_gap = spec.get('merge_gap', MERGE_GAP_DEFAULT)
