@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.6 — 2026-04-25
+
+Patch — root cause of the "game doesn't work" bug found.
+
+The strip image paths in `game/css/style.css` were `url("img/strip-1.png")`, which CSS resolves **relative to the CSS file's location** (`game/css/`), not the HTML page. So the actual lookup was for `game/css/img/strip-1.png` — a file that doesn't exist. The reels rendered as flat purple bars with no symbols, making it impossible to tell anything was happening when you clicked. Fixed to `url("../img/strip-1.png")` for both strip-1 and strip-2.
+
+This also explains the "LOSER appears after one click" symptom: with no visible reel symbols, you'd naturally tap multiple times trying to make something happen, eventually advancing the game to a result. The triple-hide CSS from v0.10.5 stays as defense.
+
+Verified visually in preview after the fix — the symbols load, the reels look right, and one click correctly stops just the top reel without revealing the result panel.
+
 ### v0.10.5 — 2026-04-25
 
 Patch — defensive triple-hide for the result panel.

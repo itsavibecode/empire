@@ -262,17 +262,20 @@ body:after {
   padding-top: 12.07%;
 }
 
-/* "Fun" set — built from 1symbol-{a,b,c}.png by build-game-strips.py */
+/* "Fun" set — built from 1symbol-{a,b,c}.png by build-game-strips.py.
+   Paths are relative to THIS CSS file's location (game/css/), so we go
+   up one level to get to game/img/. Using "img/..." resolves to
+   game/css/img/... which doesn't exist. */
 body.set-fun .columns.columns-top,
 body.set-fun .columns.columns-center,
 body.set-fun .columns.columns-bottom {
-  background-image: url("img/strip-1.png");
+  background-image: url("../img/strip-1.png");
 }
 /* "More Fun" set — built from 2symbol-{a,b,c}.png */
 body.set-more-fun .columns.columns-top,
 body.set-more-fun .columns.columns-center,
 body.set-more-fun .columns.columns-bottom {
-  background-image: url("img/strip-2.png");
+  background-image: url("../img/strip-2.png");
 }
 
 @-webkit-keyframes ltr-transition-0 {
