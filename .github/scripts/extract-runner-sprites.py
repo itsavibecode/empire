@@ -61,6 +61,7 @@ BG_TOLERANCE = 24
 
 # Minimum area (in pixels) for a connected region to count as a sprite.
 # Filters out specks of noise, JPEG artifacts, single bright pixels.
+# Per-source override available via `min_area` in SOURCES below.
 MIN_SPRITE_AREA = 4000
 
 # Padding around each cropped sprite (in transparent pixels) so post-
@@ -87,13 +88,21 @@ ROW_TOLERANCE = 80
 MERGE_GAP_DEFAULT = 0
 
 # Per-source-file extraction config. `merge_gap` is optional and
-# defaults to MERGE_GAP_DEFAULT.
+# defaults to MERGE_GAP_DEFAULT. `min_area` overrides MIN_SPRITE_AREA
+# for sheets where sprites are smaller than the default minimum (e.g.
+# the 6x4 NPC grid sheet has ~140x140 sprites, well below the default
+# 4000-px-area threshold tuned for full-body Mike/Ice sprites).
 SOURCES = [
-    {'file': 'mike-runs.png',     'prefix': 'mike-run'},
-    {'file': 'mike-actions.png',  'prefix': 'mike-action'},
-    {'file': 'mike-combat.png',   'prefix': 'mike-combat'},
-    {'file': 'ice-poseidon.png',  'prefix': 'ice'},
-    {'file': 'cx-coin.png',       'prefix': 'cx-coin'},
+    {'file': 'mike-runs.png',         'prefix': 'mike-run'},
+    {'file': 'mike-actions.png',      'prefix': 'mike-action'},
+    {'file': 'mike-combat.png',       'prefix': 'mike-combat'},
+    {'file': 'ice-poseidon.png',      'prefix': 'ice'},
+    {'file': 'cx-coin.png',           'prefix': 'cx-coin'},
+    # NPC pedestrian/protester sheets — used for street obstacles,
+    # phone-thieves (the "reaching" poses), and individual mob members.
+    {'file': 'npcs-grid.png',         'prefix': 'npc-grid',       'min_area': 1200},
+    {'file': 'npcs-pedestrians.png',  'prefix': 'npc-pedestrian'},
+    {'file': 'npcs-protesters.png',   'prefix': 'npc-protester'},
 ]
 
 
@@ -128,7 +137,7 @@ def make_is_bg(bg_rgb):
     return is_bg
 
 
-def find_components(img, is_bg):
+def find_components(img, is_bg, min_area=MIN_SPRITE_AREA):
     """Find connected regions of non-background pixels.
 
     Returns list of (left, top, right, bottom, area). Uses iterative
@@ -185,7 +194,7 @@ def find_components(img, is_bg):
                             continue
                         if not visited[ny * w + nx]:
                             stack.append((nx, ny))
-            if area >= MIN_SPRITE_AREA:
+            if area >= min_area:
                 components.append((min_x, min_y, max_x + 1, max_y + 1, area))
     return components
 
@@ -290,7 +299,8 @@ def process_file(spec):
     bg_rgb = detect_bg_color(img)
     is_bg = make_is_bg(bg_rgb)
     print(f'    detected BG color: rgb{bg_rgb}')
-    raw = find_components(img, is_bg)
+    min_area = spec.get('min_area', MIN_SPRITE_AREA)
+    raw = find_components(img, is_bg, min_area=min_area)
     merge_gap = spec.get('merge_gap', MERGE_GAP_DEFAULT)
     if merge_gap > 0:
         components = merge_nearby_components(raw, merge_gap)

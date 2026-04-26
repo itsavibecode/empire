@@ -16,6 +16,23 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.11.1 — 2026-04-26
+
+Patch — runner asset library expanded with NPCs and mob crowd backdrops.
+
+- **Three new NPC sprite sheets extracted** into individual frames (53 new sprites, 131 total now):
+    - `npc-grid` — 24 chibi pixel-art Chilean street pedestrians (flag-waver, vendor, grandma with yerba mate, baseball-cap dudes, etc.) — for individual obstacle/sniper spawns
+    - `npc-pedestrian` — 14 illustrated pedestrian frames (hoodie dude × 4 walking, woman in red × 4, hoodie dude × 4 **reaching forward** — the reaching pose is exactly the phone-thief animation)
+    - `npc-protester` — 15 protester poses with picket signs (FUCK ICE / WHERE'S ICE / Cx / ICE SCAMMED ME / ICE), plus "Reaching For Something" and "A Group Reaching" — these are the close-up named NPCs that spawn as the mob closes in
+- **Pre-composed mob-crowd backdrops** added at `run/img/mob/`. These are full-frame compositions used as-is (no extraction) — they're the chasing-mob-behind-the-player layer:
+    - `mob-fuckice-01..03` — three sheets of running mobs holding parody picket signs (FUCK ICE / WHERE'S ICE / Cx)
+    - `mob-dignidad-01` — mob with DIGNIDAD / CHILE UNIDO signs (more politically-themed mob)
+    - `mob-vivachile-01..03` — VIVA CHILE / PURO CHILE patriotic crowd
+    - `mob-dense-01..02` — pure crowd density without signs (good for a deeper background layer)
+- **Extractor enhancements:**
+    - Per-source `min_area` override added to SOURCES so sheets with much smaller sprites (the 24-NPC chibi grid is ~140 px wide vs Mike's ~400 px) work without lowering the global threshold and re-introducing noise on the bigger sheets
+    - Background detection still auto-handles black, white, and now grey-grid (rgb 207,209,208) sources without per-source config
+
 ### v0.11.0 — 2026-04-26
 
 Minor — kicked off the **EmpireX Runner** mini-game (`/run/`). Asset-pipeline scaffold + first round of extracted character sprites. No playable game yet — that's the next round.
