@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="EmpireX — The world&#x27;s first live-streamed reality experience. June 11-15, 2026 in Kissimmee, Florida. Streaming groups compete for social influence and a cash prize across 5 days, live on Kick. Invite only.">
 <link rel="canonical" href="https://ourempirex.com/">
-<meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, SaltyGummiBear, XenaTheWitch, Ice Poseidon, Kimmee, JJStream, WoodBaby, TaylorStarlight, AshWilder, FloridaBoy, AdrianahLee, Feef, BlackAssDave, NanaPips, BrieWylde, Fanos, Jackie, IamTalanya, KennyHoopz, KikiKrazy, Cobbruvs, Dtan, Shangel, Ozemi, lifeismizzy, RiddaW, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
+<meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, SaltyGummiBear, XenaTheWitch, Ice Poseidon, Kimmee, JJStream, WoodBaby, TaylorStarlight, AshWilder, FloridaBoy, AdrianahLee, Feef, BlackAssDave, NanaPips, BrieWylde, Fanos, Jackie, IamTalanya, KennyHoopz, KikiKrazy, Cobbruvs, Dtan, Shangel, Ozemi, lifeismizzy, RiddaW, Sasha West, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
 <meta name="version" content="0.13.0">
 <meta name="robots" content="index, follow">
@@ -97,7 +97,8 @@
     {"@type": "Person", "name": "Shangel", "url": "https://kick.com/shangel"},
     {"@type": "Person", "name": "Ozemi", "url": "https://kick.com/ozemi"},
     {"@type": "Person", "name": "lifeismizzy", "url": "https://kick.com/lifeismizzy"},
-    {"@type": "Person", "name": "RiddaW", "url": "https://kick.com/riddaw"}
+    {"@type": "Person", "name": "RiddaW", "url": "https://kick.com/riddaw"},
+    {"@type": "Person", "name": "Sasha West", "url": "https://kick.com/shashawest"}
   ]
 }
 </script>
@@ -1308,6 +1309,14 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">RiddaW</div>
         <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
         <div class="streamer-status" id="status-riddaw"><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
+      </a><a class="streamer-card" href="https://kick.com/shashawest" target="_blank">
+        <div class="streamer-avatar" id="av-sashawest">
+          <span class="streamer-initials">SW</span>
+          <img class="streamer-img" src="/avatars/screenshot-2026-04-26-151109.png" alt="Sasha West" loading="lazy">
+        </div>
+        <div class="streamer-name">Sasha West</div>
+        <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
+        <div class="streamer-status" id="status-sashawest"><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
       </a>
     </div>
     </div>
@@ -1580,7 +1589,7 @@ section{padding:6rem 1.5rem}
 
 // Check Kick live status for all streamers
 (function(){
-  const streamers = ["mikesmallsjr", "saltygummibear", "xenathewitch", "iceposeidon", "kimmee", "jjstream", "woodbaby", "taylorstarlight", "ashwilder", "floridaboy", "adrianahlee", "feef", "blackassdave", "nanapips", "briewylde", "fanos", "jackie", "iamTalanya", "kennyhoopz", "kikikrazy", "cobbruvs", "dtanmanb", "shangel", "ozemi", "lifeismizzy", "riddaw"];
+  const streamers = ["mikesmallsjr", "saltygummibear", "xenathewitch", "iceposeidon", "kimmee", "jjstream", "woodbaby", "taylorstarlight", "ashwilder", "floridaboy", "adrianahlee", "feef", "blackassdave", "nanapips", "briewylde", "fanos", "jackie", "iamTalanya", "kennyhoopz", "kikikrazy", "cobbruvs", "dtanmanb", "shangel", "ozemi", "lifeismizzy", "riddaw", "sashawest"];
   
   streamers.forEach(function(username){
     const statusEl = document.getElementById('status-' + username);
