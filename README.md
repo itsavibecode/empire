@@ -16,6 +16,21 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.5 — 2026-04-25
+
+Patch — defensive triple-hide for the result panel.
+
+User reported that one click brought up the LOSER result on the live site, but the v0.10.4 click-counter confirmed `handleClick` is only firing once per click — so React state advances correctly (activeRowIndex 0 → 1, panel should stay hidden). The remaining hypothesis is that some browsers don't honor the `transform: translateY(100%)` reliably for a position-absolute element, so the panel sits on screen anyway.
+
+Fix: hide the panel three different ways at once. Even if one fails, the other two keep it invisible.
+
+- `transform: translateY(100%)` — original slide-down (still drives the slide animation when `.shown` is added/removed)
+- `opacity: 0` — fade-out fallback
+- `visibility: hidden` — hard hide (delayed-transitions back to `hidden` after the slide animation has 1s to finish, so the animation still plays going out)
+- `pointer-events: none` while hidden so the panel can't intercept clicks even if positioned wrongly
+
+The debug counter from v0.10.4 stays in place for one more cycle in case the issue isn't the transform — that way we can confirm the real fix vs guess again.
+
 ### v0.10.4 — 2026-04-25
 
 Diagnostic — temporary on-screen click counter to track down why one user click is triggering all 3 reels at once on real-site usage (preview server can't reproduce the issue).

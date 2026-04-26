@@ -184,7 +184,10 @@ body:after {
           transform: translateY(-50%);
 }
 
-/* ---- Result text + Save-as-PNG button ---- */
+/* ---- Result text + Save-as-PNG button ----
+   Hidden three different ways at once (transform, opacity, visibility) so
+   the panel can't accidentally appear if any one of them fails on a
+   particular browser. */
 .results {
   position: absolute;
   top: 0;
@@ -198,17 +201,24 @@ body:after {
   gap: 1rem;
   -webkit-transform: translateY(100%);
           transform: translateY(100%);
-  transition: -webkit-transform 1s ease;
-  transition: transform 1s ease;
-  transition: transform 1s ease, -webkit-transform 1s ease;
+  opacity: 0;
+  visibility: hidden;
+  /* visibility transitions "instantly" to hidden 1s after .shown is removed,
+     so the slide-down animation has time to finish before it disappears. */
+  transition: transform 1s ease, -webkit-transform 1s ease, opacity .6s ease, visibility 0s linear 1s;
   color: #FFD566;
   font-size: 6vw;
   text-shadow: 2px 2px 2px rgba(0,0,0,.6);
   z-index: 20;
+  pointer-events: none;
 }
 .results.shown {
   -webkit-transform: translateY(0);
           transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 1s ease, -webkit-transform 1s ease, opacity .6s ease, visibility 0s linear 0s;
 }
 .results.lost {
   color: #f4f4f4;
