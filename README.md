@@ -16,6 +16,26 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.11.0 — 2026-04-26
+
+Minor — kicked off the **EmpireX Runner** mini-game (`/run/`). Asset-pipeline scaffold + first round of extracted character sprites. No playable game yet — that's the next round.
+
+The premise: a SkiFree-style endless-runner parody of IRL streaming culture. Mike Smalls Jr runs downhill through a Chilean street, dodging stream snipers and phone thieves. Ice Poseidon shows up partway through as a side-kick (his neck literally stretches to flag down the player), and from then on auto-collects Cx coins which act as a score multiplier.
+
+What landed in this commit:
+
+- **`run/` scaffold** — `concept/`, `img/sprites/`, `img/bg/`, `audio/`, `css/`, `js/` directories.
+- **`.github/scripts/extract-runner-sprites.py`** — turns the 5 raw concept-art reference sheets (Mike runs, Mike actions, Mike combat, Ice Poseidon all-poses, Cx coin) into 78 clean per-frame PNGs. Auto-detects black-vs-white background per sheet so we don't have to special-case anything. Bottom-aligns every sprite within a per-source standardized canvas — that's the trick that stops AI-generated frames from jittering vertically when played as an animation cycle.
+- **`.github/scripts/build-runner-contact-sheet.py`** — generates `run/img/sprites-contact-sheet.png`, a labeled grid of all 78 extracted sprites grouped by role (mike-run, mike-action, mike-combat, ice, cx-coin). Quick visual QA tool — rerun any time the extractor changes.
+- **`run/img/sprites/`** — 78 game-ready PNGs:
+    - 12 Mike run-cycle frames
+    - 9 Mike action poses (idle/surprised/kick/roll/uppercut)
+    - 18 Mike combat frames (run cycles + cartwheel/flip/combat moves)
+    - 29 Ice Poseidon poses (idle/run/neck-stretch/action moves)
+    - 10 Cx coin frames (8-frame spin + 2 collect-effect frames; the rest of the collect particles will be done procedurally in code)
+- **`run/img/bg/`** — 5 background scenes (4 ChatGPT-generated street/runner compositions + 1 4128×1024 panorama for parallax scrolling).
+- **`.gitignore` update** — excludes `run/img/bg/concept-pano/` so the 13 panorama-bg variations (~59 MB total) don't ship with the public repo. They live locally for future swap-ins.
+
 ### v0.10.17 — 2026-04-26
 
 Patch — PNG export crop, take 2.

@@ -13,3 +13,9 @@ desktop.ini
 
 # Claude commit message scratch
 .git/COMMIT_MSG.tmp
+
+# Runner game scratch — extra panorama-bg generations live here. Only
+# the ones actually used in game ship from run/img/bg/. Keep the rest
+# locally for future swap-ins, but don't bloat the public repo with
+# 59 MB of near-identical 4128x1024 PNGs.
+run/img/bg/concept-pano/
