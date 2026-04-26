@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.12 — 2026-04-25
+
+Patch — game polish round 12:
+
+- **1symbol-b crop pushed further toward the top.** `crop_top: 0.10, crop_bottom: 0.45`. Face center at ~44% of strip (up from ~53%).
+- **BookHockeys logo** dropped from `bottom: 5.5rem` → `2rem` so it sits near the very bottom of the page, well clear of the slot's white frame. Fixes the previous wrong-direction tweak.
+- **Background-music volume slider** added next to the mute toggle. Persists via `localStorage`. Dragging the slider while muted auto-unmutes (familiar UX).
+- **Woosh sound** on each reel-stop tap, wired to the new `audio/woosh-sound-effect.mp3` the user dropped in.
+- The save-as-PNG export now also hides the new `.audio-controls` cluster (instead of the old `.mute-toggle` selector).
+
 ### v0.10.11 — 2026-04-25
 
 Patch — five game improvements:

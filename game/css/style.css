@@ -76,11 +76,11 @@ body:after {
 /* ---- BookHockeys cross-link ---- */
 /* Centered via translate so the link element is only as wide as the logo
    itself — the rest of the bottom strip stays clickable for spinning.
-   Sits well below the slot machine's white frame; tweak `bottom` if it
-   crowds the URL caption. */
+   `bottom` is small so the logo sits near the very bottom of the page,
+   well away from the slot's white frame. */
 .game-bookhockeys {
   position: fixed;
-  bottom: 5.5rem;
+  bottom: 2rem;
   left: 50%;
   -webkit-transform: translateX(-50%);
           transform: translateX(-50%);
@@ -99,12 +99,60 @@ body:after {
   display: block;
 }
 
-/* ---- Mute toggle (top-right) ---- */
-.mute-toggle {
+/* ---- Audio controls (top-right): volume slider + mute toggle ---- */
+.audio-controls {
   position: fixed;
   top: 1rem;
   right: 1rem;
   z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.bg-volume {
+  -webkit-appearance: none;
+          appearance: none;
+  width: 110px;
+  height: 30px;
+  padding: 0 .7rem;
+  background: rgba(15,15,15,.55);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .2s ease;
+}
+.bg-volume:hover { border-color: rgba(142,92,203,.6); }
+.bg-volume::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(245,241,235,.2);
+  border-radius: 2px;
+}
+.bg-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+          appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #8E5CCB;
+  border-radius: 50%;
+  margin-top: -5px;
+  border: none;
+  box-shadow: 0 0 0 3px rgba(142,92,203,.25);
+}
+.bg-volume::-moz-range-track {
+  height: 4px;
+  background: rgba(245,241,235,.2);
+  border-radius: 2px;
+  border: none;
+}
+.bg-volume::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #8E5CCB;
+  border-radius: 50%;
+  border: none;
+}
+.mute-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -132,6 +180,9 @@ body:after {
 .mute-toggle .icon-off { display: none; }
 .mute-toggle.is-muted .icon-on { display: none; }
 .mute-toggle.is-muted .icon-off { display: block; }
+@media (max-width: 480px) {
+  .bg-volume { width: 80px; }
+}
 
 /* ---- Dev panel (?dev=1 in URL) ---- */
 .dev-panel {

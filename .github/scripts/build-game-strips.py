@@ -54,12 +54,12 @@ BG = (0x8E, 0x5C, 0xCB)
 # subject's face is high in the frame and the bottom is shoulders/torso
 # we don't want eating up the reel slices).
 SYMBOL_OVERRIDES = {
-    # 1symbol-b: face needs to ride higher in the strip so the nose
-    # joins the eyes in the middle reel and only the mouth/chin land
-    # in the bottom reel. Iterated to crop_top 0.07 + crop_bottom 0.50
-    # which puts face center at ~53% of strip, with eyes/nose in the
-    # middle reel and mouth in the bottom reel.
-    '1symbol-b.png': {'crop_top': 0.07, 'crop_bottom': 0.50},
+    # 1symbol-b: face rides higher in the strip than the others. Pushing
+    # the crop_top up trims more of the head/forehead off so what remains
+    # of the face is biased toward the top of the cropped image; reducing
+    # crop_bottom keeps the face from sliding back down. Net: face center
+    # at ~44% of strip (vs the natural 50% for centered images).
+    '1symbol-b.png': {'crop_top': 0.10, 'crop_bottom': 0.45},
 }
 
 

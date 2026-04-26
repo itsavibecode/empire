@@ -71,7 +71,7 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
       var isKey = e && (e.type === 'keydown' || e.type === 'keypress');
       if (e && !isKey && e.target && e.target.closest) {
         if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') ||
-            e.target.closest('.save-btn') || e.target.closest('.mute-toggle') ||
+            e.target.closest('.save-btn') || e.target.closest('.audio-controls') ||
             e.target.closest('.dev-panel')) {
           return;
         }
@@ -81,6 +81,8 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
         this.cancelInterval(index);
         this.setEndValue(index, this.state.rows[index].value);
         this.determinePrize();
+        // Play woosh on each reel-stop tap.
+        if (typeof window.playWoosh === 'function') window.playWoosh();
       }
       this.updateActiveRow();
     }},
@@ -256,7 +258,7 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
           clonedDoc.body.insertBefore(bar, clonedDoc.body.firstChild);
 
           // Hide bits that don't belong in a screenshot
-          ['.tabs', '.mute-toggle', '.dev-panel', '.helper', '.save-btn',
+          ['.tabs', '.audio-controls', '.dev-panel', '.helper', '.save-btn',
            '.game-url', '.game-version'].forEach(function (sel) {
             var el = clonedDoc.querySelector(sel);
             if (el) el.style.display = 'none';
@@ -316,12 +318,16 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
 })();
 
 
-// ---- Audio: mute toggle + per-prize playback ----
+// ---- Audio: volume slider + mute toggle + per-event playback ----
 // Drop your own audio files into game/audio/ to enable sound. If a file
 // is missing, the audio element silently does nothing — game still works.
 (function () {
   var muted = localStorage.getItem('empirex-slots-muted') !== '0'; // muted by default
+  var savedVol = parseFloat(localStorage.getItem('empirex-slots-bg-volume'));
+  var bgVolume = isNaN(savedVol) ? 0.5 : Math.max(0, Math.min(1, savedVol));
+
   var btn = document.getElementById('mute-toggle');
+  var slider = document.getElementById('bg-volume');
   var bgMusic = document.getElementById('bg-music');
 
   function applyMute() {
@@ -330,7 +336,13 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
     Array.prototype.forEach.call(els, function (a) { a.muted = muted; });
   }
 
+  function applyBgVolume() {
+    if (bgMusic) bgMusic.volume = bgVolume;
+    if (slider) slider.value = Math.round(bgVolume * 100);
+  }
+
   applyMute();
+  applyBgVolume();
 
   // Browsers block autoplay until first user interaction. Try to start
   // bg-music on first click/keydown.
@@ -354,12 +366,38 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
     });
   }
 
+  if (slider) {
+    slider.addEventListener('input', function (e) {
+      e.stopPropagation();
+      bgVolume = parseFloat(slider.value) / 100;
+      localStorage.setItem('empirex-slots-bg-volume', String(bgVolume));
+      applyBgVolume();
+      // Adjusting the slider while muted -> auto-unmute (familiar UX).
+      if (muted && bgVolume > 0) {
+        muted = false;
+        localStorage.setItem('empirex-slots-muted', '0');
+        applyMute();
+        if (bgMusic) bgMusic.play().catch(function () {});
+      }
+    });
+  }
+
   // Called from <Results> when the result panel transitions in.
   window.playSound = function (prize) {
     if (muted) return;
     var id = SOUND_IDS[prize];
     if (!id) return;
     var sound = document.getElementById(id);
+    if (sound) {
+      try { sound.currentTime = 0; } catch (_) {}
+      sound.play().catch(function () {});
+    }
+  };
+
+  // Called from App.handleClick on each reel-stop tap.
+  window.playWoosh = function () {
+    if (muted) return;
+    var sound = document.getElementById('sound-woosh');
     if (sound) {
       try { sound.currentTime = 0; } catch (_) {}
       sound.play().catch(function () {});
