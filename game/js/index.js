@@ -227,8 +227,10 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         console.warn('html2canvas not loaded');
         return;
       }
-      // Snapshot the slot's bounding box BEFORE capture (we'll crop the
-      // raw canvas to just this region after html2canvas finishes).
+      // Snapshot the slot's bounding box BEFORE capture. Two coordinate
+      // systems are at play: CSS pixels (window/getBoundingClientRect)
+      // and canvas pixels (devicePixelRatio scaled). We tell html2canvas
+      // exactly what region to capture so there's no post-crop math.
       var rows = document.querySelectorAll('.row');
       if (!rows.length) { return; }
       var firstRect = rows[0].getBoundingClientRect();
@@ -236,26 +238,46 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       var slotTop    = firstRect.top;
       var slotBottom = lastRect.bottom;
       var slotHeight = slotBottom - slotTop;
-      // The .row element spans the full viewport width, but the visible
-      // slot window sits BETWEEN the .viewport:before / :after black side
-      // bars. Compute the same fraction the CSS uses (20% desktop, 5%
-      // mobile) so the export crops in to just the actual slot content.
-      var isMobile = window.matchMedia('(max-width: 768px)').matches;
-      var sideBarFrac = isMobile ? 0.05 : 0.20;
-      var slotLeft  = Math.round(window.innerWidth * sideBarFrac);
-      var slotRight = Math.round(window.innerWidth * (1 - sideBarFrac));
-      var slotWidth = slotRight - slotLeft;
-      // Padding so the white border + result text don't get clipped.
+
+      // Read the actual rendered side-bar width via getComputedStyle on
+      // the .viewport::before pseudo-element. Resilient to whatever the
+      // CSS says (20% desktop / 5% mobile, future tweaks, etc.) without
+      // duplicating the media query in JS.
+      var refWidth = document.documentElement.clientWidth || window.innerWidth;
+      var viewportEl = document.querySelector('.viewport');
+      var sideBarPx = 0;
+      if (viewportEl) {
+        var beforeStyle = window.getComputedStyle(viewportEl, '::before');
+        sideBarPx = parseFloat(beforeStyle && beforeStyle.width) || 0;
+      }
+      if (!sideBarPx) {
+        // Fallback if pseudo-element isn't queryable.
+        var isMobile = window.matchMedia('(max-width: 768px)').matches;
+        sideBarPx = refWidth * (isMobile ? 0.05 : 0.20);
+      }
+      var slotLeft  = Math.round(sideBarPx);
+      var slotWidth = Math.round(refWidth - 2 * sideBarPx);
+      // Vertical padding so the white horizontal frame edges + result
+      // text don't get clipped.
       var pad = Math.max(20, Math.round(slotHeight * 0.08));
+      var captureTop    = Math.max(0, Math.round(slotTop - pad));
+      var captureHeight = Math.round(slotHeight + 2 * pad);
 
       html2canvas(document.body, {
         backgroundColor: '#000000',
         useCORS: true,
         logging: false,
+        // Capture ONLY the slot region. html2canvas applies these in
+        // page coords; result canvas comes back with width = `width` *
+        // devicePixelRatio. Side bars (.viewport:before/:after) are
+        // outside this rectangle and won't appear in the output.
+        x: slotLeft,
+        y: captureTop,
+        width: slotWidth,
+        height: captureHeight,
         onclone: function (clonedDoc) {
-          // Hide all chrome — we'll synthesize the top bar in the
-          // post-capture canvas instead so it sits at the very top
-          // edge regardless of viewport size.
+          // Hide all chrome — we synthesize a branded top bar in the
+          // post-capture canvas so it sits at the very top edge.
           ['.tabs', '.audio-controls', '.helper', '.save-btn',
            '.game-bookhockeys', '.game-url', '.game-version'].forEach(function (sel) {
             var el = clonedDoc.querySelector(sel);
@@ -263,22 +285,12 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
           });
         }
       }).then(function (canvas) {
-        // html2canvas may render at a higher pixel ratio than CSS pixels.
-        var scale = canvas.width / window.innerWidth;
-        var topBarH = Math.max(60, Math.round(slotHeight * 0.10));
-        // Source rectangle in the captured canvas (in canvas pixels).
-        var srcY = Math.max(0, Math.round((slotTop - pad) * scale));
-        var srcH = Math.round((slotHeight + 2 * pad) * scale);
-        if (srcY + srcH > canvas.height) srcH = canvas.height - srcY;
-        var srcX = Math.max(0, Math.round(slotLeft * scale));
-        var srcW = Math.round(slotWidth * scale);
-        if (srcX + srcW > canvas.width) srcW = canvas.width - srcX;
+        // canvas now contains ONLY the slot region (no side bars).
+        var topBarH = Math.max(60, Math.round((canvas.height) * 0.08));
 
-        // Output canvas: top bar + cropped slot region edge-to-edge.
-        // Width matches the cropped slot window so the side black bars
-        // don't appear in the saved image.
-        var outW = srcW;
-        var outH = topBarH + srcH;
+        // Output canvas: top bar + captured slot region, same width.
+        var outW = canvas.width;
+        var outH = topBarH + canvas.height;
         var out = document.createElement('canvas');
         out.width = outW;
         out.height = outH;
@@ -309,10 +321,8 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
           x += glyphWidths[j] + trackedSpacing;
         }
 
-        // Draw the captured slot region under the top bar, edge-to-edge.
-        // Source: (srcX, srcY) sized (srcW, srcH) — the cropped window
-        // between the side black bars. Dest: (0, topBarH) full output width.
-        ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, topBarH, outW, srcH);
+        // Draw the captured slot region under the top bar.
+        ctx.drawImage(canvas, 0, topBarH);
 
         var link = document.createElement('a');
         var ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);

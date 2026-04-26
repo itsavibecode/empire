@@ -16,6 +16,14 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.17 — 2026-04-26
+
+Patch — PNG export crop, take 2.
+
+- Switched the export from "capture full body, post-crop" to "tell `html2canvas` exactly what region to capture." The previous approach computed a crop rectangle in CSS pixels and applied it after capture; if `devicePixelRatio` or the body-vs-viewport width didn't line up the way I expected, the math drifted and side strips leaked back into the output. Passing `x` / `y` / `width` / `height` directly to `html2canvas` removes that whole class of mismatch — the returned canvas already contains only the slot region.
+- The side-bar width is now read from `getComputedStyle(viewport, '::before').width` rather than guessed from a media query, so a future tweak to the side-bar `%` won't desync the export.
+- The purple top bar is now exactly the width of the captured region (which is exactly the width of the visible slot), so there can't be a wider band than the slot underneath.
+
 ### v0.10.16 — 2026-04-26
 
 Patch — PNG export now crops the side black bars too.
