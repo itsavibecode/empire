@@ -16,6 +16,15 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.11 — 2026-04-26
+
+Patch — cop car motion blur trimmed + cut scene layered over chile bg (with caveat).
+
+- **Cop car motion blur cropped.** Each cop-car-XX sprite had a baked-in diagonal grey/white motion-blur streak extending off the right side. Crop the right 18% of each extracted sprite — POLICE text stays intact, blur disappears.
+- **Cut scene now layers over `bg-chile-runner-01.png`** as the backdrop. The Mike+Ice composition art has its sky-blue background flood-keyed transparent (`tolerance=30`) so the chile street scene shows through behind them. Stored as `cutscene-{closed,mid,open}-keyed.png`.
+
+  ⚠️ **Honest caveat:** Ice's shirt is rgb(1,60,167) — virtually identical to the middle blue band rgb(4,66,170) in the source art. A more aggressive flood would key out his shirt along with the bg. With tolerance=30, only the corner-connected sky region clears (the middle band is "trapped" between Mike and Ice's silhouettes so flood can't reach it from the corners). Result: chile street shows through the top sky region; the middle blue band behind Mike+Ice stays solid. This is the cleanest algorithmic separation possible — going further would require manually masking Ice in an image editor.
+
 ### Run v0.18.10 — 2026-04-26
 
 Patch — pause-button visibility + Quit-to-Title on game-over.

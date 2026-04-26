@@ -513,9 +513,14 @@ html, body {
   font-size: 1.6rem;
 }
 
-/* ---- Cut scene overlay (Mike-meets-Ice first encounter) ---- */
+/* ---- Cut scene overlay (Mike-meets-Ice first encounter) ----
+   Background is bg-chile-runner-01.png (the Chile street scene). The
+   cutscene composition layers on top with its sky-blue keyed
+   transparent so the chile bg shows through. (The middle blue band
+   stays opaque because Ice's shirt is the same blue and can't be
+   algorithmically separated.) */
 .overlay-cutscene {
-  background: #000;
+  background: #000 url('img/bg/bg-chile-runner-01.png') center/cover no-repeat;
   padding: 0;
   z-index: 40;
   /* No flex-centering — children are positioned absolutely */
