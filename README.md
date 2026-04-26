@@ -16,6 +16,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.6 — 2026-04-26
+
+Patch — Ice properly tall + neck-stretch actually visible on coin grab.
+
+- **Ice scaled way up** — `ICE_HEIGHT_FRAC = 0.27` (Ice's run-cycle height is 27 % of viewport, vs Mike's 17 %). Ice is canonically tall and lanky in real life, Mike's stockier and shorter. This gets the proportions right at a glance instead of Ice looking like a tiny side-kick.
+- **Reach radius bumped** `80 → 130 px` so Ice grabs nearby-lane coins more reliably.
+- **Lateral offset bumped** `10% → 13%` of viewport so the now-bigger Ice doesn't visually overlap Mike.
+- **Neck-stretch render rewrite** — the old code used `scaledSize('ice-15', ...)` which forced EVERY Ice frame into ice-15's bounding box, so when the neck-stretch frames (ice-23..29) rendered, their tall extending necks got squished into the same height. Now each frame is sized relative to ice-15's source ratio, so neck-stretch frames render at their natural taller proportion — when Ice grabs a coin, his neck visibly EXTENDS UPWARD before snapping back to running. Stretch animation duration also bumped `600 → 700 ms` to give the eye more time to register the extension.
+- Bottom-anchor preserved: Ice's feet stay at Mike's foot line whether his neck is stretched or not — so the head reaches up but the body stays grounded.
+
 ### Run v0.18.5 — 2026-04-26
 
 Patch — cut scene plays every run instead of once-per-session.

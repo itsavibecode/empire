@@ -46,10 +46,11 @@
   var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
   // Ice side-kick — once joined (post-cutscene), Ice runs alongside
   // Mike at this lateral pixel offset and auto-grabs nearby coins.
-  var ICE_OFFSET_X_FRAC = 0.10;    // distance from Mike's center, as fraction of viewport width
-  var ICE_REACH_PX = 80;           // coin pickup radius around Ice
-  var ICE_NECK_STRETCH_MS = 600;   // duration of neck-stretch animation per coin grab
+  var ICE_OFFSET_X_FRAC = 0.13;    // distance from Mike's center, as fraction of viewport width
+  var ICE_REACH_PX = 130;          // coin pickup radius around Ice
+  var ICE_NECK_STRETCH_MS = 700;   // duration of neck-stretch animation per coin grab
   var ICE_COIN_BONUS = 0.5;        // bonus per Ice-collected coin (counts as 0.5x toward total)
+  var ICE_HEIGHT_FRAC = 0.27;      // Ice's run-cycle height as fraction of viewH (taller than Mike's 0.17)
 
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
@@ -1463,25 +1464,30 @@
     // During horse boost, Ice rides on Mike's horse (built into the
     // mike-ice-horse-* sprite), so no separate Ice render needed.
     if (performance.now() < state.effects.horseBoostUntil) return;
-    // Ice rendered at 1.05x Mike's height — Ice is taller in real life
-    // (lanky vs Mike's stockier build) so this matches the canon
-    // proportions and stops Ice from looking like a tiny child next to
-    // Mike. Source-sprite aspect ratios are different too (Ice is
-    // narrower) so without the bump he renders comically small.
-    var size = scaledSize('ice-15', PLAYER_TARGET_HEIGHT_FRAC * 1.05);
-    var x = iceX();
-    var y = playerY() - size.h;
     var key = pickIceFrame(now);
     var img = sprites[key];
-    if (!img) return;
-    // Mirror Ice horizontally if he's on Mike's left (so he faces forward)
+    var baseImg = sprites['ice-15']; // reference frame for the base Ice height
+    if (!img || !baseImg) return;
+    // Compute scale so ice-15 renders at ICE_HEIGHT_FRAC * viewH.
+    // Then ANY current frame gets that same px-per-source-px ratio
+    // applied — meaning neck-stretch frames (which are taller in the
+    // source) render proportionally taller, so the neck visibly
+    // EXTENDS UPWARD when Ice grabs a coin. Without this, scaledSize
+    // would force every frame into ice-15's box and the stretch would
+    // be invisible.
+    var pxPerSrc = (viewH() * ICE_HEIGHT_FRAC) / baseImg.height;
+    var w = img.width * pxPerSrc;
+    var h = img.height * pxPerSrc;
+    var x = iceX();
+    var y = playerY() - h; // bottom-anchored at Mike's foot line
+    // Mirror horizontally if Ice is on Mike's left (so he faces forward)
     ctx.save();
     if (state.ice.lastSide < 0) {
-      ctx.translate(x + size.w / 2, y);
+      ctx.translate(x + w / 2, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, -size.w / 2, 0, size.w, size.h);
+      ctx.drawImage(img, -w / 2, 0, w, h);
     } else {
-      ctx.drawImage(img, x - size.w / 2, y, size.w, size.h);
+      ctx.drawImage(img, x - w / 2, y, w, h);
     }
     ctx.restore();
   }
@@ -1492,7 +1498,9 @@
     if (!state.iceSidekickJoined) return false;
     if (coin.picked) return false;
     var ix = iceX();
-    var iy = playerY() - scaledSize('ice-15', PLAYER_TARGET_HEIGHT_FRAC * 1.05).h * 0.5;
+    // Ice's vertical center for collision is half his run-cycle height
+    var iceFullH = viewH() * ICE_HEIGHT_FRAC;
+    var iy = playerY() - iceFullH * 0.5;
     var coinCx = laneX(coin.lane);
     var coinCy = coin.y + coin.h / 2;
     var dx = coinCx - ix;
