@@ -59,13 +59,19 @@
   // PICKUP TYPES — special bonus/debuff items that spawn occasionally.
   // Each cycles through `frames` at `frameMs`. `kind` drives the effect
   // applied on collision.
+  // Build frame lists from sprite naming convention
+  function _seq(prefix, n) {
+    var out = [];
+    for (var i = 1; i <= n; i++) out.push(prefix + (i < 10 ? '0' + i : i));
+    return out;
+  }
   var PICKUP_TYPES = [
-    // HAM — short freeze + coin shower + chipmunk music
-    { kind: 'ham', frames: ['ham-spin-01'], frameMs: 0, weight: 3 },
-    // 400 — instant +1 life (rare)
-    { kind: 'h400', frames: ['h400-spin-01', 'h400-spin-02'], frameMs: 130, weight: 1 },
-    // WEED — debuff (slow + red tint)
-    { kind: 'weed', frames: ['weed-spin-01', 'weed-spin-02', 'weed-spin-03', 'weed-spin-04'], frameMs: 100, weight: 2 },
+    // HAM — short freeze + coin shower + chipmunk music. 7-frame spin.
+    { kind: 'ham',  frames: _seq('ham-spin-', 7),    frameMs: 90,  weight: 3 },
+    // 400 — instant +1 life. 20-frame spin (very smooth).
+    { kind: 'h400', frames: _seq('h400-spin-', 20),  frameMs: 60,  weight: 1 },
+    // WEED — debuff (slow + red tint). 16-frame spin.
+    { kind: 'weed', frames: _seq('weed-spin-', 16),  frameMs: 70,  weight: 2 },
   ];
   var PICKUP_TARGET_HEIGHT_FRAC = 0.09;
 
@@ -140,9 +146,14 @@
   // photographic-style image that compresses fine without quality loss.
   SPRITE_PATHS['titlescreen'] = 'img/titlescreen.jpg';
   // Pickup item sprites (referenced by PICKUP_TYPES below)
-  SPRITE_PATHS['ham-spin-01']    = 'img/sprites/ham-spin-01.png';
-  SPRITE_PATHS['h400-spin-01']   = 'img/sprites/h400-spin-01.png';
-  SPRITE_PATHS['h400-spin-02']   = 'img/sprites/h400-spin-02.png';
+  for (var hs = 1; hs <= 7; hs++) {
+    var hk = 'ham-spin-' + (hs < 10 ? '0' + hs : hs);
+    SPRITE_PATHS[hk] = 'img/sprites/' + hk + '.png';
+  }
+  for (var hh = 1; hh <= 20; hh++) {
+    var hhk = 'h400-spin-' + (hh < 10 ? '0' + hh : hh);
+    SPRITE_PATHS[hhk] = 'img/sprites/' + hhk + '.png';
+  }
   for (var ws = 1; ws <= 16; ws++) {
     var wk = 'weed-spin-' + (ws < 10 ? '0' + ws : ws);
     SPRITE_PATHS[wk] = 'img/sprites/' + wk + '.png';
@@ -568,6 +579,11 @@
     function tapHandler(e) {
       if (state.phase !== 'playing') return;
       if (state.paused) return; // tap-to-resume handled by the pause overlay click
+      // Mouse: only respond to LEFT button (e.button === 0). Right-click
+      // (e.button === 2) is reserved for pause via the contextmenu listener
+      // — without this guard a right-click would also fire mousedown and
+      // trigger a lane-shift, which is exactly the bug reported in v0.17.3.
+      if (e.type === 'mousedown' && e.button !== 0) return;
       // If the tap came from a button or overlay, let the click bubble.
       if (e.target.closest('button') || e.target.closest('.overlay:not(.hidden)')) {
         return;

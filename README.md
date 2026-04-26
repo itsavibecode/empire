@@ -16,6 +16,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.4 — 2026-04-26
+
+Patch — three more bugs caught from playtest.
+
+- **Seagulls no longer have white body parts missing.** Same root cause as the Mike-eyebrow bug from earlier: per-pixel RGB tolerance keys EVERY pixel that matches the bg color, including white body pixels enclosed inside a sprite. Fix: added a new **flood-fill-from-corners** extraction mode. Starts from each of the 4 image corners, only marks pixels as bg if they're (a) within tolerance of the corner color AND (b) reachable through a continuous run of in-tolerance pixels back to a corner. Interior whites enclosed by darker outline pixels are preserved. Switched seagulls/pigeons/dogs/ham-spin/400-spin sources to flood mode and re-extracted.
+- **400 spin is actually animated now** (was blinking between 2 frames). Old extraction only got 2 of the 20 frames because the corner-color detection picked the wrong color (a stray red pixel at a corner). Flood-mode extraction now correctly identifies the white bg, so we get all 20 spin frames. Same fix gave us 7 ham-spin frames (was 1) and the full seagull set with intact white bodies. JS preload + PICKUP_TYPES updated to use the full frame counts at sensible cadences (60-90 ms per frame).
+- **Right-click no longer triggers a lane shift to the right.** The mouse `tapHandler` was firing for ANY mouse button — left-click for lane shift, but right-click was also passing through and the right-click happens to land on the right half of the screen, so it triggered a right-lane-shift before the contextmenu pause kicked in. Added `if (e.type === 'mousedown' && e.button !== 0) return;` so only LEFT clicks register as lane-shift taps.
+
 ### Run v0.17.3 — 2026-04-26
 
 Patch round — bug fixes + UX feedback from playtest.

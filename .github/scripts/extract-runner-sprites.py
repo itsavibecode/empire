@@ -112,18 +112,22 @@ SOURCES = [
     {'file': 'ice_poseidon_alpha.png',     'prefix': 'ice',          'use_alpha': True},
     # Single-frame items + spin sheets
     {'file': 'cx-coin.png',                'prefix': 'cx-coin'},
-    {'file': 'ham-spin.png',               'prefix': 'ham-spin'},
-    {'file': '400-spin.png',               'prefix': 'h400-spin'},
+    # ham-spin + 400-spin both have white-on-white interior bug w/ the
+    # default per-pixel BG matching. Flood-fill mode preserves interior
+    # white pixels (only the connected-from-corners bg gets keyed).
+    {'file': 'ham-spin.png',               'prefix': 'ham-spin',     'bg_mode': 'flood'},
+    {'file': '400-spin.png',               'prefix': 'h400-spin',    'bg_mode': 'flood'},
     {'file': 'weed_spin_transparent.png',  'prefix': 'weed-spin',    'use_alpha': True},
     # NPC sheets — street obstacles, phone-thieves, mob members.
     {'file': 'npcs-grid.png',              'prefix': 'npc-grid',     'min_area': 1200},
     {'file': 'npcs-pedestrians.png',       'prefix': 'npc-pedestrian', 'bg_extra': [(255, 255, 255)]},
     {'file': 'npcs-protesters.png',        'prefix': 'npc-protester'},
-    # Background fauna (animal walk cycles for sidewalk ambient life)
-    {'file': 'animals-seagulls.png',       'prefix': 'seagull',      'min_area': 1500},
-    {'file': 'animals-pigeons.png',        'prefix': 'pigeon',       'min_area': 1500},
+    # Background fauna — flood mode for the white-bg birds (their white
+    # bodies were getting keyed out under per-pixel matching).
+    {'file': 'animals-seagulls.png',       'prefix': 'seagull',      'min_area': 1500, 'bg_mode': 'flood'},
+    {'file': 'animals-pigeons.png',        'prefix': 'pigeon',       'min_area': 1500, 'bg_mode': 'flood'},
     {'file': 'animals-cats.png',           'prefix': 'cat',          'min_area': 1500},
-    {'file': 'animals-dogs.png',           'prefix': 'dog',          'min_area': 1500},
+    {'file': 'animals-dogs.png',           'prefix': 'dog',          'min_area': 1500, 'bg_mode': 'flood'},
     {'file': 'animals-goats.png',          'prefix': 'goat',         'min_area': 1500},
     # Vehicles
     {'file': 'cop_car_iso_transparent.png','prefix': 'cop-car',      'use_alpha': True, 'min_area': 3000},
@@ -154,6 +158,68 @@ def make_is_bg_alpha():
     (user-pre-cleaned files like *_alpha.png). Avoids the RGB-tolerance
     approach which would eat dark interior pixels (eyebrows, facial hair,
     black outlines on Mike) — just trusts the existing alpha channel."""
+    def is_bg(r, g, b, a):
+        return a < 50
+    return is_bg
+
+
+def make_bg_mask_via_corner_flood(img, tolerance=20):
+    """Build a 2D boolean mask of which pixels are background, by
+    flood-filling from each of the 4 image corners outward. Only pixels
+    that are (a) within `tolerance` of the corner color AND (b)
+    reachable via 4-connectivity through other in-tolerance pixels
+    get marked as bg.
+
+    Why this matters: simple per-pixel RGB tolerance keys EVERY pixel
+    that matches the bg color — including white pixels INSIDE a sprite
+    (e.g. a seagull's white body on a white background, or the white
+    centers of a "400" character). This corner-flood approach preserves
+    those interior pixels because they're not connected to the corner
+    background through a continuous run of in-tolerance pixels — they're
+    enclosed by the sprite's darker outline.
+
+    Returns a flat list of W*H booleans (mask[y*w + x] = is_bg)."""
+    w, h = img.size
+    px = img.load()
+    mask = [False] * (w * h)
+
+    corners = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+
+    for cx, cy in corners:
+        cp = px[cx, cy][:3]
+        cr, cg, cb = cp[0], cp[1], cp[2]
+        # Iterative flood-fill with stack (4-connectivity)
+        stack = [(cx, cy)]
+        while stack:
+            x, y = stack.pop()
+            idx = y * w + x
+            if mask[idx]:
+                continue
+            p = px[x, y]
+            if (abs(p[0] - cr) > tolerance or
+                abs(p[1] - cg) > tolerance or
+                abs(p[2] - cb) > tolerance):
+                continue
+            mask[idx] = True
+            if x > 0:     stack.append((x - 1, y))
+            if x < w - 1: stack.append((x + 1, y))
+            if y > 0:     stack.append((x, y - 1))
+            if y < h - 1: stack.append((x, y + 1))
+
+    return mask
+
+
+def make_is_bg_from_mask(mask, w):
+    """Wrap a precomputed bg mask in the standard is_bg(r,g,b,a)
+    signature. The closure captures the mask so we can pass it to
+    find_components / make_sprite. We need x,y context though — the
+    standard signature only has the pixel value. Workaround: index by
+    position via a mutable counter — but that's fragile. Better: the
+    callers will be updated to pass (x, y) when in flood mode.
+
+    Actually simpler approach: just precompute and apply transparency
+    in a one-shot pass before component-finding, then use a trivial
+    is_bg(alpha < 50) for the rest of the pipeline. See the caller."""
     def is_bg(r, g, b, a):
         return a < 50
     return is_bg
@@ -344,6 +410,23 @@ def process_file(spec):
         # Source already has proper alpha-keyed transparency. Trust it.
         is_bg = make_is_bg_alpha()
         print(f'    using ALPHA mode (existing transparency)')
+    elif spec.get('bg_mode') == 'flood':
+        # Flood-fill from corners — preserves interior bg-color pixels
+        # (white seagull bodies on white bg, etc.). We pre-bake the mask
+        # into the image's alpha channel, then the rest of the pipeline
+        # uses simple alpha-mode bg detection.
+        tol = spec.get('bg_tolerance', 24)
+        mask = make_bg_mask_via_corner_flood(img, tolerance=tol)
+        w, h = img.size
+        px = img.load()
+        cleared = 0
+        for y in range(h):
+            for x in range(w):
+                if mask[y * w + x]:
+                    px[x, y] = (0, 0, 0, 0)
+                    cleared += 1
+        is_bg = make_is_bg_alpha()
+        print(f'    using FLOOD mode (tol={tol}, cleared {cleared:,} bg pixels)')
     else:
         bg_rgb = detect_bg_color(img)
         bg_colors = [bg_rgb]
