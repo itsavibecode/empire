@@ -469,6 +469,100 @@ html, body {
   font-size: 1.6rem;
 }
 
+/* ---- Cut scene overlay (Mike-meets-Ice first encounter) ---- */
+.overlay-cutscene {
+  background: #000;
+  padding: 0;
+  z-index: 40;
+  /* No flex-centering — children are positioned absolutely */
+  justify-content: flex-start;
+  align-items: stretch;
+}
+.cutscene-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+.cutscene-dialogue {
+  position: absolute;
+  bottom: 4%;
+  left: 6%;
+  right: 6%;
+  background: rgba(20, 14, 36, .92);
+  border: 3px solid rgba(201, 164, 255, .85);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem 1.2rem;
+  z-index: 2;
+  font-family: 'VT323', monospace;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+}
+.cutscene-name {
+  position: absolute;
+  top: -1.2rem;
+  left: 1.5rem;
+  background: #8E5CCB;
+  color: #fff;
+  font-size: 1.25rem;
+  letter-spacing: .2em;
+  padding: .15rem .9rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.7);
+}
+.cutscene-text {
+  font-size: 1.7rem;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  min-height: 4.5rem;
+  margin: 0;
+  /* Blinking caret at the end of the typing line */
+}
+.cutscene-text::after {
+  content: '_';
+  margin-left: .15rem;
+  animation: cs-blink 0.55s steps(1, end) infinite;
+}
+@keyframes cs-blink {
+  50% { opacity: 0; }
+}
+.cutscene-choices {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-top: 1rem;
+}
+.cutscene-choices.hidden { display: none; }
+.cutscene-choices button {
+  font-family: 'VT323', monospace;
+  font-size: 1.4rem;
+  letter-spacing: .04em;
+  text-align: left;
+  padding: .6rem 1rem;
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,.25);
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  transition: all .15s ease;
+}
+.cutscene-choices button:hover {
+  background: #8E5CCB;
+  border-color: #fff;
+  transform: translateX(6px);
+}
+@media (max-width: 700px) {
+  .cutscene-text { font-size: 1.3rem; }
+  .cutscene-choices button { font-size: 1.1rem; padding: .5rem .7rem; }
+  .cutscene-name { font-size: 1rem; }
+}
+
 /* ---- Game-over button row ---- */
 .gameover-buttons {
   display: flex;

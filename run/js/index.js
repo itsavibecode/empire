@@ -353,6 +353,98 @@
   }
 
   // ============================================================
+  // CUT SCENE — Mike-meets-Ice first-encounter dialogue.
+  // Triggered once per browser (localStorage flag) when the player
+  // crosses CUTSCENE_TRIGGER_DISTANCE_M during a run. Pauses the game
+  // world (similar to ham-freeze but indefinite), shows a typewriter
+  // dialogue with mouth-frame cycling, then 3 player-choice buttons.
+  // All choices set state.iceSidekickJoined = true (the side-kick
+  // mechanic itself lands in v0.18.1).
+  // ============================================================
+  var CUTSCENE_TRIGGER_DISTANCE_M = 400;
+  var CUTSCENE_FLAG_KEY = 'runner-cutscene-met-ice-v1';
+  var CUTSCENE_LINE = "Mike Smalls? Aren't you the guy who always just wants to fuck?";
+  var CUTSCENE_TYPE_MS = 35;     // ms per character of dialogue
+  var CUTSCENE_MOUTH_MS = 110;   // ms per mouth-frame swap
+
+  var cutscene = {
+    active: false,
+    startedAt: 0,
+    typedChars: 0,
+    showingChoices: false,
+  };
+
+  function maybeTriggerCutscene() {
+    if (cutscene.active) return;
+    if (state.iceSidekickJoined) return;
+    if (state.distance < CUTSCENE_TRIGGER_DISTANCE_M) return;
+    try {
+      if (localStorage.getItem(CUTSCENE_FLAG_KEY) === '1') {
+        // Already met Ice in a prior session — skip cut scene + activate side-kick
+        state.iceSidekickJoined = true;
+        return;
+      }
+    } catch (e) {}
+    startCutscene();
+  }
+
+  function startCutscene() {
+    cutscene.active = true;
+    cutscene.startedAt = performance.now();
+    cutscene.typedChars = 0;
+    cutscene.showingChoices = false;
+    var ov = document.getElementById('overlay-cutscene');
+    var txt = document.getElementById('cutscene-text');
+    var ch = document.getElementById('cutscene-choices');
+    if (ov) ov.classList.remove('hidden');
+    if (txt) txt.textContent = '';
+    if (ch) ch.classList.add('hidden');
+    ga('cutscene_played');
+  }
+
+  function tickCutscene(now) {
+    if (!cutscene.active) return;
+    // Mouth animation cycle while typing
+    if (!cutscene.showingChoices) {
+      var mouthIdx = Math.floor((now - cutscene.startedAt) / CUTSCENE_MOUTH_MS) % 3;
+      var mouthVariant = ['closed', 'mid', 'open'][mouthIdx];
+      var bg = document.getElementById('cutscene-bg');
+      if (bg && bg.dataset.mouth !== mouthVariant) {
+        bg.dataset.mouth = mouthVariant;
+        bg.src = 'img/cutscene-' + mouthVariant + '.jpg';
+      }
+      // Typewriter
+      var elapsed = now - cutscene.startedAt;
+      var targetChars = Math.min(CUTSCENE_LINE.length, Math.floor(elapsed / CUTSCENE_TYPE_MS));
+      if (targetChars > cutscene.typedChars) {
+        // Play the dialogue beep on each new character (very short blip)
+        playSfx('dialogue-beep');
+        cutscene.typedChars = targetChars;
+        var txt2 = document.getElementById('cutscene-text');
+        if (txt2) txt2.textContent = CUTSCENE_LINE.slice(0, targetChars);
+      }
+      // Once text completes — settle on closed mouth + show choices
+      if (cutscene.typedChars >= CUTSCENE_LINE.length) {
+        cutscene.showingChoices = true;
+        var bg2 = document.getElementById('cutscene-bg');
+        if (bg2) { bg2.dataset.mouth = 'closed'; bg2.src = 'img/cutscene-closed.jpg'; }
+        var ch2 = document.getElementById('cutscene-choices');
+        if (ch2) ch2.classList.remove('hidden');
+        playSfx('ice-neck'); // Ice's "neck stretch" cue marks the end of his line
+      }
+    }
+  }
+
+  function dismissCutscene(choiceIdx) {
+    cutscene.active = false;
+    state.iceSidekickJoined = true;
+    try { localStorage.setItem(CUTSCENE_FLAG_KEY, '1'); } catch (e) {}
+    var ov = document.getElementById('overlay-cutscene');
+    if (ov) ov.classList.add('hidden');
+    ga('cutscene_choice', { selected_option: choiceIdx });
+  }
+
+  // ============================================================
   // GA event wrapper. Defaults to a no-op if gtag isn't loaded (so the
   // game still works if GA fails to load or is blocked by adblock).
   // ============================================================
@@ -423,6 +515,7 @@
     spawnTimer: 0,
     seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
     seagullSpawnTimer: 0,
+    iceSidekickJoined: false, // true after first cut scene; persisted via localStorage
     effects: {
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
@@ -560,6 +653,8 @@
         if (key === ' ' || key === 'Enter') startRun();
         return;
       }
+      // Cut scene blocks all gameplay input (player picks via mouse/tap on the choice buttons)
+      if (cutscene.active) return;
       // Playing — handle pause + lane shift
       if (key === 'p' || key === 'P' || key === 'Escape') {
         togglePause(); e.preventDefault(); return;
@@ -583,6 +678,7 @@
     function tapHandler(e) {
       if (state.phase !== 'playing') return;
       if (state.paused) return; // tap-to-resume handled by the pause overlay click
+      if (cutscene.active) return; // cut scene UI uses its own button clicks
       // Mouse: only respond to LEFT button (e.button === 0). Right-click
       // (e.button === 2) is reserved for pause via the contextmenu listener
       // — without this guard a right-click would also fire mousedown and
@@ -777,12 +873,16 @@
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
 
-    // FREEZE check: during the Mario-1UP ham-pickup freeze, don't move
-    // the world or run spawn timers. Effects still tick (so the freeze
-    // itself can expire).
+    // FREEZE check: during the Mario-1UP ham-pickup freeze OR during
+    // the Mike-meets-Ice cut scene, don't move the world or run spawn
+    // timers. Effects still tick so the freeze itself can expire.
     var nowMs = performance.now();
     tickEffects(nowMs);
+    tickCutscene(nowMs);
+    if (cutscene.active) return;
     if (nowMs < state.effects.hamFreezeUntil) return;
+    // Distance-triggered cut scene (first encounter only)
+    maybeTriggerCutscene();
 
     // Effective speed — modified by active bonus/debuff effects
     var effSpeed = state.speed;
@@ -1331,6 +1431,15 @@
     state.effects.weedDebuffUntil = 0;
     state.effects.textShownUntil = 0;
     state.effects.textLabel = '';
+    // Cut scene resets: re-read the localStorage flag (so a run that
+    // started fresh after clearing storage can re-trigger the cut scene)
+    cutscene.active = false;
+    try {
+      state.iceSidekickJoined = localStorage.getItem(CUTSCENE_FLAG_KEY) === '1';
+    } catch (e) {
+      state.iceSidekickJoined = false;
+    }
+    document.getElementById('overlay-cutscene').classList.add('hidden');
     // Reset music playback rate in case prior run ended mid-bonus
     if (currentMusicKey && audioInstances[currentMusicKey]) {
       audioInstances[currentMusicKey].playbackRate = 1;
@@ -1539,6 +1648,16 @@
       e.target.blur();
       quitToTitle();
     });
+    // Cut-scene choice buttons (all 3 dismiss with Ice joining)
+    var choiceContainer = document.getElementById('cutscene-choices');
+    if (choiceContainer) {
+      choiceContainer.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-choice]');
+        if (!btn) return;
+        e.target.blur();
+        dismissCutscene(parseInt(btn.dataset.choice, 10));
+      });
+    }
 
     // Pause button (in HUD) + click on the pause overlay to resume.
     var pauseBtn = document.getElementById('btn-pause');

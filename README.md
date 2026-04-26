@@ -16,6 +16,31 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.0 — 2026-04-26
+
+Minor — Mike-meets-Ice cut scene lands. First story moment in the runner.
+
+- **Triggered automatically** the first time the player crosses **400 m** during a run, **once per browser** (localStorage flag `runner-cutscene-met-ice-v1`). After it fires, all subsequent runs skip the cut scene and Ice is considered "joined" (side-kick mechanic itself ships in v0.18.1).
+- **Cut scene UX:**
+  - Game world freezes (same machinery as the ham-1UP freeze)
+  - Full-screen background image (Mike from behind on the left, Ice with selfie stick + Sonic shirt on the right) — uses your three `cutscene-ice-mouth-{closed,mid,open}.png` source files compressed to ~200 KB JPEGs each (was 1.5 MB each as PNG).
+  - Mouth animation cycles **closed → mid → open** every 110 ms while the dialogue text is typing in
+  - Dialogue typewriter at ~35 ms per character, with `Blip3.mp3` beeping on each new character (Pokemon-style)
+  - Speaker name banner ("ICE POSEIDON") floats above the dialogue box
+  - Blinking caret at the end of the typing line
+  - When text finishes: mouth settles on `closed`, `ice-neck.mp3` plays, three player-choice buttons fade in
+- **The dialogue + choices** (your authored copy):
+  > **ICE POSEIDON:** "Mike Smalls? Aren't you the guy who always just wants to fuck?"
+  -
+  > "What did you just say horse boy?"
+  > "DON'T GRAB MY DICK BITCH ASS N\*GGA!"
+  > "ALLAT! Let's team up!"
+  
+  All three converge — choosing any of them sets `iceSidekickJoined = true` + persists the localStorage flag and dismisses the overlay.
+- **GA events:** `cutscene_played` fires on overlay open, `cutscene_choice` fires on dismiss with `selected_option` (0/1/2).
+- **Input handling** during cut scene: keyboard + tap input is blocked so the player can't accidentally pause/jump/shift-lane while the dialogue is typing. The choice buttons remain interactive (their own click handler).
+- **Coming in v0.18.1:** Ice actually appears in the world running alongside Mike + auto-collects Cx coins + neck-stretches each time he scores.
+
 ### Run v0.17.5 — 2026-04-26
 
 Patch — pickup-text overlays for 400 + weed, and live duration countdowns in the HUD.

@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.17.5">
+  <meta name="version" content="0.18.0">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -113,6 +113,23 @@
     </div>
   </div>
 
+  <!-- Cut scene overlay — Pokemon-style first-encounter dialogue
+       between Mike and Ice. Game-world is paused while this is up.
+       Three player-choice buttons appear after the dialogue finishes
+       typing in. All choices funnel to "Ice has joined." -->
+  <div class="overlay overlay-cutscene hidden" id="overlay-cutscene">
+    <img class="cutscene-bg" id="cutscene-bg" src="img/cutscene-closed.jpg" alt="">
+    <div class="cutscene-dialogue">
+      <div class="cutscene-name" id="cutscene-name">ICE POSEIDON</div>
+      <p class="cutscene-text" id="cutscene-text"></p>
+      <div class="cutscene-choices hidden" id="cutscene-choices">
+        <button type="button" data-choice="0">"What did you just say horse boy?"</button>
+        <button type="button" data-choice="1">"DON'T GRAB MY DICK BITCH ASS N*GGA!"</button>
+        <button type="button" data-choice="2">"ALLAT! Let's team up!"</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Pause overlay — semi-transparent panel shown while paused.
        Click anywhere on it (or press P / ESC again) to resume.
        Map of Chile sits behind the title as ambient flavor. -->
@@ -143,7 +160,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.17.5</div>
+  <div class="game-version">Run v0.18.0</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
