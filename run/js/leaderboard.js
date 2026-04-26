@@ -46,55 +46,11 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 
-// ============================================================
-// Profanity filter — three layers + l33t-speak normalize.
-// ============================================================
-const HATE_TERMS = [
-  // Edit this list to add/remove terms. Stored as a baseline; the
-  // l33t-speak normalize step catches "n1gger", "n!gger", "n1g", etc.
-  // We keep it terse here — most common slurs only. The full filter
-  // catches a wider net via the bad-words equivalent below.
-  'nigger', 'nigga', 'faggot', 'tranny', 'kike', 'spic', 'chink',
-  'gook', 'wetback', 'retard', 'retarded',
-];
-
-const COMMON_PROFANITY = [
-  'fuck', 'shit', 'cunt', 'bitch', 'asshole', 'dick', 'pussy',
-  'cock', 'bastard', 'whore', 'slut', 'douche', 'piss',
-];
-
-// l33t-speak character substitutions for normalize step
-const L33T_MAP = {
-  '0': 'o', '1': 'i', '!': 'i', '|': 'i',
-  '3': 'e', '4': 'a', '@': 'a', '5': 's', '$': 's',
-  '7': 't', '+': 't', '9': 'g', '6': 'g',
-};
-function normalizeForFilter(s) {
-  // Lowercase, strip non-alphanumeric repeats, l33t→letters, then strip
-  // anything that's not a letter (so "fuuuck" + "f.u.c.k" + "f3ck" all
-  // collapse to "fuck"). Catches most evasion attempts.
-  s = (s || '').toLowerCase();
-  let out = '';
-  for (const ch of s) {
-    out += L33T_MAP[ch] || ch;
-  }
-  // Collapse repeated letters: "fuuuck" → "fuck"
-  out = out.replace(/(.)\1+/g, '$1');
-  // Strip non-letters
-  out = out.replace(/[^a-z]/g, '');
-  return out;
-}
-
-function containsBlockedWord(displayName) {
-  const norm = normalizeForFilter(displayName);
-  for (const term of HATE_TERMS) {
-    if (norm.includes(term)) return { blocked: true, reason: 'hate' };
-  }
-  for (const term of COMMON_PROFANITY) {
-    if (norm.includes(term)) return { blocked: true, reason: 'profanity' };
-  }
-  return { blocked: false };
-}
+// (Profanity filter / display-name modes removed in v0.17.3 — leaderboard
+// is now streamer-handle-only so the handle character regex
+// `[a-zA-Z0-9_]` does all the validation we need. If we ever re-add
+// free-text display names, the filter from the v0.17.2 commit history
+// can be restored.)
 
 // ============================================================
 // Anti-spam: client-side sanity caps + per-session "submitted" flag.
@@ -134,28 +90,14 @@ async function submit(scoreData) {
     throw new Error('already submitted');
   }
 
-  // Validate identity type + sanitize identity string
+  // Streamer-handle only. Allow alphanumeric + underscore, max 25 chars
+  // (matches Kick + Twitch username rules).
   const it = scoreData.identityType;
-  if (!['name', 'arcade', 'kick', 'twitch'].includes(it)) {
-    throw new Error('bad identityType');
+  if (!['kick', 'twitch'].includes(it)) {
+    throw new Error('Pick Kick or Twitch');
   }
-  let identity = String(scoreData.identity || '').trim();
-  if (!identity) throw new Error('empty identity');
-
-  if (it === 'name') {
-    if (identity.length > 20) identity = identity.slice(0, 20);
-    const block = containsBlockedWord(identity);
-    if (block.blocked) {
-      throw new Error('display name blocked: ' + block.reason);
-    }
-  } else if (it === 'arcade') {
-    identity = identity.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-    if (identity.length === 0) throw new Error('empty arcade tag');
-  } else { // kick or twitch
-    // Allow alphanumeric + underscore, max 25 chars (matching platform rules)
-    identity = identity.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 25);
-    if (identity.length === 0) throw new Error('empty handle');
-  }
+  let identity = String(scoreData.identity || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 25);
+  if (identity.length === 0) throw new Error('Enter a handle');
 
   // Combined score: distance (m) + coins × multiplier × 10
   const score = Math.floor(scoreData.distance) + scoreData.coins * scoreData.multiplier * 10;
@@ -201,27 +143,14 @@ function buildSubmitDialog(scoreData) {
     <h2>SUBMIT YOUR SCORE</h2>
     <p class="score-line">${Math.floor(scoreData.distance)} m · Cx ${scoreData.coins} ×${scoreData.multiplier} · ${formatTime(scoreData.durationSec * 1000)}</p>
     <p class="score-total">Total: ${Math.floor(scoreData.distance) + scoreData.coins * scoreData.multiplier * 10}</p>
-    <div class="submit-tabs">
-      <button type="button" class="submit-tab is-active" data-mode="name">Display Name</button>
-      <button type="button" class="submit-tab" data-mode="arcade">Arcade Tag</button>
-      <button type="button" class="submit-tab" data-mode="streamer">Streamer Handle</button>
-    </div>
-    <div class="submit-input-wrap" data-mode="name">
-      <input type="text" class="submit-input" placeholder="Your name (max 20)" maxlength="20">
-      <p class="submit-help">Profanity filter applies. Be cool.</p>
-    </div>
-    <div class="submit-input-wrap" data-mode="arcade" hidden>
-      <input type="text" class="submit-input arcade" placeholder="MJX9" maxlength="4">
-      <p class="submit-help">4 characters, A-Z 0-9.</p>
-    </div>
-    <div class="submit-input-wrap" data-mode="streamer" hidden>
-      <select class="submit-platform">
+    <div class="submit-input-wrap" data-mode="streamer">
+      <select class="submit-platform" aria-label="Streaming platform">
         <option value="kick">Kick</option>
         <option value="twitch">Twitch</option>
       </select>
-      <input type="text" class="submit-input handle" placeholder="username" maxlength="25">
-      <p class="submit-help">Becomes a clickable link on the leaderboard.</p>
+      <input type="text" class="submit-input handle" placeholder="username" maxlength="25" autocomplete="off">
     </div>
+    <p class="submit-help">Your handle becomes a clickable link to your channel on the leaderboard.</p>
     <p class="submit-error" hidden></p>
     <div class="submit-buttons">
       <button type="button" class="submit-cancel">Cancel</button>
@@ -242,15 +171,8 @@ function openSubmitDialog(scoreData) {
   const dlg = buildSubmitDialog(scoreData);
   document.body.appendChild(dlg);
 
-  let activeMode = 'name';
-  const tabs = dlg.querySelectorAll('.submit-tab');
-  const wraps = dlg.querySelectorAll('.submit-input-wrap');
-  tabs.forEach(t => t.addEventListener('click', () => {
-    activeMode = t.dataset.mode;
-    tabs.forEach(x => x.classList.toggle('is-active', x === t));
-    wraps.forEach(w => { w.hidden = w.dataset.mode !== activeMode; });
-    dlg.querySelector(`.submit-input-wrap[data-mode="${activeMode}"] .submit-input`)?.focus();
-  }));
+  // Auto-focus the handle input so the user can just type
+  setTimeout(() => dlg.querySelector('.submit-input.handle')?.focus(), 50);
 
   dlg.querySelector('.submit-cancel').addEventListener('click', () => dlg.remove());
 
@@ -258,19 +180,9 @@ function openSubmitDialog(scoreData) {
     const errEl = dlg.querySelector('.submit-error');
     errEl.hidden = true;
     try {
-      let identityType, identity;
-      if (activeMode === 'name') {
-        identityType = 'name';
-        identity = dlg.querySelector('.submit-input-wrap[data-mode="name"] input').value;
-      } else if (activeMode === 'arcade') {
-        identityType = 'arcade';
-        identity = dlg.querySelector('.submit-input-wrap[data-mode="arcade"] input').value;
-      } else {
-        identityType = dlg.querySelector('.submit-platform').value;
-        identity = dlg.querySelector('.submit-input-wrap[data-mode="streamer"] input').value;
-      }
+      const identityType = dlg.querySelector('.submit-platform').value; // 'kick' or 'twitch'
+      const identity = dlg.querySelector('.submit-input.handle').value;
       const submitted = await submit({ ...scoreData, identityType, identity });
-      // GA event
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'leaderboard_submitted', { identity_type: submitted.identityType });
       }
@@ -306,12 +218,11 @@ async function openLeaderboard() {
     wrap.innerHTML = rows.map((r, i) => {
       let ident;
       if (r.identityType === 'kick') {
-        ident = `<a href="https://kick.com/${r.identity}" target="_blank" rel="noopener">${r.identity}</a> <span class="plat">kick</span>`;
+        ident = `<a href="https://kick.com/${r.identity}" target="_blank" rel="noopener">kick.com/${r.identity}</a>`;
       } else if (r.identityType === 'twitch') {
-        ident = `<a href="https://twitch.tv/${r.identity}" target="_blank" rel="noopener">${r.identity}</a> <span class="plat">twitch</span>`;
-      } else if (r.identityType === 'arcade') {
-        ident = `<span class="arcade-tag">${r.identity}</span>`;
+        ident = `<a href="https://twitch.tv/${r.identity}" target="_blank" rel="noopener">twitch.tv/${r.identity}</a>`;
       } else {
+        // Legacy entries from v0.17.2 days (display name / arcade tag) — render plain
         ident = `<span class="display-name">${r.identity}</span>`;
       }
       return `<div class="lb-row${i < 3 ? ' top3' : ''}">

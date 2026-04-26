@@ -417,6 +417,21 @@ html, body {
   text-transform: uppercase;
 }
 
+/* ---- Title screen button row ---- */
+.title-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  align-items: center;
+  margin-top: .8rem;
+}
+.title-buttons button { min-width: 220px; }
+#btn-title-leaderboard {
+  background: rgba(255,255,255,.1);
+  border-color: rgba(255,255,255,.4);
+  font-size: 1.6rem;
+}
+
 /* ---- Game-over button row ---- */
 .gameover-buttons {
   display: flex;
@@ -425,6 +440,15 @@ html, body {
   align-items: center;
 }
 .gameover-buttons button { min-width: 220px; }
+
+/* ---- Pause overlay's quit button ---- */
+#btn-pause-quit {
+  margin-top: 1.2rem;
+  font-size: 1.4rem;
+  background: rgba(255,255,255,.1);
+  border-color: rgba(255,255,255,.4);
+  position: relative; /* sit above the map */
+}
 
 /* ---- Submit-score dialog ---- */
 .overlay-submit, .overlay-leaderboard {

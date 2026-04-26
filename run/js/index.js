@@ -139,6 +139,18 @@
   // as a JPEG (800 KB) instead of the 7 MB source PNG since it's a
   // photographic-style image that compresses fine without quality loss.
   SPRITE_PATHS['titlescreen'] = 'img/titlescreen.jpg';
+  // Pickup item sprites (referenced by PICKUP_TYPES below)
+  SPRITE_PATHS['ham-spin-01']    = 'img/sprites/ham-spin-01.png';
+  SPRITE_PATHS['h400-spin-01']   = 'img/sprites/h400-spin-01.png';
+  SPRITE_PATHS['h400-spin-02']   = 'img/sprites/h400-spin-02.png';
+  for (var ws = 1; ws <= 16; ws++) {
+    var wk = 'weed-spin-' + (ws < 10 ? '0' + ws : ws);
+    SPRITE_PATHS[wk] = 'img/sprites/' + wk + '.png';
+  }
+  // Cop car sprites (referenced by OBSTACLE_TYPES below)
+  ['01', '02', '05', '09'].forEach(function (n) {
+    SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
+  });
   // Seagull frames for animated title-screen flying birds (rows 3-4 of
   // the source sheet are the wings-spread flight poses).
   for (var sg = 9; sg <= 12; sg++) {
@@ -162,8 +174,10 @@
     'mob-argue':           { src: 'audio/mob-argue.mp3',           channel: 'sfx' },
     'punch-phone-snatch':  { src: 'audio/punch-phone-snatch.mp3',  channel: 'sfx' },
     'ice-neck':            { src: 'audio/ice-neck.mp3',            channel: 'dialogue' },
-    // v0.16 audio additions
-    'coin-pickup':         { src: 'audio/coin-pickup.wav',         channel: 'sfx' },
+    // v0.16 audio additions. Coin pack file used here instead of
+    // coin-pickup.wav — reported inaudible and the pack version is
+    // shorter (~80 ms) + louder, better for "rapid Cx grab" feedback.
+    'coin-pickup':         { src: 'audio/Coins/MP3/Coin1.mp3',     channel: 'sfx' },
     'swoosh':              { src: 'audio/swoosh.flac',             channel: 'sfx' },
     // Pre-loaded for v0.17 features (referenced when those land)
     'ham-pickup':          { src: 'audio/1up/MP3/1up3.mp3',        channel: 'sfx' },
@@ -175,7 +189,7 @@
   var audioInstances = {};
   var audioMixer = {
     music:    { volume: 0.5, muted: false },
-    sfx:      { volume: 0.7, muted: false },
+    sfx:      { volume: 0.85, muted: false }, // boosted in v0.17.3 — coin SFX was reported inaudible
     dialogue: { volume: 1.0, muted: false },
     masterMuted: false,
   };
@@ -569,6 +583,18 @@
     }
     document.addEventListener('touchstart', tapHandler, { passive: false });
     document.addEventListener('mousedown', tapHandler);
+
+    // Right-click (contextmenu) toggles pause during play. Suppress the
+    // browser context menu either way so it doesn't pop up over the game.
+    document.addEventListener('contextmenu', function (e) {
+      // Allow context menu on form inputs (so the leaderboard input
+      // dialog still has paste etc.)
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        return;
+      }
+      e.preventDefault();
+      if (state.phase === 'playing') togglePause();
+    });
   }
 
   // ============================================================
@@ -727,9 +753,14 @@
     tickEffects(nowMs);
     if (nowMs < state.effects.hamFreezeUntil) return;
 
-    // Effective speed — slowed by weed debuff if active
+    // Effective speed — modified by active bonus/debuff effects
     var effSpeed = state.speed;
     if (nowMs < state.effects.weedDebuffUntil) effSpeed *= 0.55;
+    // HAM bonus: world scroll also speeds up to match the chipmunk-music
+    // tempo, so the visual pace matches the audio pace
+    if (nowMs > state.effects.hamFreezeUntil && nowMs < state.effects.hamBonusUntil) {
+      effSpeed *= 1.7;
+    }
 
     // Move obstacles + coins + pickups UP toward Mike.
     var i;
@@ -1023,20 +1054,24 @@
     for (var i = 0; i < state.seagulls.length; i++) {
       state.seagulls[i].x += state.seagulls[i].vx * dt;
     }
-    // Cull off-screen left
+    // Cull off-screen on the right (they're flying L→R now)
     state.seagulls = state.seagulls.filter(function (g) {
-      return g.x > -200;
+      return g.x < viewW() + 200;
     });
     // Spawn new ones periodically
     state.seagullSpawnTimer += dt;
     if (state.seagullSpawnTimer > 1.6 + Math.random() * 1.4) {
       state.seagullSpawnTimer = 0;
       state.seagulls.push({
-        x: viewW() + 60,
+        x: -60,
         // Sky region — top 35% of viewport
         y: viewH() * (0.04 + Math.random() * 0.30),
-        vx: -(60 + Math.random() * 90),       // px/sec leftward
-        scale: 0.8 + Math.random() * 0.7,
+        // Positive vx — fly LEFT→RIGHT (matches the seagull sprite's
+        // beak-pointing-right orientation; flying the other way looked
+        // backwards)
+        vx: 60 + Math.random() * 90,
+        // Smaller default scale (0.4-0.7) so they don't dominate the title
+        scale: 0.4 + Math.random() * 0.3,
         flapPhase: Math.random() * 1000,
       });
     }
@@ -1050,7 +1085,15 @@
     if (!img) return;
     var w = img.width * g.scale;
     var hh = img.height * g.scale;
+    // Drop shadow so the white-bodied seagulls don't disappear against
+    // the bright sky in the title-screen background image.
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, .55)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 4;
     ctx.drawImage(img, g.x - w / 2, g.y - hh / 2, w, hh);
+    ctx.restore();
   }
 
   function drawRoad(yTop, yBot) {
@@ -1247,6 +1290,20 @@
     ga('game_started');
   }
 
+  function quitToTitle() {
+    // Hard reset back to title screen — clears game state, hides
+    // pause + gameover overlays, shows the start overlay.
+    setPaused(false);
+    state.phase = 'menu';
+    stopBackgroundMusic();
+    stopLoop('mob-angry');
+    // Restart bg music for the title screen
+    startBackgroundMusic();
+    document.getElementById('overlay-start').classList.remove('hidden');
+    document.getElementById('overlay-pause').classList.add('hidden');
+    document.getElementById('overlay-gameover').classList.add('hidden');
+  }
+
   function endRun() {
     state.phase = 'gameover';
     // Audio: death sting first, then queue the gameover music
@@ -1414,6 +1471,18 @@
       e.target.blur();
       if (!window.RunnerLeaderboard) return;
       window.RunnerLeaderboard.openLeaderboard();
+    });
+    var titleLbBtn = document.getElementById('btn-title-leaderboard');
+    if (titleLbBtn) titleLbBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      if (!window.RunnerLeaderboard) return;
+      window.RunnerLeaderboard.openLeaderboard();
+    });
+    // QUIT-TO-TITLE button in pause menu — resets to menu phase
+    var quitBtn = document.getElementById('btn-pause-quit');
+    if (quitBtn) quitBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      quitToTitle();
     });
 
     // Pause button (in HUD) + click on the pause overlay to resume.

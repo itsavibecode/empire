@@ -16,6 +16,19 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.3 — 2026-04-26
+
+Patch round — bug fixes + UX feedback from playtest.
+
+- **Pickup sprites no longer render as purple boxes.** `ham-spin-01`, `h400-spin-01/02`, and `weed-spin-01..16` were referenced in `PICKUP_TYPES` but I never added them to `SPRITE_PATHS` so they never preloaded — `drawAt` was hitting its missing-sprite fallback (the magenta box). Same for `cop-car-01/02/05/09`. All now in the preload list.
+- **Seagulls flipped + shrunk + drop-shadowed.** They were flying right→left but the sprite's beak points right, so they looked like they were flying backwards. Now flying L→R (matching beak direction). Default scale dropped from 0.8-1.5 → 0.4-0.7 so they don't dominate the title screen. Added a CSS-style drop shadow (rgba(0,0,0,.55), blur 8 px, offset 2/4) on each draw so the white-bodied seagulls don't disappear against the bright sky in the title-screen image.
+- **Title screen text** — removed the "an EmpireX runner" subtitle. Description tag now line-breaks after "through Chile." for cleaner reading. Hint line expanded to mention SPACE / pause keys.
+- **LEADERBOARD button** added to the title screen (next to START). Quit-to-title button added to the pause overlay so mid-game you can bail back to the title without finishing the run.
+- **Right-click also pauses** — `contextmenu` event listener on the document toggles pause during play (and suppresses the browser context menu either way so it doesn't pop up over the game). Inputs/textareas still get their normal context menu so leaderboard handle entry isn't broken.
+- **HAM bonus speeds up world scroll too** (× 1.7) so the visual pace matches the chipmunk-music tempo. Was previously only audio that sped up.
+- **Coin pickup SFX** — switched from the user's `coin-pickup.wav` (was reported inaudible — possibly too quiet, possibly format issue) to `Coins/MP3/Coin1.mp3` from the bundled sound pack which is shorter (~80 ms) and louder. SFX channel default volume bumped from 0.7 → 0.85 across the board.
+- **Leaderboard simplified to streamer-handle-only.** Display-name + arcade-tag modes removed. The submit dialog now has just a Kick/Twitch dropdown + handle input — auto-focused on open so you can just type and hit SUBMIT. Profanity filter code stripped (no longer needed since handles are character-regex-validated). Leaderboard rows now show the full `kick.com/handle` or `twitch.tv/handle` URL form.
+
 ### Run v0.17.2 — 2026-04-26
 
 Patch — Firebase-backed leaderboard live.

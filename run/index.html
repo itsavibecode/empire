@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.17.2">
+  <meta name="version" content="0.17.3">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -103,10 +103,12 @@
   <!-- Start overlay — shown until "START" tapped (assets must be loaded first) -->
   <div class="overlay" id="overlay-start">
     <h1 class="title-cursive"><span class="big">O</span>n <span class="big">B</span>aby!</h1>
-    <p class="subtitle">an EmpireX runner</p>
-    <p>Mike Smalls Jr is being chased through Chile. Help him outrun the mob.</p>
-    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>5 lanes — collect Cx coins for score multiplier</p>
-    <button type="button" id="btn-start">START</button>
+    <p>Mike Smalls Jr is being chased through Chile.<br>Help him outrun the mob.</p>
+    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>SPACE = jump · P / ESC / right-click = pause<br>5 lanes — collect Cx coins for score multiplier</p>
+    <div class="title-buttons">
+      <button type="button" id="btn-start">START</button>
+      <button type="button" id="btn-title-leaderboard">LEADERBOARD</button>
+    </div>
   </div>
 
   <!-- Pause overlay — semi-transparent panel shown while paused.
@@ -115,7 +117,8 @@
   <div class="overlay overlay-pause hidden" id="overlay-pause">
     <img class="pause-map" src="concept/Mapa Todas las regiones.svg" alt="" aria-hidden="true">
     <h1>PAUSED</h1>
-    <p class="hint">P / ESC or tap to resume</p>
+    <p class="hint">P / ESC / right-click or tap PAUSED text to resume</p>
+    <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
   <!-- Game-over overlay — shown when lives hit 0 -->
@@ -138,7 +141,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.17.2</div>
+  <div class="game-version">Run v0.17.3</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
