@@ -16,6 +16,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.4 — 2026-04-26
+
+Patch — Ice scaling + orientation + per-run reset.
+
+- **Ice now front-faces the camera** like Mike instead of running side-view. Switched his run cycle from `ice-19/20/21/22` (the side-view profile row) to `ice-14/15/16` (the camera-POV row, where Ice is running TOWARD the camera with the selfie stick). Now visually consistent with Mike's orientation.
+- **Ice scaled up** from `0.85x` Mike's height → `1.05x`. Ice's source sprite is narrower than Mike's so even at 1.05x he renders comparably wide on screen. Was rendering as a tiny child next to Mike before — now reads as a proper side-kick at proportional height.
+- **Cut scene + Ice now reset on every Run Again.** Previously the localStorage flag persisted, so the cut scene only ever played once per browser, and Ice was permanently with you across all future runs. Now:
+  - Each new run starts with Ice gone (`state.iceSidekickJoined = false`).
+  - Cut scene fires the first time you cross **250 m** (lowered from 400 m so it triggers more reliably) — but only the FIRST time per page-load session. Subsequent Run Agains skip the dialogue and Ice silently joins at the same threshold.
+  - Reload the page → cut scene replays once again on the next 250 m crossing.
+- **Cut scene trigger lowered** from 400 m → 250 m so it fires within the first ~7 seconds of survival instead of needing 12+ seconds. Players who die early should now reliably see the cut scene at least once.
+
 ### Run v0.18.3 — 2026-04-26
 
 Patch — three playtest bugs from the v0.18.0-0.18.2 story round.

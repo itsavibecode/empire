@@ -391,8 +391,7 @@
   // All choices set state.iceSidekickJoined = true (the side-kick
   // mechanic itself lands in v0.18.1).
   // ============================================================
-  var CUTSCENE_TRIGGER_DISTANCE_M = 400;
-  var CUTSCENE_FLAG_KEY = 'runner-cutscene-met-ice-v1';
+  var CUTSCENE_TRIGGER_DISTANCE_M = 250;
   var CUTSCENE_LINE = "Mike Smalls? Aren't you the guy who always just wants to fuck?";
   var CUTSCENE_TYPE_MS = 35;     // ms per character of dialogue
   var CUTSCENE_MOUTH_MS = 110;   // ms per mouth-frame swap
@@ -402,19 +401,19 @@
     startedAt: 0,
     typedChars: 0,
     showingChoices: false,
+    everPlayedThisSession: false, // resets on page reload, NOT on Run Again
   };
 
   function maybeTriggerCutscene() {
     if (cutscene.active) return;
     if (state.iceSidekickJoined) return;
     if (state.distance < CUTSCENE_TRIGGER_DISTANCE_M) return;
-    try {
-      if (localStorage.getItem(CUTSCENE_FLAG_KEY) === '1') {
-        // Already met Ice in a prior session — skip cut scene + activate side-kick
-        state.iceSidekickJoined = true;
-        return;
-      }
-    } catch (e) {}
+    if (cutscene.everPlayedThisSession) {
+      // Already saw the cut scene this page-load. Ice silently joins
+      // for THIS run (resets on next Run Again).
+      state.iceSidekickJoined = true;
+      return;
+    }
     startCutscene();
   }
 
@@ -468,7 +467,7 @@
   function dismissCutscene(choiceIdx) {
     cutscene.active = false;
     state.iceSidekickJoined = true;
-    try { localStorage.setItem(CUTSCENE_FLAG_KEY, '1'); } catch (e) {}
+    cutscene.everPlayedThisSession = true; // skip the cut scene on subsequent Run Agains in this session
     var ov = document.getElementById('overlay-cutscene');
     if (ov) ov.classList.add('hidden');
     ga('cutscene_choice', { selected_option: choiceIdx });
@@ -1455,9 +1454,11 @@
       if (stretchFrame > 29) stretchFrame = 29;
       return 'ice-' + (stretchFrame < 10 ? '0' + stretchFrame : stretchFrame);
     }
-    // Otherwise, run-cycle on side-view frames (ice-19..22 are clean
-    // side-view running poses from the source sheet)
-    var frame = 19 + Math.floor(now / RUN_FRAME_MS) % 4;
+    // Otherwise, run-cycle on CAMERA-POV (front-facing) frames so Ice
+    // visually matches Mike's orientation. ice-14/15/16 are the
+    // running-toward-camera poses from the source sheet.
+    var frames = [14, 15, 16];
+    var frame = frames[Math.floor(now / RUN_FRAME_MS) % frames.length];
     return 'ice-' + frame;
   }
 
@@ -1467,7 +1468,12 @@
     // During horse boost, Ice rides on Mike's horse (built into the
     // mike-ice-horse-* sprite), so no separate Ice render needed.
     if (performance.now() < state.effects.horseBoostUntil) return;
-    var size = scaledSize('ice-19', PLAYER_TARGET_HEIGHT_FRAC * 0.85);
+    // Ice rendered at 1.05x Mike's height — Ice is taller in real life
+    // (lanky vs Mike's stockier build) so this matches the canon
+    // proportions and stops Ice from looking like a tiny child next to
+    // Mike. Source-sprite aspect ratios are different too (Ice is
+    // narrower) so without the bump he renders comically small.
+    var size = scaledSize('ice-15', PLAYER_TARGET_HEIGHT_FRAC * 1.05);
     var x = iceX();
     var y = playerY() - size.h;
     var key = pickIceFrame(now);
@@ -1491,7 +1497,7 @@
     if (!state.iceSidekickJoined) return false;
     if (coin.picked) return false;
     var ix = iceX();
-    var iy = playerY() - scaledSize('ice-19', PLAYER_TARGET_HEIGHT_FRAC * 0.85).h * 0.5;
+    var iy = playerY() - scaledSize('ice-15', PLAYER_TARGET_HEIGHT_FRAC * 1.05).h * 0.5;
     var coinCx = laneX(coin.lane);
     var coinCy = coin.y + coin.h / 2;
     var dx = coinCx - ix;
@@ -1590,14 +1596,12 @@
     state.effects.horseBoostUntil = 0;
     state.effects.textShownUntil = 0;
     state.effects.textLabel = '';
-    // Cut scene resets: re-read the localStorage flag (so a run that
-    // started fresh after clearing storage can re-trigger the cut scene)
+    // Cut scene resets: each new run starts with Ice gone and the
+    // cut scene un-triggered. The cut scene only re-plays if it
+    // hasn't been seen this page-load session — otherwise Ice silently
+    // joins again at the trigger distance (250m by default).
     cutscene.active = false;
-    try {
-      state.iceSidekickJoined = localStorage.getItem(CUTSCENE_FLAG_KEY) === '1';
-    } catch (e) {
-      state.iceSidekickJoined = false;
-    }
+    state.iceSidekickJoined = false;
     state.ice.neckStretchUntil = 0;
     state.iceCoinsCollected = 0;
     document.getElementById('overlay-cutscene').classList.add('hidden');
