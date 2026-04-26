@@ -4,8 +4,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- noindex on the page itself (we don't want this ranking on Google) but
+       OG/Twitter tags below still work — social-card unfurlers read those
+       tags directly and don't honor robots meta. So shared links will still
+       show a rich preview. -->
   <meta name="robots" content="noindex, nofollow">
-  <title>EmpireX - Slots</title>
+  <meta name="description" content="EmpireX Slots — a tap-to-spin slot mini-game on the EmpireX site. Match three to win, save your win as a screenshot.">
+  <link rel="canonical" href="https://ourempirex.com/game/">
+  <meta name="author" content="Our Empire">
+  <meta name="version" content="0.10.15">
+  <title>EmpireX Slots — Tap to Spin</title>
+
+  <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord, etc.) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ourempirex.com/game/">
+  <meta property="og:title" content="EmpireX Slots — Tap to Spin">
+  <meta property="og:description" content="A tap-to-spin slot mini-game on the EmpireX site. Match three to win, save your win as a screenshot.">
+  <meta property="og:image" content="https://ourempirex.com/game/og-game.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="EmpireX Slots — slot machine showing a winning match">
+  <meta property="og:site_name" content="EmpireX by Our Empire">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="EmpireX Slots — Tap to Spin">
+  <meta name="twitter:description" content="A tap-to-spin slot mini-game on the EmpireX site. Match three to win, save your win as a screenshot.">
+  <meta name="twitter:image" content="https://ourempirex.com/game/og-game.jpg">
+  <meta name="twitter:image:alt" content="EmpireX Slots — slot machine showing a winning match">
+
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
@@ -41,7 +69,7 @@
     <img src="/bookhockeys-logo.png" alt="BookHockeys">
   </a>
   <div class="game-url">ourempirex.com/game</div>
-  <div class="game-version">v0.10.14</div>
+  <div class="game-version">v0.10.15</div>
 
   <!-- Audio elements. Files are not committed; drop your own MP3/OGG
        files into game/audio/ and they'll auto-load. If a file is

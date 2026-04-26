@@ -16,6 +16,15 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.15 — 2026-04-26
+
+Patch — Open Graph / Twitter share metadata for the `/game/` page.
+
+- **`/game/` now has full social-share metadata.** Previously, sharing `ourempirex.com/game` to Discord, iMessage, Slack, Facebook, X, etc. produced a bare-URL preview with no image and no description. Now the unfurler picks up a proper title (`EmpireX Slots — Tap to Spin`), a one-line description, and a 1200×630 preview image showing the slot in a winning state with the top-prize face inside the white frame and `OUREMPIREX.COM/GAME` underneath.
+- **`game/og-game.jpg`** — generated 1200×630 share image, mirrors the in-page look (black background, white-bordered slot, purple interior, brand caption). Built by a new script.
+- **`.github/scripts/build-game-og.py`** — Pillow-based generator that loads `1symbol-a.png`, cover-fits it inside the slot frame, draws the EMPIREX SLOTS eyebrow + URL caption. Falls back to bundled system fonts (Arial/Helvetica/DejaVu) so it runs anywhere without a custom TTF dependency. Re-run any time the top-prize face changes.
+- **`canonical`, `description`, `author`, `version`, OG, and Twitter Card tags added to `game/index.html`** alongside the existing `noindex` (the page itself stays out of Google search results, but social-card unfurlers read the OG tags directly so previews still work).
+
 ### v0.10.14 — 2026-04-25
 
 Patch — removed the dev-mode panel.
