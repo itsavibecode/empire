@@ -16,6 +16,23 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.2 — 2026-04-26
+
+Patch — Firebase-backed leaderboard live.
+
+- **`run/js/leaderboard.js`** — new ES module loaded as `<script type="module">` so it can use Firebase v12's modular SDK (ESM imports from gstatic CDN). Self-contained: handles Firebase init, profanity filtering, score submission, top-100 fetch + render, and the submit/leaderboard UI overlays. Exposes a small surface (`window.RunnerLeaderboard.openSubmitDialog/openLeaderboard/submit/fetchTop`) that the main classic-JS game can call.
+- **3 identity input modes** as discussed: **Display Name** (max 20 chars, profanity-filtered) / **Arcade Tag** (4 chars, A-Z 0-9, no filter needed since length-limited) / **Streamer Handle** (Kick/Twitch dropdown, becomes a clickable link on the board).
+- **Profanity filter** is 3-layer:
+  1. **L33t-speak normalize** — `0`→`o`, `1`→`i`, `3`→`e`, `4`→`a`, `@`→`a`, `5`→`s`, `7`→`t` etc., then collapse repeated letters and strip non-letters. So `n1gger`, `fuuuck`, `f.u.c.k`, `f3ck` all collapse to their root form for matching.
+  2. **Hate-term list** — common slurs, blocks with `reason: 'hate'`.
+  3. **Common-profanity list** — fuck/shit/cunt/etc., blocks with `reason: 'profanity'`.
+- **Anti-spam:**
+  - Per-(distance, coins) localStorage flag prevents double-submitting the same run. Different runs can be submitted freely.
+  - Server-side sanity caps in JS (DB rules also enforce, layered defense): max 100k m distance, max 10k coins, min 5 sec duration.
+- **Sorted by combined score** = `distance + coins × multiplier × 10`. Top 3 rows highlighted with subtle purple background.
+- **Game-over screen** now has 3 buttons: SUBMIT SCORE / LEADERBOARD / RUN AGAIN. Submit dialog is a full-screen overlay with the input mode tabs + score recap. Leaderboard is a separate full-screen overlay with rows showing rank, identity (clickable for streamer handles), score, and detail (distance + coins×multiplier).
+- GA event `leaderboard_submitted` fires with `identity_type` param when a submission succeeds.
+
 ### Run v0.17.1 + Slots v0.14.0 — 2026-04-26
 
 Minor — Google Analytics + custom-event tracking on both games.

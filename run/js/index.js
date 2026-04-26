@@ -1395,6 +1395,27 @@
     document.getElementById('btn-start').addEventListener('click', startAndBlur);
     document.getElementById('btn-restart').addEventListener('click', startAndBlur);
 
+    // Leaderboard buttons (require window.RunnerLeaderboard which is
+    // loaded as an ES module — may not be ready immediately on first
+    // paint, but will be by the time game-over fires).
+    var subBtn = document.getElementById('btn-submit-score');
+    if (subBtn) subBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      if (!window.RunnerLeaderboard) return;
+      window.RunnerLeaderboard.openSubmitDialog({
+        distance: state.distance,
+        coins: state.coins,
+        multiplier: state.multiplier,
+        durationSec: state.elapsedMs / 1000,
+      });
+    });
+    var lbBtn = document.getElementById('btn-leaderboard');
+    if (lbBtn) lbBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      if (!window.RunnerLeaderboard) return;
+      window.RunnerLeaderboard.openLeaderboard();
+    });
+
     // Pause button (in HUD) + click on the pause overlay to resume.
     var pauseBtn = document.getElementById('btn-pause');
     if (pauseBtn) {

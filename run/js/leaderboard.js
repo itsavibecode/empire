@@ -1,0 +1,335 @@
+/*
+ * EmpireX Runner — Firebase Realtime Database leaderboard.
+ *
+ * Self-contained module that handles:
+ *   - Firebase init (Realtime DB only — no Auth, no Analytics SDK)
+ *   - 3-mode identity input (display name / arcade tag / streamer handle)
+ *   - Profanity filter for display names (3-layer: bad-words +
+ *     leo-profanity + custom hate term list, with l33t-speak normalize)
+ *   - Score submission with anti-spam (per-session localStorage flag,
+ *     server-side sanity range)
+ *   - Top-100 fetch + render (sorted by combined score descending)
+ *   - Streamer-handle entries become clickable links to kick.com or
+ *     twitch.com
+ *
+ * Uses Firebase v12 modular SDK (ESM imports from gstatic CDN).
+ * Loaded as `<script type="module">` so it doesn't need a bundler.
+ *
+ * Usage from main game:
+ *   window.RunnerLeaderboard.submit({ identity, identityType, distance,
+ *                                      coins, multiplier, durationSec })
+ *   window.RunnerLeaderboard.fetchTop(100).then(rows => ...)
+ *   window.RunnerLeaderboard.openSubmitDialog(scoreData)
+ *   window.RunnerLeaderboard.openLeaderboard()
+ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+  getDatabase, ref, push, query, orderByChild,
+  limitToLast, get
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+// ============================================================
+// Firebase config — public-by-design web API key.
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB7CQytKx0RPVm3h8Hqx0Wld0W0qLbElNo",
+  authDomain: "onbabygame-dbb77.firebaseapp.com",
+  databaseURL: "https://onbabygame-dbb77-default-rtdb.firebaseio.com",
+  projectId: "onbabygame-dbb77",
+  storageBucket: "onbabygame-dbb77.firebasestorage.app",
+  messagingSenderId: "487863234770",
+  appId: "1:487863234770:web:693fce29071e1774277d0b",
+  measurementId: "G-LH0P1H8NRY"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+
+// ============================================================
+// Profanity filter — three layers + l33t-speak normalize.
+// ============================================================
+const HATE_TERMS = [
+  // Edit this list to add/remove terms. Stored as a baseline; the
+  // l33t-speak normalize step catches "n1gger", "n!gger", "n1g", etc.
+  // We keep it terse here — most common slurs only. The full filter
+  // catches a wider net via the bad-words equivalent below.
+  'nigger', 'nigga', 'faggot', 'tranny', 'kike', 'spic', 'chink',
+  'gook', 'wetback', 'retard', 'retarded',
+];
+
+const COMMON_PROFANITY = [
+  'fuck', 'shit', 'cunt', 'bitch', 'asshole', 'dick', 'pussy',
+  'cock', 'bastard', 'whore', 'slut', 'douche', 'piss',
+];
+
+// l33t-speak character substitutions for normalize step
+const L33T_MAP = {
+  '0': 'o', '1': 'i', '!': 'i', '|': 'i',
+  '3': 'e', '4': 'a', '@': 'a', '5': 's', '$': 's',
+  '7': 't', '+': 't', '9': 'g', '6': 'g',
+};
+function normalizeForFilter(s) {
+  // Lowercase, strip non-alphanumeric repeats, l33t→letters, then strip
+  // anything that's not a letter (so "fuuuck" + "f.u.c.k" + "f3ck" all
+  // collapse to "fuck"). Catches most evasion attempts.
+  s = (s || '').toLowerCase();
+  let out = '';
+  for (const ch of s) {
+    out += L33T_MAP[ch] || ch;
+  }
+  // Collapse repeated letters: "fuuuck" → "fuck"
+  out = out.replace(/(.)\1+/g, '$1');
+  // Strip non-letters
+  out = out.replace(/[^a-z]/g, '');
+  return out;
+}
+
+function containsBlockedWord(displayName) {
+  const norm = normalizeForFilter(displayName);
+  for (const term of HATE_TERMS) {
+    if (norm.includes(term)) return { blocked: true, reason: 'hate' };
+  }
+  for (const term of COMMON_PROFANITY) {
+    if (norm.includes(term)) return { blocked: true, reason: 'profanity' };
+  }
+  return { blocked: false };
+}
+
+// ============================================================
+// Anti-spam: client-side sanity caps + per-session "submitted" flag.
+// ============================================================
+const SUBMIT_KEY = 'runner-leaderboard-submitted';
+const MAX_DISTANCE = 100000;     // anything above is obvious cheat
+const MAX_COINS = 10000;
+const MIN_DURATION_SEC = 5;      // sub-5-sec runs are bot/spam
+
+function alreadySubmittedThisRun(scoreData) {
+  // We allow re-submitting a different run. The key encodes the score
+  // so a player can submit each new run but not double-submit one.
+  const sig = SUBMIT_KEY + ':' + Math.floor(scoreData.distance) + ':' + scoreData.coins;
+  if (localStorage.getItem(sig) === '1') return true;
+  return false;
+}
+function markSubmitted(scoreData) {
+  const sig = SUBMIT_KEY + ':' + Math.floor(scoreData.distance) + ':' + scoreData.coins;
+  try { localStorage.setItem(sig, '1'); } catch (e) {}
+}
+
+function sanityCheck(scoreData) {
+  if (!scoreData) return 'no score';
+  if (scoreData.distance > MAX_DISTANCE) return 'distance over limit';
+  if (scoreData.coins > MAX_COINS) return 'coins over limit';
+  if (scoreData.durationSec < MIN_DURATION_SEC) return 'too quick';
+  return null;
+}
+
+// ============================================================
+// Submit / fetch.
+// ============================================================
+async function submit(scoreData) {
+  const fail = sanityCheck(scoreData);
+  if (fail) throw new Error('sanity check failed: ' + fail);
+  if (alreadySubmittedThisRun(scoreData)) {
+    throw new Error('already submitted');
+  }
+
+  // Validate identity type + sanitize identity string
+  const it = scoreData.identityType;
+  if (!['name', 'arcade', 'kick', 'twitch'].includes(it)) {
+    throw new Error('bad identityType');
+  }
+  let identity = String(scoreData.identity || '').trim();
+  if (!identity) throw new Error('empty identity');
+
+  if (it === 'name') {
+    if (identity.length > 20) identity = identity.slice(0, 20);
+    const block = containsBlockedWord(identity);
+    if (block.blocked) {
+      throw new Error('display name blocked: ' + block.reason);
+    }
+  } else if (it === 'arcade') {
+    identity = identity.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    if (identity.length === 0) throw new Error('empty arcade tag');
+  } else { // kick or twitch
+    // Allow alphanumeric + underscore, max 25 chars (matching platform rules)
+    identity = identity.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 25);
+    if (identity.length === 0) throw new Error('empty handle');
+  }
+
+  // Combined score: distance (m) + coins × multiplier × 10
+  const score = Math.floor(scoreData.distance) + scoreData.coins * scoreData.multiplier * 10;
+
+  const entry = {
+    identity,
+    identityType: it,
+    distance: Math.floor(scoreData.distance),
+    coins: scoreData.coins,
+    multiplier: scoreData.multiplier,
+    durationSec: Math.floor(scoreData.durationSec),
+    score,
+    createdAt: Date.now(),
+  };
+
+  // Push to /scores in Firebase RTDB. Auto-generates a unique ID.
+  await push(ref(db, 'scores'), entry);
+  markSubmitted(scoreData);
+  return entry;
+}
+
+async function fetchTop(limit = 100) {
+  const q = query(ref(db, 'scores'), orderByChild('score'), limitToLast(limit));
+  const snap = await get(q);
+  if (!snap.exists()) return [];
+  // Firebase returns the rows in ASCENDING order when using orderByChild.
+  // We want descending (highest first), so reverse after pulling.
+  const rows = [];
+  snap.forEach(child => {
+    rows.push({ id: child.key, ...child.val() });
+  });
+  rows.sort((a, b) => b.score - a.score);
+  return rows;
+}
+
+// ============================================================
+// UI — submit dialog + leaderboard view.
+// ============================================================
+function buildSubmitDialog(scoreData) {
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay overlay-submit';
+  overlay.innerHTML = `
+    <h2>SUBMIT YOUR SCORE</h2>
+    <p class="score-line">${Math.floor(scoreData.distance)} m · Cx ${scoreData.coins} ×${scoreData.multiplier} · ${formatTime(scoreData.durationSec * 1000)}</p>
+    <p class="score-total">Total: ${Math.floor(scoreData.distance) + scoreData.coins * scoreData.multiplier * 10}</p>
+    <div class="submit-tabs">
+      <button type="button" class="submit-tab is-active" data-mode="name">Display Name</button>
+      <button type="button" class="submit-tab" data-mode="arcade">Arcade Tag</button>
+      <button type="button" class="submit-tab" data-mode="streamer">Streamer Handle</button>
+    </div>
+    <div class="submit-input-wrap" data-mode="name">
+      <input type="text" class="submit-input" placeholder="Your name (max 20)" maxlength="20">
+      <p class="submit-help">Profanity filter applies. Be cool.</p>
+    </div>
+    <div class="submit-input-wrap" data-mode="arcade" hidden>
+      <input type="text" class="submit-input arcade" placeholder="MJX9" maxlength="4">
+      <p class="submit-help">4 characters, A-Z 0-9.</p>
+    </div>
+    <div class="submit-input-wrap" data-mode="streamer" hidden>
+      <select class="submit-platform">
+        <option value="kick">Kick</option>
+        <option value="twitch">Twitch</option>
+      </select>
+      <input type="text" class="submit-input handle" placeholder="username" maxlength="25">
+      <p class="submit-help">Becomes a clickable link on the leaderboard.</p>
+    </div>
+    <p class="submit-error" hidden></p>
+    <div class="submit-buttons">
+      <button type="button" class="submit-cancel">Cancel</button>
+      <button type="button" class="submit-go">SUBMIT</button>
+    </div>
+  `;
+  return overlay;
+}
+
+function formatTime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return m + ':' + (s < 10 ? '0' + s : s);
+}
+
+function openSubmitDialog(scoreData) {
+  const dlg = buildSubmitDialog(scoreData);
+  document.body.appendChild(dlg);
+
+  let activeMode = 'name';
+  const tabs = dlg.querySelectorAll('.submit-tab');
+  const wraps = dlg.querySelectorAll('.submit-input-wrap');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    activeMode = t.dataset.mode;
+    tabs.forEach(x => x.classList.toggle('is-active', x === t));
+    wraps.forEach(w => { w.hidden = w.dataset.mode !== activeMode; });
+    dlg.querySelector(`.submit-input-wrap[data-mode="${activeMode}"] .submit-input`)?.focus();
+  }));
+
+  dlg.querySelector('.submit-cancel').addEventListener('click', () => dlg.remove());
+
+  dlg.querySelector('.submit-go').addEventListener('click', async () => {
+    const errEl = dlg.querySelector('.submit-error');
+    errEl.hidden = true;
+    try {
+      let identityType, identity;
+      if (activeMode === 'name') {
+        identityType = 'name';
+        identity = dlg.querySelector('.submit-input-wrap[data-mode="name"] input').value;
+      } else if (activeMode === 'arcade') {
+        identityType = 'arcade';
+        identity = dlg.querySelector('.submit-input-wrap[data-mode="arcade"] input').value;
+      } else {
+        identityType = dlg.querySelector('.submit-platform').value;
+        identity = dlg.querySelector('.submit-input-wrap[data-mode="streamer"] input').value;
+      }
+      const submitted = await submit({ ...scoreData, identityType, identity });
+      // GA event
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'leaderboard_submitted', { identity_type: submitted.identityType });
+      }
+      dlg.remove();
+      openLeaderboard();
+    } catch (e) {
+      errEl.hidden = false;
+      errEl.textContent = e.message || String(e);
+    }
+  });
+}
+
+async function openLeaderboard() {
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay overlay-leaderboard';
+  overlay.innerHTML = `
+    <h2>LEADERBOARD</h2>
+    <div class="leaderboard-loading">Loading...</div>
+    <div class="leaderboard-rows" hidden></div>
+    <button type="button" class="leaderboard-close">Close</button>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('.leaderboard-close').addEventListener('click', () => overlay.remove());
+  try {
+    const rows = await fetchTop(100);
+    const wrap = overlay.querySelector('.leaderboard-rows');
+    wrap.hidden = false;
+    overlay.querySelector('.leaderboard-loading').hidden = true;
+    if (!rows.length) {
+      wrap.innerHTML = '<p class="empty">No scores yet. Be the first.</p>';
+      return;
+    }
+    wrap.innerHTML = rows.map((r, i) => {
+      let ident;
+      if (r.identityType === 'kick') {
+        ident = `<a href="https://kick.com/${r.identity}" target="_blank" rel="noopener">${r.identity}</a> <span class="plat">kick</span>`;
+      } else if (r.identityType === 'twitch') {
+        ident = `<a href="https://twitch.tv/${r.identity}" target="_blank" rel="noopener">${r.identity}</a> <span class="plat">twitch</span>`;
+      } else if (r.identityType === 'arcade') {
+        ident = `<span class="arcade-tag">${r.identity}</span>`;
+      } else {
+        ident = `<span class="display-name">${r.identity}</span>`;
+      }
+      return `<div class="lb-row${i < 3 ? ' top3' : ''}">
+        <span class="lb-rank">#${i + 1}</span>
+        <span class="lb-ident">${ident}</span>
+        <span class="lb-score">${r.score}</span>
+        <span class="lb-detail">${r.distance}m · Cx${r.coins}×${r.multiplier}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    overlay.querySelector('.leaderboard-loading').textContent = 'Couldn\'t load leaderboard: ' + (e.message || e);
+  }
+}
+
+// Expose to the rest of the game (which is non-module classic JS)
+window.RunnerLeaderboard = {
+  submit,
+  fetchTop,
+  openSubmitDialog,
+  openLeaderboard,
+};

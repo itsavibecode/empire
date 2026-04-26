@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.17.1">
+  <meta name="version" content="0.17.2">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -123,7 +123,11 @@
     <h1>SNIPED</h1>
     <p class="final-score">0 m</p>
     <p class="final-coins">Cx 0</p>
-    <button type="button" id="btn-restart">RUN AGAIN</button>
+    <div class="gameover-buttons">
+      <button type="button" id="btn-submit-score">SUBMIT SCORE</button>
+      <button type="button" id="btn-leaderboard">LEADERBOARD</button>
+      <button type="button" id="btn-restart">RUN AGAIN</button>
+    </div>
   </div>
 
   <!-- BookHockeys cross-link sits above the URL caption. Grayscale at
@@ -134,8 +138,11 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.17.1</div>
+  <div class="game-version">Run v0.17.2</div>
 
   <script src="js/index.js"></script>
+  <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
+       imports from the gstatic CDN). Exposes window.RunnerLeaderboard. -->
+  <script type="module" src="js/leaderboard.js"></script>
 </body>
 </html>
