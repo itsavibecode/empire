@@ -36,16 +36,25 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
     _this.resetGame = _this.resetGame.bind(_this);
     _this.determinePrize = _this.determinePrize.bind(_this);
 
-    document.body.addEventListener('touchstart', _this.handleClick.bind(_this));
-    window.addEventListener('keypress', _this.handleClick.bind(_this));
+    // 'click' fires for both desktop mouse and mobile tap (with the
+    // proper viewport meta the old 300ms tap delay is gone), so we don't
+    // need a separate touchstart handler.
+    document.body.addEventListener('click', _this.handleClick);
+    window.addEventListener('keypress', _this.handleClick);
     return _this;
   }
 
   _createClass(App, [
     { key: 'handleClick', value: function handleClick(e) {
-      // Don't treat clicks on tabs / save button as a "spin tap".
-      if (e && e.target && (e.target.closest && (e.target.closest('.tabs') || e.target.closest('.save-btn')))) {
-        return;
+      // For pointer events (click/tap), ignore presses on tabs and the
+      // save button so they can do their own thing without ALSO
+      // triggering a spin. Keypress events always spin, regardless of
+      // which element happens to have focus (avoids the "tab button is
+      // still focused, so keys go to nothing" bug).
+      if (e && e.type !== 'keypress' && e.target && e.target.closest) {
+        if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') || e.target.closest('.save-btn')) {
+          return;
+        }
       }
       var index = this.state.activeRowIndex;
       if (index < this.state.rows.length) {

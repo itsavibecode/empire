@@ -19,13 +19,15 @@ body:after {
 }
 
 /* ---- Tabs (Fun / More Fun) ---- */
+/* width: max-content so the container only covers the actual buttons,
+   leaving the rest of the top strip clickable for spinning the reels. */
 .tabs {
   position: fixed;
   top: 1rem;
-  left: 0;
-  right: 0;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+          transform: translateX(-50%);
   display: flex;
-  justify-content: center;
   gap: .6rem;
   z-index: 50;
 }
@@ -67,13 +69,15 @@ body:after {
 }
 
 /* ---- BookHockeys cross-link ---- */
+/* Centered via translate so the link element is only as wide as the logo
+   itself — the rest of the bottom strip stays clickable for spinning. */
 .game-bookhockeys {
   position: fixed;
   bottom: 3.6rem;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+          transform: translateX(-50%);
+  display: block;
   opacity: .35;
   transition: opacity .3s ease;
   z-index: 100;

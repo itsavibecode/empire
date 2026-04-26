@@ -16,6 +16,17 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.2 — 2026-04-25
+
+Patch — game wasn't responding to clicks or keys after v0.10.1.
+
+Three causes, all fixed:
+
+- **`.tabs` was full-width**, so the early-return guard that checks `e.target.closest('.tabs')` matched every click in the entire top strip — not just clicks on the actual tab buttons. Constrained the container to `width: max-content` (centered via translate) so only the buttons themselves capture clicks.
+- **`.game-bookhockeys` was full-width**, so the BookHockeys link captured every click in the bottom strip and opened bookhockeys.com instead of spinning. Same fix — constrained to logo width via translate.
+- **Keypress after a tab click did nothing** because the tab button kept focus, and my pointer guard fired against `e.target` (the focused tab) for keypresses too. Skipped the guard entirely for keypress events — keys always spin regardless of focused element.
+- Also swapped the original `touchstart` listener for a single `click` listener that handles both desktop mouse and mobile tap (modern viewport meta eliminates the old 300ms tap delay).
+
 ### v0.10.1 — 2026-04-25
 
 Patch — moved BookHockeys cross-link from the main site footer to the /game/ page (was a misread of the previous spec).
