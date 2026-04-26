@@ -513,9 +513,13 @@ html, body {
   font-size: 1.6rem;
 }
 
-/* ---- Cut scene overlay (Mike-meets-Ice first encounter) ---- */
+/* ---- Cut scene overlay (Mike-meets-Ice first encounter) ----
+   Background is bg-chile-runner-01.png. Ice's panels (full-blue JPGs)
+   cover it completely. Mike's panels (chroma-keyed PNGs) let it show
+   through — that's the requested "use the chile bg behind Mike's cut
+   scene" treatment. */
 .overlay-cutscene {
-  background: #000;
+  background: #000 url('img/bg/bg-chile-runner-01.png') center/cover no-repeat;
   padding: 0;
   z-index: 40;
   /* No flex-centering — children are positioned absolutely */

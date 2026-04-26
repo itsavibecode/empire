@@ -16,6 +16,19 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.14 — 2026-04-26
+
+Patch — cut scene polish + audio fixes + weed icon swap.
+
+- **Chile bg behind Mike's cut scenes.** `bg-chile-runner-01.png` re-added as the `.overlay-cutscene` CSS background. Ice's panels (full-blue JPG art) cover it completely; Mike's panels (chroma-keyed PNGs) let it show through — that's the requested "use the chile bg behind Mike's cut scene" treatment.
+- **Mob crowd noise pauses during cut scenes.** The `mob-angry` ambient loop (which was always playing during the playing phase) was competing with the typewriter beep + dialogue cues, making cut scenes feel chaotic. Now stopped on `startCutscene` and resumed on `advanceCutscene` final dismissal.
+- **Cut scene distances spaced out:**
+  - First Meet: 250 m (unchanged)
+  - Mike Tells Off: was 600 → **1000 m** (gives Ice time to actually be following for a meaningful stretch before the "fed up" moment)
+  - Ice Returns: was 1100 → **2000 m** (1000 m gap so the player has a long stretch without Ice before he reappears)
+- **Death + game-over music stops on Quit-to-Title.** The death sting + game-over music are one-shot SFX (~3 sec each). If the player tapped QUIT TO TITLE before they finished playing, the audio would keep playing on the title screen, weirdly competing with the title bg music. Now explicitly stopped.
+- **Weed debuff badge** changed from 🌿 (herb) to 🍁 (maple leaf) — closer to the recognizable weed-leaf silhouette. There's no dedicated cannabis emoji in Unicode so 🍁 is the closest convention.
+
 ### Run v0.18.13 — 2026-04-26
 
 Minor — multi-stage Ice arc throughout each run.

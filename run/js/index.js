@@ -416,7 +416,7 @@
       onComplete: function () { state.iceSidekickJoined = true; },
     },
     'mike-tells-off': {
-      triggerDistanceM: 600,
+      triggerDistanceM: 1000,
       requires: function () { return state.iceSidekickJoined; },
       panels: [
         {
@@ -428,7 +428,7 @@
       onComplete: function () { state.iceSidekickJoined = false; },
     },
     'ice-returns': {
-      triggerDistanceM: 1100,
+      triggerDistanceM: 2000,
       requires: function () { return !state.iceSidekickJoined; },
       panels: [
         {
@@ -480,6 +480,10 @@
     cutscene.panelIdx = 0;
     var ov = document.getElementById('overlay-cutscene');
     if (ov) ov.classList.remove('hidden');
+    // Mute the mob-yelling ambient loop while dialogue is on screen —
+    // it competes with the typewriter beep + dialogue voice cues and
+    // makes the cut scene feel chaotic instead of intimate.
+    stopLoop('mob-angry');
     ga('cutscene_played', { def: defId });
     transitionToPanel(0);
   }
@@ -568,6 +572,8 @@
       cutscene.defId = null;
       var ov = document.getElementById('overlay-cutscene');
       if (ov) ov.classList.add('hidden');
+      // Resume the mob-yelling ambient loop now that dialogue is over
+      if (state.phase === 'playing') startLoop('mob-angry');
     } else {
       transitionToPanel(nextIdx);
     }
@@ -1203,7 +1209,9 @@
       }
       if (nowMs < state.effects.weedDebuffUntil) {
         var weedRem = ((state.effects.weedDebuffUntil - nowMs) / 1000).toFixed(1);
-        html += '<span class="eff eff-weed">🌿 ' + weedRem + 's</span>';
+        // Maple-leaf emoji — closest weed-leaf silhouette in Unicode
+        // (no dedicated cannabis emoji exists; this is the convention)
+        html += '<span class="eff eff-weed">🍁 ' + weedRem + 's</span>';
       }
       if (nowMs < state.effects.horseBoostUntil) {
         var horseRem = ((state.effects.horseBoostUntil - nowMs) / 1000).toFixed(1);
@@ -1752,6 +1760,11 @@
     state.phase = 'menu';
     stopBackgroundMusic();
     stopLoop('mob-angry');
+    // Stop the death + gameover-music SFX explicitly. They're one-shots
+    // (not loops) but if the player quits to title BEFORE death-gameover
+    // finishes its ~3 sec play, it'd keep playing on the title screen.
+    stopLoop('death');
+    stopLoop('death-gameover');
     // Restart bg music for the title screen
     startBackgroundMusic();
     document.getElementById('overlay-start').classList.remove('hidden');
