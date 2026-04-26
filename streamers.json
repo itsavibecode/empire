@@ -181,6 +181,13 @@
       "url": "https://kick.com/riddaw",
       "initials": "RW",
       "avatar": "avatars/riddaw.jpg"
+    },
+    {
+      "slug": "sashawest",
+      "name": "Sasha West",
+      "url": "https://kick.com/shashawest",
+      "initials": "SW",
+      "avatar": "/avatars/screenshot-2026-04-26-151109.png"
     }
   ]
 }
