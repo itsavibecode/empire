@@ -16,6 +16,26 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.13.0 — 2026-04-26
+
+Minor — first iteration on the runner. **Title is now "ON BABY!"** Audio is in. Lanes bumped to 5. Background actually feels like it's moving now.
+
+- **Renamed game** to "On Baby! — an EmpireX runner". Title screen, page title, OG/Twitter share metadata all updated. URL stays `/run/` so existing links don't break.
+- **5 lanes** (was 3). Mike + obstacles scaled down ~15% so things still fit comfortably per lane. Mike now starts in lane 2 (true center of 5).
+- **Procedural background overhaul.** Previously the world only scrolled left-right via a slow horizontal panorama drift, which made the road feel static. Now the road has:
+    - **Sidewalk strips** on both edges with periodic darker tiles (manhole-grate look) scrolling DOWN
+    - **Crosswalks** every 1100 px of distance traveled — 7-stripe white painted bars across the asphalt, scrolling DOWN
+    - **Dashed lane dividers** that scroll DOWN at speed (instead of being static) by binding `lineDashOffset` to `state.distancePx`
+    - Skyline panorama at top kept but slowed to a subtle ambient drift (1/3 the previous rate) so it's not the dominant motion cue anymore
+- **Audio system** with 3 logical channels (Music / SFX / Dialogue), each with its own volume slider, a per-channel mute, and a master mute. State persists via `localStorage` key `runner-audio-mixer-v1`. Adjusting a slider auto-unmutes that channel (familiar UX from media players).
+- **Audio events wired:**
+    - Random background-music track (one of `bg-music-atacama` / `bg-music-charango-1` / `bg-music-charango-2`) starts on **START** and loops
+    - `mob-angry` plays as a quiet looping ambient under the music while running
+    - `damage.mp3` plays on each non-fatal hit
+    - On the fatal hit: background music + mob ambient stop, `death.mp3` plays, then `death-gameover.mp3` queued 600 ms later for the game-over screen
+    - `ice-neck.mp3` and `punch-phone-snatch.mp3` are loaded but not yet wired (waiting on Ice-Poseidon and phone-thief mechanics in v0.14)
+- **`run/ART_SPECS.md`** — written-down specs for what to send next: vertical-tiling road tile (1024×2048, top-bottom seamless), drop-in scenery props, replacement skylines, character sprite-sheet rules. Future art generation can use this as a reference so what comes back is drop-in usable.
+
 ### v0.12.0 — 2026-04-26
 
 Minor — **EmpireX Runner** is now playable at [ourempirex.com/run/](https://ourempirex.com/run/). First v0.1.

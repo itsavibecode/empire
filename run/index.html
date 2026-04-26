@@ -7,24 +7,24 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.12.0">
-  <title>EmpireX Runner — Don't Get Sniped</title>
+  <meta name="version" content="0.13.0">
+  <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ourempirex.com/run/">
-  <meta property="og:title" content="EmpireX Runner — Don't Get Sniped">
+  <meta property="og:title" content="On Baby! — EmpireX Runner">
   <meta property="og:description" content="Help Mike Smalls Jr outrun the mob through Chile. Dodge stream snipers, collect Cx coins. SkiFree-style endless runner.">
   <meta property="og:image" content="https://ourempirex.com/run/og-runner.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="EmpireX Runner — Mike Smalls Jr running from a chasing mob">
+  <meta property="og:image:alt" content="On Baby! — Mike Smalls Jr running from a chasing mob">
   <meta property="og:site_name" content="EmpireX by Our Empire">
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="EmpireX Runner — Don't Get Sniped">
+  <meta name="twitter:title" content="On Baby! — EmpireX Runner">
   <meta name="twitter:description" content="Help Mike Smalls Jr outrun the mob through Chile. Dodge stream snipers, collect Cx coins.">
   <meta name="twitter:image" content="https://ourempirex.com/run/og-runner.jpg">
 
@@ -47,11 +47,39 @@
     </div>
   </div>
 
+  <!-- Audio control panel — speaker icon top-right, click to expand
+       per-channel sliders (Music / SFX / Dialogue) + master mute. -->
+  <div class="audio-controls">
+    <button type="button" id="audio-toggle" class="audio-toggle" aria-label="Audio settings">
+      <svg class="icon-on" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      <svg class="icon-off" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.96 8.96 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.17v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    </button>
+    <div id="audio-panel" class="audio-panel">
+      <div class="audio-panel-row">
+        <button type="button" class="audio-channel-mute" data-mute-channel="music" aria-label="Mute music">♪</button>
+        <label>Music</label>
+        <input type="range" min="0" max="100" value="50" data-channel="music" aria-label="Music volume">
+      </div>
+      <div class="audio-panel-row">
+        <button type="button" class="audio-channel-mute" data-mute-channel="sfx" aria-label="Mute SFX">★</button>
+        <label>SFX</label>
+        <input type="range" min="0" max="100" value="70" data-channel="sfx" aria-label="SFX volume">
+      </div>
+      <div class="audio-panel-row">
+        <button type="button" class="audio-channel-mute" data-mute-channel="dialogue" aria-label="Mute voice">●</button>
+        <label>Voice</label>
+        <input type="range" min="0" max="100" value="100" data-channel="dialogue" aria-label="Voice volume">
+      </div>
+      <button type="button" id="audio-master-mute" class="audio-master-mute">MUTE ALL</button>
+    </div>
+  </div>
+
   <!-- Start overlay — shown until "START" tapped (assets must be loaded first) -->
   <div class="overlay" id="overlay-start">
-    <h1>EMPIREX RUNNER</h1>
+    <h1>ON BABY!</h1>
+    <p class="subtitle">an EmpireX runner</p>
     <p>Mike Smalls Jr is being chased through Chile. Help him outrun the mob.</p>
-    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>collect Cx coins for score multiplier</p>
+    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>5 lanes — collect Cx coins for score multiplier</p>
     <button type="button" id="btn-start">START</button>
   </div>
 
@@ -65,7 +93,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">v0.12.0</div>
+  <div class="game-version">v0.13.0</div>
 
   <script src="js/index.js"></script>
 </body>

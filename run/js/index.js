@@ -24,23 +24,29 @@
   // ============================================================
   // Config — all the gameplay knobs in one place for easy tuning.
   // ============================================================
-  var LANES = 3;                   // 3-lane runner (left/center/right)
+  var LANES = 5;                   // 5-lane runner (more lateral choice)
+  var STARTING_LANE = 2;           // dead center of 5
   var SPEED_INITIAL = 360;         // px/sec downward scroll at start
   var SPEED_GROWTH = 4;            // px/sec added per second of survival
   var SPEED_MAX = 900;             // cap so it doesn't become impossible
-  var SPAWN_INTERVAL_INITIAL = 1.1; // seconds between spawn checks at start
-  var SPAWN_INTERVAL_MIN = 0.45;   // minimum spawn interval (hardest)
-  var COIN_SPAWN_PROBABILITY = 0.55; // chance of coin spawn alongside obstacle
+  var SPAWN_INTERVAL_INITIAL = 0.9; // seconds between spawn checks at start
+  var SPAWN_INTERVAL_MIN = 0.35;   // minimum spawn interval (hardest)
+  var COIN_SPAWN_PROBABILITY = 0.6; // chance of coin spawn alongside obstacle
   var LIVES_INITIAL = 3;
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
 
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
-  // a normal-sized player on screen. All scales are pre-resize; the
-  // game also re-derives visible sizes per resize.
-  var PLAYER_TARGET_HEIGHT_FRAC = 0.20;  // Mike = 20% of canvas height
-  var OBSTACLE_TARGET_HEIGHT_FRAC = 0.16;
-  var COIN_TARGET_HEIGHT_FRAC = 0.07;
+  // a normal-sized player on screen. With 5 lanes each lane is narrower
+  // so we shrink Mike a bit so he visually fits inside one lane.
+  var PLAYER_TARGET_HEIGHT_FRAC = 0.17;  // Mike = 17% of canvas height
+  var OBSTACLE_TARGET_HEIGHT_FRAC = 0.14;
+  var COIN_TARGET_HEIGHT_FRAC = 0.06;
+
+  // Procedural background — periodic features that scroll past so the
+  // road feels alive instead of just being scrolling stripes.
+  var CROSSWALK_INTERVAL_PX = 1100;  // pixels of distance between crosswalks
+  var SIDEWALK_DETAIL_INTERVAL_PX = 350; // pixels between manhole/grate tiles
 
   // Animation cadence — milliseconds per run-cycle frame.
   var RUN_FRAME_MS = 80;
@@ -75,6 +81,137 @@
   SPRITE_PATHS['bg-pano'] = 'img/bg/bg-chile-pano.png';
 
   // ============================================================
+  // Audio catalog. Three logical channels — music, sfx, dialogue —
+  // each with its own slider in the audio control panel. Volume
+  // settings persist via localStorage.
+  // ============================================================
+  var AUDIO_DEFS = {
+    'bg-music-atacama':    { src: 'audio/bg-music-atacama.mp3',    channel: 'music', loop: true },
+    'bg-music-charango-1': { src: 'audio/bg-music-charango-1.mp3', channel: 'music', loop: true },
+    'bg-music-charango-2': { src: 'audio/bg-music-charango-2.mp3', channel: 'music', loop: true },
+    'damage':              { src: 'audio/damage.mp3',              channel: 'sfx' },
+    'death':               { src: 'audio/death.mp3',               channel: 'sfx' },
+    'death-gameover':      { src: 'audio/death-gameover.mp3',      channel: 'sfx' },
+    'mob-angry':           { src: 'audio/mob-angry.mp3',           channel: 'sfx', loop: true },
+    'mob-argue':           { src: 'audio/mob-argue.mp3',           channel: 'sfx' },
+    'punch-phone-snatch':  { src: 'audio/punch-phone-snatch.mp3',  channel: 'sfx' },
+    'ice-neck':            { src: 'audio/ice-neck.mp3',            channel: 'dialogue' },
+  };
+
+  var audioInstances = {};
+  var audioMixer = {
+    music:    { volume: 0.5, muted: false },
+    sfx:      { volume: 0.7, muted: false },
+    dialogue: { volume: 1.0, muted: false },
+    masterMuted: false,
+  };
+  var currentMusicKey = null;
+
+  function loadAudio() {
+    Object.keys(AUDIO_DEFS).forEach(function (key) {
+      var def = AUDIO_DEFS[key];
+      var a = new Audio();
+      a.src = def.src;
+      a.preload = 'auto';
+      a.loop = def.loop || false;
+      a.onerror = function () { /* file missing — ignore silently */ };
+      audioInstances[key] = a;
+    });
+    loadMixerFromStorage();
+    applyMixer();
+  }
+
+  function loadMixerFromStorage() {
+    try {
+      var s = localStorage.getItem('runner-audio-mixer-v1');
+      if (s) {
+        var saved = JSON.parse(s);
+        // Shallow merge per-channel settings; don't blow away unknown keys
+        ['music', 'sfx', 'dialogue'].forEach(function (ch) {
+          if (saved[ch]) {
+            audioMixer[ch].volume = clamp01(saved[ch].volume);
+            audioMixer[ch].muted = !!saved[ch].muted;
+          }
+        });
+        if (typeof saved.masterMuted === 'boolean') {
+          audioMixer.masterMuted = saved.masterMuted;
+        }
+      }
+    } catch (e) {}
+  }
+
+  function saveMixerToStorage() {
+    try {
+      localStorage.setItem('runner-audio-mixer-v1', JSON.stringify(audioMixer));
+    } catch (e) {}
+  }
+
+  function clamp01(v) {
+    v = Number(v);
+    if (isNaN(v)) return 0;
+    return Math.max(0, Math.min(1, v));
+  }
+
+  function effectiveVolume(channel) {
+    if (audioMixer.masterMuted) return 0;
+    var ch = audioMixer[channel];
+    if (!ch || ch.muted) return 0;
+    return ch.volume;
+  }
+
+  function applyMixer() {
+    Object.keys(audioInstances).forEach(function (key) {
+      var def = AUDIO_DEFS[key];
+      audioInstances[key].volume = effectiveVolume(def.channel);
+    });
+  }
+
+  function playSfx(key) {
+    var a = audioInstances[key];
+    var def = AUDIO_DEFS[key];
+    if (!a || !def) return;
+    a.currentTime = 0;
+    a.volume = effectiveVolume(def.channel);
+    a.play().catch(function () {});
+  }
+
+  function startLoop(key) {
+    var a = audioInstances[key];
+    var def = AUDIO_DEFS[key];
+    if (!a || !def) return;
+    a.volume = effectiveVolume(def.channel);
+    a.play().catch(function () {});
+  }
+
+  function stopLoop(key) {
+    var a = audioInstances[key];
+    if (!a) return;
+    a.pause();
+    a.currentTime = 0;
+  }
+
+  function pickRandomMusic() {
+    var keys = Object.keys(AUDIO_DEFS).filter(function (k) {
+      return AUDIO_DEFS[k].channel === 'music';
+    });
+    return keys[Math.floor(Math.random() * keys.length)];
+  }
+
+  function startBackgroundMusic() {
+    // Stop whatever's playing first
+    if (currentMusicKey) stopLoop(currentMusicKey);
+    currentMusicKey = pickRandomMusic();
+    if (currentMusicKey) startLoop(currentMusicKey);
+  }
+
+  function stopBackgroundMusic() {
+    if (currentMusicKey) {
+      stopLoop(currentMusicKey);
+      currentMusicKey = null;
+    }
+  }
+
+  // ============================================================
   // State.
   // ============================================================
   var sprites = {}; // key -> Image (loaded async)
@@ -86,11 +223,12 @@
     phase: 'loading',  // 'loading' | 'menu' | 'playing' | 'gameover'
     speed: SPEED_INITIAL,
     distance: 0,         // meters traveled (1 px ≈ 0.1 m for nicer numbers)
+    distancePx: 0,       // raw pixel distance (used for procedural BG features)
     coins: 0,
     multiplier: 1,
     lives: LIVES_INITIAL,
     invulnUntil: 0,      // performance.now() timestamp; until then no hits register
-    player: { lane: 1, targetLane: 1, lerpX: 0 }, // lerpX 0..1 for smooth shift
+    player: { lane: STARTING_LANE, targetLane: STARTING_LANE, lerpX: 1 },
     obstacles: [],       // [{lane, y, sprite, w, h, hit}]
     coinsArr: [],        // [{lane, y, w, h, picked}]
     spawnTimer: 0,
@@ -138,8 +276,7 @@
   function viewH() { return window.innerHeight; }
 
   function laneX(lane) {
-    var w = viewW();
-    return (w / LANES) * (lane + 0.5);
+    return laneXOnRoad(lane);
   }
 
   function playerY() {
@@ -247,7 +384,9 @@
   function update(dt) {
     // Speed ramps up over time, capped.
     state.speed = Math.min(SPEED_MAX, state.speed + SPEED_GROWTH * dt);
-    state.distance += state.speed * dt * 0.1; // 0.1 = px-to-meters fudge
+    var pxThisFrame = state.speed * dt;
+    state.distance += pxThisFrame * 0.1; // 0.1 = px-to-meters fudge
+    state.distancePx += pxThisFrame;     // raw px counter for procedural BG
 
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
@@ -305,7 +444,10 @@
         if (now > state.invulnUntil) {
           state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
-          if (state.lives <= 0) {
+          // Damage SFX on every hit; full death sting only when lives = 0
+          if (state.lives > 0) {
+            playSfx('damage');
+          } else {
             endRun();
           }
         }
@@ -326,8 +468,12 @@
       }
     }
 
-    // Background scroll for parallax illusion (skyline moves slowly opposite to lane shift)
-    bgScrollX -= state.speed * dt * 0.04;
+    // Slow ambient drift on the skyline panorama. Most of the sense of
+    // forward motion now comes from the procedural road details (lane
+    // dashes, crosswalks, sidewalk grates scrolling DOWN), so this
+    // horizontal drift just adds a subtle "you're moving" cue without
+    // making the static skyline feel like the primary scrolling layer.
+    bgScrollX -= state.speed * dt * 0.012;
 
     updateHUD();
   }
@@ -386,24 +532,78 @@
 
   function drawRoad(yTop, yBot) {
     var w = viewW();
-    // Asphalt
+    var roadH = yBot - yTop;
+    var sidewalkW = w * 0.07;            // sidewalks on far edges
+    var roadL = sidewalkW;
+    var roadR = w - sidewalkW;
+    var roadW = roadR - roadL;
+
+    // --- Sidewalk strips (scroll downward) ---
+    // Concrete grey base
+    ctx.fillStyle = '#5a5a64';
+    ctx.fillRect(0, yTop, sidewalkW, roadH);
+    ctx.fillRect(roadR, yTop, sidewalkW, roadH);
+    // Curb edge — slightly darker line at the road boundary
+    ctx.fillStyle = '#3a3a40';
+    ctx.fillRect(sidewalkW - 3, yTop, 3, roadH);
+    ctx.fillRect(roadR, yTop, 3, roadH);
+    // Periodic darker tiles along sidewalks (manholes/grates) — scroll down
+    // with distance so they appear to fly past the player
+    var detailScroll = state.distancePx % SIDEWALK_DETAIL_INTERVAL_PX;
+    for (var sy = yTop - SIDEWALK_DETAIL_INTERVAL_PX + detailScroll;
+         sy < yBot;
+         sy += SIDEWALK_DETAIL_INTERVAL_PX) {
+      ctx.fillStyle = '#3e3e46';
+      ctx.fillRect(sidewalkW * 0.20, sy, sidewalkW * 0.60, 22);
+      ctx.fillRect(roadR + sidewalkW * 0.20, sy, sidewalkW * 0.60, 22);
+    }
+
+    // --- Asphalt road ---
     ctx.fillStyle = '#2a2a2e';
-    ctx.fillRect(0, yTop, w, yBot - yTop);
-    // Lane divider lines (dashed, scrolling downward)
+    ctx.fillRect(roadL, yTop, roadW, roadH);
+
+    // --- Crosswalks (white stripes spanning the road) ---
+    // Periodic — every CROSSWALK_INTERVAL_PX pixels of distance traveled
+    var cwScroll = state.distancePx % CROSSWALK_INTERVAL_PX;
+    var cwY = yTop - CROSSWALK_INTERVAL_PX + cwScroll;
+    while (cwY < yBot) {
+      if (cwY + 60 > yTop && cwY < yBot) {
+        // Draw 7 stripes across the road
+        var stripeCount = 7;
+        var stripeW = roadW / (stripeCount * 2 - 1);
+        ctx.fillStyle = '#f4f4f4';
+        for (var s = 0; s < stripeCount; s++) {
+          var sx = roadL + s * stripeW * 2;
+          ctx.fillRect(sx, cwY, stripeW, 22);
+        }
+      }
+      cwY += CROSSWALK_INTERVAL_PX;
+    }
+
+    // --- Lane divider dashes (scrolling downward) ---
     ctx.strokeStyle = '#FFD566';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([28, 22]);
-    var dashOffset = -((bgScrollX * -8) % 50);
-    ctx.lineDashOffset = dashOffset;
-    var laneW = w / LANES;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([26, 24]);
+    // lineDashOffset goes negative to make dashes appear to move DOWN the road
+    ctx.lineDashOffset = -state.distancePx % 50;
     for (var i = 1; i < LANES; i++) {
-      var x = laneW * i;
+      var lx = roadL + (roadW / LANES) * i;
       ctx.beginPath();
-      ctx.moveTo(x, yTop);
-      ctx.lineTo(x, yBot);
+      ctx.moveTo(lx, yTop);
+      ctx.lineTo(lx, yBot);
       ctx.stroke();
     }
     ctx.setLineDash([]);
+  }
+
+  // Mike's lane center now spans the ROAD area, not the full canvas
+  // (so he stays on asphalt, not on the sidewalk).
+  function laneXOnRoad(lane) {
+    var w = viewW();
+    var sidewalkW = w * 0.07;
+    var roadL = sidewalkW;
+    var roadW = w - 2 * sidewalkW;
+    return roadL + (roadW / LANES) * (lane + 0.5);
   }
 
   function pickCoinSprite(now) {
@@ -455,11 +655,12 @@
     state.phase = 'playing';
     state.speed = SPEED_INITIAL;
     state.distance = 0;
+    state.distancePx = 0;
     state.coins = 0;
     state.multiplier = 1;
     state.lives = LIVES_INITIAL;
-    state.player.lane = 1;
-    state.player.targetLane = 1;
+    state.player.lane = STARTING_LANE;
+    state.player.targetLane = STARTING_LANE;
     state.player.lerpX = 1;
     state.obstacles = [];
     state.coinsArr = [];
@@ -468,10 +669,18 @@
     document.getElementById('overlay-start').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');
     updateHUD();
+    // Audio: random bg music + ambient mob loop in the distance
+    startBackgroundMusic();
+    startLoop('mob-angry');
   }
 
   function endRun() {
     state.phase = 'gameover';
+    // Audio: death sting first, then queue the gameover music
+    stopBackgroundMusic();
+    stopLoop('mob-angry');
+    playSfx('death');
+    setTimeout(function () { playSfx('death-gameover'); }, 600);
     var ov = document.getElementById('overlay-gameover');
     ov.classList.remove('hidden');
     var fs = ov.querySelector('.final-score');
@@ -494,6 +703,80 @@
   }
 
   // ============================================================
+  // Audio control UI — 3 sliders + master mute, persists via storage.
+  // ============================================================
+  function bindAudioUI() {
+    var toggle = document.getElementById('audio-toggle');
+    var panel = document.getElementById('audio-panel');
+    if (!toggle || !panel) return;
+
+    // Sync slider positions to current mixer state on load
+    ['music', 'sfx', 'dialogue'].forEach(function (channel) {
+      var slider = panel.querySelector('input[data-channel="' + channel + '"]');
+      var muteBtn = panel.querySelector('button[data-mute-channel="' + channel + '"]');
+      if (slider) {
+        slider.value = Math.round(audioMixer[channel].volume * 100);
+        slider.addEventListener('input', function () {
+          audioMixer[channel].volume = clamp01(slider.value / 100);
+          // Adjusting volume implicitly unmutes (familiar UX)
+          if (slider.value > 0) audioMixer[channel].muted = false;
+          applyMixer();
+          saveMixerToStorage();
+          syncMuteButton(channel);
+        });
+      }
+      if (muteBtn) {
+        syncMuteButton(channel);
+        muteBtn.addEventListener('click', function () {
+          audioMixer[channel].muted = !audioMixer[channel].muted;
+          applyMixer();
+          saveMixerToStorage();
+          syncMuteButton(channel);
+        });
+      }
+    });
+
+    // Master mute
+    var masterBtn = document.getElementById('audio-master-mute');
+    if (masterBtn) {
+      syncMasterButton();
+      masterBtn.addEventListener('click', function () {
+        audioMixer.masterMuted = !audioMixer.masterMuted;
+        applyMixer();
+        saveMixerToStorage();
+        syncMasterButton();
+        syncToggleIcon();
+      });
+    }
+
+    // Click toggle to expand/collapse panel
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      panel.classList.toggle('open');
+    });
+    // Click anywhere outside the panel to close it
+    document.addEventListener('click', function (e) {
+      if (!panel.contains(e.target) && e.target !== toggle) {
+        panel.classList.remove('open');
+      }
+    });
+    syncToggleIcon();
+  }
+
+  function syncMuteButton(channel) {
+    var btn = document.querySelector('button[data-mute-channel="' + channel + '"]');
+    if (btn) btn.classList.toggle('is-muted', audioMixer[channel].muted);
+  }
+  function syncMasterButton() {
+    var btn = document.getElementById('audio-master-mute');
+    if (btn) btn.classList.toggle('is-muted', audioMixer.masterMuted);
+  }
+  function syncToggleIcon() {
+    var t = document.getElementById('audio-toggle');
+    if (t) t.classList.toggle('is-muted', audioMixer.masterMuted);
+  }
+
+  // ============================================================
   // Boot.
   // ============================================================
   function init() {
@@ -502,6 +785,8 @@
     resize();
     window.addEventListener('resize', resize);
     bindInput();
+    loadAudio();
+    bindAudioUI();
 
     document.getElementById('btn-start').addEventListener('click', startRun);
     document.getElementById('btn-restart').addEventListener('click', startRun);

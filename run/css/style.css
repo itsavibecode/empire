@@ -113,6 +113,157 @@ html, body {
   transform: scale(.95);
 }
 
+/* ---- Audio control panel (top-right speaker icon + collapsible sliders) ---- */
+.audio-controls {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 30;
+}
+.audio-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(15,15,15,.65);
+  color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  padding: 0;
+  transition: all .2s ease;
+}
+.audio-toggle:hover {
+  background: #8E5CCB;
+  color: #fff;
+  border-color: #8E5CCB;
+}
+.audio-toggle svg { width: 22px; height: 22px; }
+.audio-toggle .icon-off { display: none; }
+.audio-toggle.is-muted .icon-on { display: none; }
+.audio-toggle.is-muted .icon-off { display: block; }
+
+.audio-panel {
+  position: absolute;
+  top: 54px;
+  right: 0;
+  background: rgba(15,15,20,.92);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  min-width: 240px;
+  display: none;
+  flex-direction: column;
+  gap: .75rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.audio-panel.open { display: flex; }
+.audio-panel-row {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  letter-spacing: .08em;
+  color: #f4f4f4;
+}
+.audio-panel-row label {
+  flex: 0 0 56px;
+  color: rgba(245,245,245,.7);
+}
+.audio-panel-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+          appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.audio-panel-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(245,245,245,.2);
+  border-radius: 2px;
+}
+.audio-panel-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+          appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #8E5CCB;
+  border-radius: 50%;
+  margin-top: -5px;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(142,92,203,.3);
+}
+.audio-panel-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: rgba(245,245,245,.2);
+  border-radius: 2px;
+  border: none;
+}
+.audio-panel-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #8E5CCB;
+  border-radius: 50%;
+  border: none;
+}
+.audio-channel-mute {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #C9A4FF;
+  border: 1px solid rgba(255,255,255,.2);
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  padding: 0;
+  transition: all .15s ease;
+}
+.audio-channel-mute:hover { color: #fff; border-color: #fff; }
+.audio-channel-mute.is-muted {
+  background: rgba(255,90,107,.2);
+  color: #ff5a6b;
+  border-color: rgba(255,90,107,.4);
+  text-decoration: line-through;
+}
+.audio-master-mute {
+  margin-top: .4rem;
+  padding: .4rem .8rem;
+  background: rgba(255,255,255,.08);
+  color: #f4f4f4;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  font-family: 'VT323', monospace;
+  font-size: 1rem;
+  letter-spacing: .15em;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  transition: all .15s ease;
+}
+.audio-master-mute:hover { background: rgba(255,255,255,.15); }
+.audio-master-mute.is-muted {
+  background: #ff5a6b;
+  color: #fff;
+  border-color: #ff5a6b;
+}
+
+/* Title-screen subtitle ("an EmpireX runner") under the giant ON BABY! */
+.overlay .subtitle {
+  margin-top: -.6rem;
+  color: rgba(201,164,255,.7);
+  font-size: 1.4rem;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+}
+
 /* ---- Footer caption + version (matches /game/ pattern) ---- */
 .game-url, .game-version {
   position: fixed;
