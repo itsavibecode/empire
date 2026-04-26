@@ -32,8 +32,16 @@
   var SPAWN_INTERVAL_INITIAL = 0.9; // seconds between spawn checks at start
   var SPAWN_INTERVAL_MIN = 0.35;   // minimum spawn interval (hardest)
   var COIN_SPAWN_PROBABILITY = 0.6; // chance of coin spawn alongside obstacle
+  var PICKUP_SPAWN_PROBABILITY = 0.06; // chance of a special pickup per spawn cycle
   var LIVES_INITIAL = 3;
+  var LIVES_MAX = 5;
+  // Bonus durations (ms)
+  var HAM_FREEZE_MS = 600;          // Mario-1UP freeze on ham pickup
+  var HAM_BONUS_MS = 6500;          // coin shower window
+  var WEED_DEBUFF_MS = 10000;       // slow + red tint duration
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  var JUMP_DURATION = 0.7;         // total seconds for a full jump arc
+  var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
 
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
@@ -47,6 +55,19 @@
   // road feels alive instead of just being scrolling stripes.
   var CROSSWALK_INTERVAL_PX = 1100;  // pixels of distance between crosswalks
   var SIDEWALK_DETAIL_INTERVAL_PX = 350; // pixels between manhole/grate tiles
+
+  // PICKUP TYPES — special bonus/debuff items that spawn occasionally.
+  // Each cycles through `frames` at `frameMs`. `kind` drives the effect
+  // applied on collision.
+  var PICKUP_TYPES = [
+    // HAM — short freeze + coin shower + chipmunk music
+    { kind: 'ham', frames: ['ham-spin-01'], frameMs: 0, weight: 3 },
+    // 400 — instant +1 life (rare)
+    { kind: 'h400', frames: ['h400-spin-01', 'h400-spin-02'], frameMs: 130, weight: 1 },
+    // WEED — debuff (slow + red tint)
+    { kind: 'weed', frames: ['weed-spin-01', 'weed-spin-02', 'weed-spin-03', 'weed-spin-04'], frameMs: 100, weight: 2 },
+  ];
+  var PICKUP_TARGET_HEIGHT_FRAC = 0.09;
 
   // Animation cadence — milliseconds per run-cycle frame.
   var RUN_FRAME_MS = 80;
@@ -66,11 +87,11 @@
     var ck = 'cx-coin-' + (c < 10 ? '0' + c : c);
     SPRITE_PATHS[ck] = 'img/sprites/' + ck + '.png';
   }
-  // Obstacle TYPES — each entry is one kind of street-person spawn,
-  // either an animated walk cycle or a single static frame. Walking
-  // NPCs cycle through their `frames` at `frameMs` per frame and
-  // wobble horizontally by `bobPx` for a subtle "in motion" look.
-  // Static NPCs (signs/standing characters) just sit there.
+  // Obstacle TYPES — each entry is one kind of street-person/vehicle
+  // spawn, either an animated cycle or a single static frame.
+  //   `jumpOnly: true` marks an obstacle that cannot be dodged by lane
+  //   shift — the player must JUMP over it. Used for vehicles (cop car)
+  //   that block an entire lane and would be visually weird to side-step.
   var OBSTACLE_TYPES = [
     // Walking pedestrian A (hoodie dude, 4-frame walk cycle)
     { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
@@ -92,6 +113,13 @@
     { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 0 },
     { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 0 },
     { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 0 },
+    // COP CAR — jump-only. Lane shift won't help; you must jump over it.
+    // Multiple paint variants in the cop-car sheet (16 frames showing
+    // different angle/light combos); we pick one at random per spawn.
+    { id: 'cop-car', frames: ['cop-car-01'], frameMs: 0, bobPx: 0, jumpOnly: true },
+    { id: 'cop-car', frames: ['cop-car-02'], frameMs: 0, bobPx: 0, jumpOnly: true },
+    { id: 'cop-car', frames: ['cop-car-05'], frameMs: 0, bobPx: 0, jumpOnly: true },
+    { id: 'cop-car', frames: ['cop-car-09'], frameMs: 0, bobPx: 0, jumpOnly: true },
   ];
   // Preload every sprite referenced by any obstacle type
   OBSTACLE_TYPES.forEach(function (t) {
@@ -353,12 +381,20 @@
     multiplier: 1,
     lives: LIVES_INITIAL,
     invulnUntil: 0,      // performance.now() timestamp; until then no hits register
-    player: { lane: STARTING_LANE, targetLane: STARTING_LANE, lerpX: 1 },
+    player: { lane: STARTING_LANE, targetLane: STARTING_LANE, lerpX: 1, jumpStart: 0 },
     obstacles: [],       // [{lane, y, type, spawnedAt, bobPhase, w, h, hit}]
     coinsArr: [],        // [{lane, y, w, h, picked}]
+    pickups: [],         // [{lane, y, type, spawnedAt, w, h, picked}]
     spawnTimer: 0,
     seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
     seagullSpawnTimer: 0,
+    effects: {
+      hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
+      hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
+      weedDebuffUntil: 0, // slow + red tint until this timestamp
+      lastPickupKind: null, // for HUD overlay text
+      lastPickupShownAt: 0,
+    },
   };
 
   // ============================================================
@@ -455,6 +491,27 @@
     playSfx('swoosh');
   }
 
+  function triggerJump() {
+    if (state.phase !== 'playing' || state.paused) return;
+    var now = performance.now();
+    // Block re-jumping mid-air (force a clean landing first)
+    if (now - state.player.jumpStart < JUMP_DURATION * 1000) return;
+    state.player.jumpStart = now;
+    playSfx('jump');
+  }
+  function isAirborne(now) {
+    var elapsed = now - state.player.jumpStart;
+    return elapsed >= 0 && elapsed < JUMP_DURATION * 1000;
+  }
+  // Returns vertical lift offset (negative = up) for the player at this moment
+  function jumpLiftPx(now) {
+    if (!isAirborne(now)) return 0;
+    var t = (now - state.player.jumpStart) / (JUMP_DURATION * 1000); // 0..1
+    // Parabolic arc: 4t(1-t) peaks at 1.0 when t=0.5
+    var arc = 4 * t * (1 - t);
+    return -arc * (viewH() * JUMP_HEIGHT_FRAC);
+  }
+
   function bindInput() {
     window.addEventListener('keydown', function (e) {
       if (e.repeat) return;
@@ -467,12 +524,10 @@
       if (key === 'p' || key === 'P' || key === 'Escape') {
         togglePause(); e.preventDefault(); return;
       }
-      // Space is reserved for the JUMP action (landing in v0.17). For
-      // now: capture and no-op so it doesn't (a) scroll the page or
-      // (b) re-trigger any focused START/RESTART button. Once jump
-      // lands, this becomes `triggerJump()`.
-      if (key === ' ') {
+      // Space + ArrowUp + W = JUMP (over jump-only obstacles like cop cars)
+      if (key === ' ' || key === 'ArrowUp' || key === 'w' || key === 'W') {
         e.preventDefault();
+        triggerJump();
         return;
       }
       if (state.paused) return; // ignore lane input while paused
@@ -570,6 +625,75 @@
     });
   }
 
+  function pickWeightedPickupType() {
+    var totalWeight = PICKUP_TYPES.reduce(function (a, t) { return a + t.weight; }, 0);
+    var r = Math.random() * totalWeight;
+    for (var i = 0; i < PICKUP_TYPES.length; i++) {
+      r -= PICKUP_TYPES[i].weight;
+      if (r <= 0) return PICKUP_TYPES[i];
+    }
+    return PICKUP_TYPES[0];
+  }
+
+  function spawnPickup(avoidLane) {
+    var type = pickWeightedPickupType();
+    var size = scaledSize(type.frames[0], PICKUP_TARGET_HEIGHT_FRAC);
+    state.pickups.push({
+      lane: pickRandomLane(avoidLane),
+      y: viewH() + size.h + 140,
+      type: type,
+      spawnedAt: performance.now(),
+      w: size.w,
+      h: size.h,
+      picked: false,
+    });
+  }
+
+  function getPickupSprite(p, now) {
+    var t = p.type;
+    if (t.frames.length === 1 || !t.frameMs) return t.frames[0];
+    var idx = Math.floor((now - p.spawnedAt) / t.frameMs) % t.frames.length;
+    return t.frames[idx];
+  }
+
+  function applyPickup(kind) {
+    var now = performance.now();
+    state.effects.lastPickupKind = kind;
+    state.effects.lastPickupShownAt = now;
+    if (kind === 'ham') {
+      state.effects.hamFreezeUntil = now + HAM_FREEZE_MS;
+      state.effects.hamBonusUntil = now + HAM_FREEZE_MS + HAM_BONUS_MS;
+      playSfx('ham-pickup');
+      // Music goes 4x chipmunk-speed during the bonus window
+      var mInst = currentMusicKey ? audioInstances[currentMusicKey] : null;
+      if (mInst) mInst.playbackRate = 4;
+    } else if (kind === 'h400') {
+      state.lives = Math.min(state.lives + 1, LIVES_MAX);
+      playSfx('coin-pickup'); // placeholder until a fancier 400 SFX lands
+    } else if (kind === 'weed') {
+      state.effects.weedDebuffUntil = now + WEED_DEBUFF_MS;
+      // Music slows to 0.6x to amplify the debuff feel
+      var mInst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
+      if (mInst2) mInst2.playbackRate = 0.6;
+      playSfx('damage');
+    }
+  }
+
+  function tickEffects(now) {
+    // Restore music playback rate when bonus/debuff expires
+    if (state.effects.hamBonusUntil > 0 && now > state.effects.hamBonusUntil) {
+      state.effects.hamBonusUntil = 0;
+      var inst = currentMusicKey ? audioInstances[currentMusicKey] : null;
+      if (inst) inst.playbackRate = 1;
+      playSfx('bonus-end');
+    }
+    if (state.effects.weedDebuffUntil > 0 && now > state.effects.weedDebuffUntil) {
+      state.effects.weedDebuffUntil = 0;
+      var inst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
+      if (inst2) inst2.playbackRate = 1;
+    }
+  }
+
   // ============================================================
   // Update — physics, spawning, collisions.
   // ============================================================
@@ -584,15 +708,27 @@
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
 
-    // Move obstacles + coins UP toward Mike (he's at the top, world
-    // scrolls up past him — he's running DOWN-hill so the world
-    // appears to move up across the camera).
+    // FREEZE check: during the Mario-1UP ham-pickup freeze, don't move
+    // the world or run spawn timers. Effects still tick (so the freeze
+    // itself can expire).
+    var nowMs = performance.now();
+    tickEffects(nowMs);
+    if (nowMs < state.effects.hamFreezeUntil) return;
+
+    // Effective speed — slowed by weed debuff if active
+    var effSpeed = state.speed;
+    if (nowMs < state.effects.weedDebuffUntil) effSpeed *= 0.55;
+
+    // Move obstacles + coins + pickups UP toward Mike.
     var i;
     for (i = 0; i < state.obstacles.length; i++) {
-      state.obstacles[i].y -= state.speed * dt;
+      state.obstacles[i].y -= effSpeed * dt;
     }
     for (i = 0; i < state.coinsArr.length; i++) {
-      state.coinsArr[i].y -= state.speed * dt;
+      state.coinsArr[i].y -= effSpeed * dt;
+    }
+    for (i = 0; i < state.pickups.length; i++) {
+      state.pickups[i].y -= effSpeed * dt;
     }
 
     // Cull off-screen (above the top edge).
@@ -601,6 +737,9 @@
     });
     state.coinsArr = state.coinsArr.filter(function (c) {
       return c.y > -c.h - 50 && !c.picked;
+    });
+    state.pickups = state.pickups.filter(function (p) {
+      return p.y > -p.h - 50 && !p.picked;
     });
 
     // Spawn timer.
@@ -613,8 +752,18 @@
     if (state.spawnTimer >= spawnInterval) {
       state.spawnTimer = 0;
       var obstLane = spawnObstacle();
-      if (Math.random() < COIN_SPAWN_PROBABILITY) {
+      // Coin shower during ham bonus — guaranteed coin + extras
+      var coinChance = COIN_SPAWN_PROBABILITY;
+      if (nowMs < state.effects.hamBonusUntil) coinChance = 1.0;
+      if (Math.random() < coinChance) {
         spawnCoin(obstLane);
+      }
+      if (nowMs < state.effects.hamBonusUntil && Math.random() < 0.6) {
+        spawnCoin(obstLane);
+      }
+      // Special pickup spawn (rare)
+      if (Math.random() < PICKUP_SPAWN_PROBABILITY) {
+        spawnPickup(obstLane);
       }
     }
 
@@ -635,6 +784,12 @@
       var oCenterY = oy + o.h / 2;
       var pCenterY = py - playerSize.h * 0.4;
       if (Math.abs(oCenterY - pCenterY) < (o.h * 0.4 + pHitH * 0.5)) {
+        // Jump-only obstacles (cop cars) don't register if Mike is mid-jump
+        if (o.type && o.type.jumpOnly && isAirborne(now)) {
+          // mark "skipped" so we don't re-check next frame and ding again
+          o.hit = true;
+          continue;
+        }
         o.hit = true;
         if (now > state.invulnUntil) {
           state.lives--;
@@ -663,6 +818,18 @@
         else if (state.coins >= 6) state.multiplier = 2;
       }
     }
+    // Pickup collisions (ham / 400 / weed)
+    for (i = 0; i < state.pickups.length; i++) {
+      var pk = state.pickups[i];
+      if (pk.picked) continue;
+      if (pk.lane !== state.player.targetLane) continue;
+      var pkCenterY = pk.y + pk.h / 2;
+      var pCenterY3 = py - playerSize.h * 0.4;
+      if (Math.abs(pkCenterY - pCenterY3) < (pk.h * 0.6 + pHitH * 0.4)) {
+        pk.picked = true;
+        applyPickup(pk.type.kind);
+      }
+    }
 
     // Slow ambient drift on the skyline panorama. Most of the sense of
     // forward motion now comes from the procedural road details (lane
@@ -684,7 +851,11 @@
     if (coinsEl) coinsEl.textContent = 'Cx ' + state.coins + ' ×' + state.multiplier;
     if (livesEl) {
       var hearts = '';
-      for (var i = 0; i < LIVES_INITIAL; i++) {
+      // Show as many filled hearts as current lives. If lives are above
+      // initial 3 (from a 400 pickup), all extra lives show as filled.
+      // If lives are below initial 3, show empty hearts for the missing ones.
+      var displaySlots = Math.max(LIVES_INITIAL, state.lives);
+      for (var i = 0; i < displaySlots; i++) {
         hearts += i < state.lives ? '❤' : '♡';
       }
       livesEl.textContent = hearts;
@@ -722,23 +893,85 @@
     // covers, shops on the edges).
     drawRoad(0, h);
 
-    // Obstacles + coins, sorted so closer (lower-Y) ones draw on top.
-    var allDrawables = state.obstacles.concat(state.coinsArr);
-    allDrawables.sort(function (a, b) { return b.y - a.y; });
-    for (var i = 0; i < allDrawables.length; i++) {
-      var d = allDrawables[i];
+    // Obstacles + coins + pickups, sorted so closer (lower-Y) ones
+    // draw on top. Tag each item with its category so we know which
+    // sprite-source to use.
+    var allDrawables = [];
+    for (var oi = 0; oi < state.obstacles.length; oi++) {
+      allDrawables.push({ kind: 'obs', d: state.obstacles[oi] });
+    }
+    for (var ci = 0; ci < state.coinsArr.length; ci++) {
+      allDrawables.push({ kind: 'coin', d: state.coinsArr[ci] });
+    }
+    for (var pi = 0; pi < state.pickups.length; pi++) {
+      allDrawables.push({ kind: 'pickup', d: state.pickups[pi] });
+    }
+    allDrawables.sort(function (a, b) { return b.d.y - a.d.y; });
+    for (var k = 0; k < allDrawables.length; k++) {
+      var item = allDrawables[k];
+      var d = item.d;
       var spriteKey, drift = 0;
-      if (d.type) {
+      if (item.kind === 'obs') {
         spriteKey = getObstacleSprite(d, now);
         drift = getObstacleDrift(d, now);
-      } else {
+      } else if (item.kind === 'coin') {
         spriteKey = pickCoinSprite(now);
+      } else {
+        spriteKey = getPickupSprite(d, now);
       }
       drawAt(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h);
     }
 
     // Player (last, on top)
     drawPlayer(now);
+
+    // Effect overlays
+    drawEffects(now);
+  }
+
+  function drawEffects(now) {
+    var w = viewW();
+    var h = viewH();
+    // HAM FREEZE — white→purple flash + big "HAM!" text
+    if (now < state.effects.hamFreezeUntil) {
+      var ft = (state.effects.hamFreezeUntil - now) / HAM_FREEZE_MS; // 1→0
+      var flashOn = (Math.floor(now / 60) % 2 === 0);
+      ctx.fillStyle = flashOn ? 'rgba(255,255,255,.6)' : 'rgba(142,92,203,.4)';
+      ctx.fillRect(0, 0, w, h);
+      // HAM! text
+      ctx.fillStyle = '#FFD566';
+      ctx.font = 'bold ' + Math.floor(h * 0.18) + 'px "VT323", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var scale = 1 + (1 - ft) * 0.4; // grows over freeze
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = 'rgba(0,0,0,.7)';
+      ctx.shadowBlur = 18;
+      ctx.fillText('HAM!', 0, 0);
+      ctx.restore();
+    }
+    // HAM BONUS — pulsing purple border + countdown bar at top
+    if (now > state.effects.hamFreezeUntil && now < state.effects.hamBonusUntil) {
+      var bRem = (state.effects.hamBonusUntil - now) / HAM_BONUS_MS; // 1→0
+      var pulse = 0.5 + 0.5 * Math.sin(now / 90);
+      ctx.strokeStyle = 'rgba(142,92,203,' + (0.4 + pulse * 0.4) + ')';
+      ctx.lineWidth = 8 + pulse * 6;
+      ctx.strokeRect(4, 4, w - 8, h - 8);
+      // Countdown bar
+      ctx.fillStyle = 'rgba(142,92,203,.85)';
+      ctx.fillRect(0, 0, w * bRem, 6);
+    }
+    // WEED — red tint + countdown bar at top
+    if (now < state.effects.weedDebuffUntil) {
+      var wRem = (state.effects.weedDebuffUntil - now) / WEED_DEBUFF_MS;
+      var redPulse = 0.5 + 0.5 * Math.sin(now / 240);
+      ctx.fillStyle = 'rgba(180,30,40,' + (0.10 + redPulse * 0.08) + ')';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(220,40,40,.85)';
+      ctx.fillRect(0, 0, w * wRem, 6);
+    }
   }
 
   // ============================================================
@@ -928,11 +1161,18 @@
     if (t >= 1) state.player.lane = toLane;
 
     var size = scaledSize('mike-run-01', PLAYER_TARGET_HEIGHT_FRAC);
-    var y = playerY() - size.h;
+    // Apply jump lift (negative Y offset = up) so Mike arcs over jump-only obstacles
+    var y = playerY() - size.h + jumpLiftPx(now);
 
-    // Run-cycle frame
-    var frame = Math.floor(now / RUN_FRAME_MS) % 8 + 1;
-    var key = 'mike-run-' + (frame < 10 ? '0' + frame : frame);
+    // Run-cycle frame. While airborne, freeze on the mid-stride frame
+    // (frame 3) so it looks like a jumping pose rather than running legs.
+    var key;
+    if (isAirborne(now)) {
+      key = 'mike-run-03';
+    } else {
+      var frame = Math.floor(now / RUN_FRAME_MS) % 8 + 1;
+      key = 'mike-run-' + (frame < 10 ? '0' + frame : frame);
+    }
 
     // Flash on i-frames (after a hit)
     var flashAlpha = 1;
@@ -967,10 +1207,19 @@
     state.player.lane = STARTING_LANE;
     state.player.targetLane = STARTING_LANE;
     state.player.lerpX = 1;
+    state.player.jumpStart = 0;
     state.obstacles = [];
     state.coinsArr = [];
+    state.pickups = [];
     state.spawnTimer = 0;
     state.invulnUntil = 0;
+    state.effects.hamFreezeUntil = 0;
+    state.effects.hamBonusUntil = 0;
+    state.effects.weedDebuffUntil = 0;
+    // Reset music playback rate in case prior run ended mid-bonus
+    if (currentMusicKey && audioInstances[currentMusicKey]) {
+      audioInstances[currentMusicKey].playbackRate = 1;
+    }
     currentRoadKey = pickRandomRoadTile();
     document.getElementById('overlay-start').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');

@@ -16,6 +16,40 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.0 — 2026-04-26
+
+Minor — JUMP mechanic + cop car obstacle + 3 special pickups (HAM / 400 / WEED) with full Mario-style effects.
+
+**Jump mechanic:**
+
+- **Space / ArrowUp / W = JUMP.** Mike does a procedural Y-axis arc lasting 0.7 sec (peak ~18% of viewport height), with the run-cycle frozen on a mid-stride frame so it reads as a jumping pose. Re-jumping mid-air is blocked — clean landings only.
+- `Jump1.mp3` SFX on every jump.
+- Tap-up gesture deferred for now (mobile uses the screen-half tap zones for left/right; jump button on the HUD comes later).
+
+**Cop car (jump-only obstacle):**
+
+- New obstacle type with `jumpOnly: true` flag — lane-shifting won't help; you have to jump over it. Uses the cop-car-{01, 02, 05, 09} sprites for paint variety.
+- Collision-detection layer now skips jump-only obstacles when `isAirborne(now)` returns true.
+
+**Pickup system (HAM / 400 / WEED):**
+
+- Three new pickup types spawn occasionally (~6% per spawn cycle) in random lanes. Each uses weighted random selection — ham (weight 3) most common, weed (2) middle, 400 (1) rare.
+- **HAM bonus** — full Mario-1UP sequence:
+  1. Game world FREEZES for 600 ms (movement + spawning halts).
+  2. Screen flashes white-then-purple at ~16 Hz during the freeze.
+  3. Big yellow "HAM!" text scales up in the center with shadow blur.
+  4. `1up3.mp3` jingle plays.
+  5. World resumes — for the next 6.5 seconds: coin spawn probability bumps to 1.0 + 60% chance of a second coin per cycle (literal coin shower), background music `playbackRate = 4` for chipmunk-speed comedic effect, pulsing purple border around the screen + countdown bar at the top edge.
+  6. On expiry: music returns to 1× speed, `Blip2.mp3` "bonus end" SFX plays.
+- **400** — instant +1 life, capped at 5. HUD heart row dynamically expands to show extra hearts.
+- **WEED** — 10-second debuff: world speed × 0.55, music `playbackRate = 0.6` (slowed), red screen tint pulsing slowly, red countdown bar at top. `damage.mp3` plays on collision (this is a bad pickup, not a good one). On expiry: music + speed restore.
+- HORSE speed-boost pickup deferred to v0.18+ since it needs Mike-on-horse sprite swap which cleanly couples with the post-cutscene "Ice has joined" state.
+
+**Misc:**
+
+- HUD hearts row dynamically grows to display whatever current `state.lives` is (handles +1 from 400 pickups going above the initial 3).
+- Reset music `playbackRate` to 1 on every `startRun()` in case the previous run ended mid-bonus or mid-debuff.
+
 ### Run v0.16.0 — 2026-04-26
 
 Minor — biggest visual + polish round. Mobile fix, Mike's eyebrows back, real title screen, animated seagulls, timer in HUD, lots of SFX wired.
