@@ -401,19 +401,15 @@
     startedAt: 0,
     typedChars: 0,
     showingChoices: false,
-    everPlayedThisSession: false, // resets on page reload, NOT on Run Again
   };
 
   function maybeTriggerCutscene() {
     if (cutscene.active) return;
     if (state.iceSidekickJoined) return;
     if (state.distance < CUTSCENE_TRIGGER_DISTANCE_M) return;
-    if (cutscene.everPlayedThisSession) {
-      // Already saw the cut scene this page-load. Ice silently joins
-      // for THIS run (resets on next Run Again).
-      state.iceSidekickJoined = true;
-      return;
-    }
+    // Cut scene plays every run at the trigger distance — the dialogue
+    // is short enough to tolerate the repetition, and it gives every
+    // fresh attempt a story-beat moment when Ice joins.
     startCutscene();
   }
 
@@ -467,7 +463,6 @@
   function dismissCutscene(choiceIdx) {
     cutscene.active = false;
     state.iceSidekickJoined = true;
-    cutscene.everPlayedThisSession = true; // skip the cut scene on subsequent Run Agains in this session
     var ov = document.getElementById('overlay-cutscene');
     if (ov) ov.classList.add('hidden');
     ga('cutscene_choice', { selected_option: choiceIdx });

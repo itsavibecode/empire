@@ -16,6 +16,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.5 — 2026-04-26
+
+Patch — cut scene plays every run instead of once-per-session.
+
+- Per playtest feedback ("not very long, so it's tolerable"), the cut scene now triggers on every fresh run when the player crosses the 250 m threshold — not just the first run per page-load. Removed the `cutscene.everPlayedThisSession` skip flag and the conditional in `maybeTriggerCutscene` that bypassed the dialogue. Each run gets a story-beat moment when Ice joins.
+
 ### Run v0.18.4 — 2026-04-26
 
 Patch — Ice scaling + orientation + per-run reset.
