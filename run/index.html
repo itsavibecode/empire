@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.8">
+  <meta name="version" content="0.18.9">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -99,6 +99,13 @@
         <input type="range" min="0" max="100" value="100" data-channel="dialogue" aria-label="Voice volume">
       </div>
       <button type="button" id="audio-master-mute" class="audio-master-mute">MUTE ALL</button>
+      <!-- Controls reference -->
+      <div class="audio-panel-title controls-title">CONTROLS</div>
+      <div class="audio-panel-controls">
+        <div><kbd>⬅</kbd> <kbd>➡</kbd> dodge lane (or tap left/right)</div>
+        <div><kbd>SPACE</kbd> <kbd>⬆</kbd> <kbd>W</kbd> jump</div>
+        <div><kbd>P</kbd> <kbd>ESC</kbd> right-click pause</div>
+      </div>
       <!-- Version label inside the panel — populated by JS so it stays
            in sync with the visible bottom-of-screen version pill -->
       <div class="audio-panel-version" id="audio-panel-version"></div>
@@ -109,7 +116,7 @@
   <div class="overlay" id="overlay-start">
     <h1 class="title-cursive"><span class="big">O</span>n <span class="big">B</span>aby!</h1>
     <p>Mike Smalls Jr is being chased through Chile.<br>Help him outrun the mob.</p>
-    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>SPACE = jump · P / ESC / right-click = pause<br>5 lanes — collect Cx coins for score multiplier</p>
+    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>SPACE / ⬆ / W = jump · P / ESC / right-click = pause<br>5 lanes — collect Cx coins for score multiplier</p>
     <div class="title-buttons">
       <button type="button" id="btn-start">START</button>
       <button type="button" id="btn-title-leaderboard">LEADERBOARD</button>
@@ -163,7 +170,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.8</div>
+  <div class="game-version">Run v0.18.9</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

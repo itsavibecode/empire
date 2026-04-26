@@ -458,6 +458,33 @@ html, body {
   border-top: 1px solid rgba(255,255,255,.1);
   padding-top: .55rem;
 }
+.controls-title {
+  margin-top: .8rem;
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: .6rem;
+}
+.audio-panel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  font-family: 'VT323', monospace;
+  font-size: 1rem;
+  letter-spacing: .03em;
+  color: rgba(245, 245, 245, .85);
+}
+.audio-panel-controls kbd {
+  display: inline-block;
+  font-family: 'VT323', monospace;
+  font-size: .9rem;
+  background: rgba(142, 92, 203, .25);
+  color: #C9A4FF;
+  border: 1px solid rgba(142, 92, 203, .55);
+  border-radius: 5px;
+  padding: 0 .4rem;
+  margin-right: .15rem;
+  min-width: 1.4em;
+  text-align: center;
+}
 
 /* Title-screen subtitle ("an EmpireX runner") under the giant ON BABY! */
 .overlay .subtitle {

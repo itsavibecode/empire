@@ -1450,10 +1450,13 @@
       if (stretchFrame > 29) stretchFrame = 29;
       return 'ice-' + (stretchFrame < 10 ? '0' + stretchFrame : stretchFrame);
     }
-    // Otherwise, run-cycle on CAMERA-POV (front-facing) frames so Ice
-    // visually matches Mike's orientation. ice-14/15/16 are the
-    // running-toward-camera poses from the source sheet.
-    var frames = [14, 15, 16];
+    // Camera-POV run cycle — only frames 14 + 16 (the two stride poses).
+    // Frame 15 was a STANDING-still pose that, alternated between 14
+    // and 16, made the run cycle look like it kept "pausing" with one
+    // leg always planted. Dropping it gives a cleaner 2-frame stride
+    // alternation. Y-bob in drawIce simulates the bounce a real run
+    // would have so the limited frame count still reads as motion.
+    var frames = [14, 16];
     var frame = frames[Math.floor(now / RUN_FRAME_MS) % frames.length];
     return 'ice-' + frame;
   }
@@ -1479,15 +1482,28 @@
     var w = img.width * pxPerSrc;
     var h = img.height * pxPerSrc;
     var x = iceX();
-    var y = playerY() - h; // bottom-anchored at Mike's foot line
+    // Y-bob: small sine-wave vertical oscillation while NOT mid-stretch
+    // — fakes the up/down bounce of a real run cycle and disguises the
+    // fact that we only have 2 distinct stride frames to alternate.
+    var bob = 0;
+    if (now >= state.ice.neckStretchUntil) {
+      bob = Math.sin(now / 110) * (viewH() * 0.012);
+    }
+    var y = playerY() - h + bob; // bottom-anchored at Mike's foot line
+    // CROP the bottom 9% of the source image to hide the ground-shadow
+    // ellipse that's baked into every Ice frame. Render at the same
+    // visible footprint but pull the source rect short on the bottom.
+    var srcCropFrac = 0.91;
+    var srcH = img.height * srcCropFrac;
+    var dstH = h * srcCropFrac;
     // Mirror horizontally if Ice is on Mike's left (so he faces forward)
     ctx.save();
     if (state.ice.lastSide < 0) {
       ctx.translate(x + w / 2, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, -w / 2, 0, w, h);
+      ctx.drawImage(img, 0, 0, img.width, srcH, -w / 2, 0, w, dstH);
     } else {
-      ctx.drawImage(img, x - w / 2, y, w, h);
+      ctx.drawImage(img, 0, 0, img.width, srcH, x - w / 2, y, w, dstH);
     }
     ctx.restore();
   }

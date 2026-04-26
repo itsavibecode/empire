@@ -16,6 +16,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.9 — 2026-04-26
+
+Patch — title hint, controls reference, Ice cleanup.
+
+- **Title hint** now lists `SPACE / ⬆ / W = jump` instead of just `SPACE = jump`. All three keys have always worked; the hint just wasn't reflecting it.
+- **CONTROLS section** added to the audio settings panel (gear icon dropdown). Shows the key bindings as styled `<kbd>` chips:
+  - `⬅` `➡` dodge lane (or tap left/right)
+  - `SPACE` `⬆` `W` jump
+  - `P` `ESC` right-click pause
+- **Ice run cycle cleaned up:**
+  - **Dropped the standing-pose frame (ice-15)** from the cycle. The 3-frame loop `[14, 15, 16]` was alternating stride → standing → stride, which read as Ice keeping his left leg planted. Now using a 2-frame stride loop `[14, 16]`.
+  - **Y-bob added** — small sine-wave vertical oscillation (~1.2 % of viewport) so even with only 2 stride frames, the visible up/down bounce reads as proper running motion. Disabled during the neck-stretch animation (his head's already moving up dramatically so an extra bob would look weird).
+  - **Ground shadow cropped** — every source Ice frame had a small grey ellipse shadow under his feet baked in. Drawing now pulls a partial source rect (`srcCropFrac = 0.91`, dropping the bottom 9 % of each frame) so the shadow disappears off the visible edge.
+
 ### Run v0.18.8 — 2026-04-26
 
 Patch — version label inside the audio settings panel.
