@@ -7,7 +7,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.15.3">
+  <meta name="version" content="0.15.4">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -45,6 +45,13 @@
       <div class="coins">Cx 0 ×1</div>
       <div class="lives">❤❤❤</div>
     </div>
+  </div>
+
+  <!-- Sound hint — only shown until the user has interacted with the
+       page once (browsers block audio until then). Helps the player
+       realize they can fix silence by tapping the gear / unmuting. -->
+  <div class="audio-hint" id="audio-hint">
+    No sound? Tap <span aria-hidden="true">⚙</span> to unmute
   </div>
 
   <!-- Pause button — left of the gear icon, top-right corner. P or ESC
@@ -115,7 +122,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.15.3</div>
+  <div class="game-version">Run v0.15.4</div>
 
   <script src="js/index.js"></script>
 </body>

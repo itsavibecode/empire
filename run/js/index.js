@@ -263,6 +263,11 @@
       document.removeEventListener('click', unlock, true);
       document.removeEventListener('touchstart', unlock, true);
       document.removeEventListener('keydown', unlock, true);
+      // Hide the "No sound? Tap gear to unmute" hint — once we've had
+      // user interaction, audio is unlocked and the hint is no longer
+      // useful. Fades out via CSS opacity transition.
+      var hint = document.getElementById('audio-hint');
+      if (hint) hint.classList.add('hidden');
       // Retry whichever music track is "current" — startBackgroundMusic
       // already set currentMusicKey, but the play() call inside it may
       // have been blocked.

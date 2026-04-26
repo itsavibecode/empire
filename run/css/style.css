@@ -147,9 +147,9 @@ html, body {
 .btn-pause {
   position: fixed;
   top: 1rem;
-  right: calc(1rem + 56px + .6rem); /* leave room for the 56px gear + gap */
-  width: 56px;
-  height: 56px;
+  right: calc(1rem + 44px + .5rem); /* leave room for the 44px gear + gap */
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   background: rgba(20, 16, 32, .85);
   color: #fff;
@@ -170,7 +170,7 @@ html, body {
   border-color: #8E5CCB;
 }
 .btn-pause:active { transform: scale(.95); }
-.btn-pause svg { width: 28px; height: 28px; }
+.btn-pause svg { width: 22px; height: 22px; }
 .btn-pause .icon-play { display: none; }
 .btn-pause.is-paused .icon-pause { display: none; }
 .btn-pause.is-paused .icon-play  { display: block; }
@@ -198,11 +198,11 @@ html, body {
   z-index: 30;
 }
 .audio-toggle {
-  /* Larger + more contrasted than v0.13. The previous speaker icon was
-     getting lost on busy backgrounds; this is a chunky gear-cog with a
-     purple-tinted ring so it reads as "settings" at a glance. */
-  width: 56px;
-  height: 56px;
+  /* Gear-cog with purple-tinted ring. Was 56px through v0.15.3; shrunk
+     to 44px in v0.15.4 to match the pause button + free up screen real
+     estate. Same hover rotation effect retained. */
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   background: rgba(20, 16, 32, .85);
   color: #fff;
@@ -222,8 +222,38 @@ html, body {
   transform: rotate(45deg);
   box-shadow: 0 6px 20px rgba(142, 92, 203, .55);
 }
-.audio-toggle svg { width: 30px; height: 30px; }
+.audio-toggle svg { width: 24px; height: 24px; }
 .audio-toggle.is-muted { color: #ff5a6b; border-color: #ff5a6b; }
+
+/* "No sound? Tap gear to unmute" hint — sits below the buttons until
+   the user has interacted with the page once (browsers gate audio
+   playback on first interaction; this hint helps the user realize
+   there's a fix). Auto-hidden via JS once a click/tap/keydown fires. */
+.audio-hint {
+  position: fixed;
+  top: calc(1rem + 44px + .35rem); /* directly under the 44px buttons */
+  right: 1rem;
+  font-family: 'VT323', monospace;
+  font-size: .95rem;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.85);
+  background: rgba(20, 16, 32, .82);
+  border: 1px solid rgba(142, 92, 203, .55);
+  border-radius: 8px;
+  padding: .25rem .55rem;
+  z-index: 30;
+  pointer-events: none;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.6);
+  transition: opacity .4s ease;
+}
+.audio-hint.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.audio-hint span { color: #C9A4FF; }
+@media (max-width: 600px) {
+  .audio-hint { font-size: .85rem; }
+}
 
 .audio-panel {
   position: absolute;

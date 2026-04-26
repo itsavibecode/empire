@@ -16,6 +16,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.15.4 — 2026-04-26
+
+Patch — sound-unmute hint + smaller control buttons.
+
+- **Pause + settings buttons shrunk** from 56 px → 44 px (and their inner SVG icons from 28-30 px → 22-24 px). Frees up screen real estate, especially noticeable on smaller laptops. Hover/active behaviors unchanged.
+- **"No sound? Tap ⚙ to unmute" hint** shown directly below the buttons on first load. Helps players realize that browser autoplay-blocking is the cause of any silence (not a broken site). The hint auto-hides via CSS fade the moment the user clicks/taps/types anything, since that interaction unlocks audio anyway.
+- Pause-button right-offset adjusted from `calc(1rem + 56px + .6rem)` → `calc(1rem + 44px + .5rem)` so it still sits cleanly to the left of the (now smaller) gear.
+
 ### Run v0.15.3 — 2026-04-26
 
 Patch — BookHockeys footer link.
