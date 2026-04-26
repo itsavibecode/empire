@@ -1,9 +1,29 @@
-A Pen created at CodePen.io. You can find this one at https://codepen.io/dariocorsi/pen/AXyxpp.
+EmpireX - Slots
+================
 
- Uses react and CSS animations to recreate the slot machine mini game from Super Mario Bros. 3.
+A simple 3-reel slot machine for ourempirex.com/game.
 
-In hindsight,  this was a really weird tool for this job. But I learned a bit more about React, so I have that going for me.
+Two symbol sets are toggled via the tabs at the top: "Fun" and "More Fun".
+All artwork is EmpireX-original (sourced from /game/img/ and composed into
+reel strips by .github/scripts/build-game-strips.py).
 
-Some of the CSS is wonky as hell.
+Wins (three matching values across the rows) get a "Save as PNG" button
+that exports the current display - including the ourempirex.com/game
+caption - for sharing.
 
-Also, I am not claiming copyright to a game that was released when I was a toddler. It's just a tribute. Go easy, Nintendo.
+Architecture
+------------
+- index.html       -> bootstrap, tabs UI, html2canvas + React 15 from cdnjs
+- css/style.css    -> reels, animations, tabs, save button, URL caption
+- js/index.js      -> React 15 components (App / Row / Results) + tab switcher
+- img/strip-1.png  -> "Fun" reel strip (built from 1symbol-{a,b,c}.png)
+- img/strip-2.png  -> "More Fun" reel strip (built from 2symbol-{a,b,c}.png)
+
+To rebuild the reel strips after dropping new symbol images into /img/:
+  python .github/scripts/build-game-strips.py
+
+Original code derivation
+------------------------
+The React structure and reel-scrolling CSS in this game are derived from a
+CodePen by Dario Corsi (pen AXyxpp), provided under an MIT-style license.
+The original notice is preserved at license.txt as required.

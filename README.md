@@ -16,6 +16,22 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.0 — 2026-04-25
+
+Minor — game customization (Fun / More Fun tabs, EmpireX artwork, PNG export) + main-footer cross-link to BookHockeys.
+
+**Game (`/game/`)**
+- **Two symbol sets** — added "Fun" and "More Fun" tabs at the top of the page. "Fun" uses the `1symbol-{a,b,c}.png` artwork; "More Fun" uses the `2symbol-{a,b,c}.png` artwork. Tab clicks swap a `body` class which switches the reel strip image via CSS — no game restart needed.
+- **`.github/scripts/build-game-strips.py`** — composites the 6 source symbols into 2 reel-strip PNGs (`game/img/strip-1.png` and `strip-2.png`). The "More Fun" symbols are auto-cropped to their non-transparent bounding box first so transparent padding doesn't shrink them on screen. Re-run the script after dropping new artwork into `/img/`.
+- **Reel background** changed from peachy `#FDCBC4` to EmpireX purple `#8E5CCB` (baked into the strip images and set as the CSS fallback).
+- **Prize messages** updated to `Cx` / `400` / `Nick White wins` / `LOSER`.
+- **Save-as-PNG export** — on a winning spin, a "Save as PNG" button appears under the prize text. Clicks capture the full visible display via `html2canvas` and trigger a download named `empirex-slots-<timestamp>.png`. The capture includes a small `ourempirex.com/game` caption + version number at the bottom of the page so the URL travels with anyone who shares the screenshot.
+- **Title** changed to "EmpireX - Slots".
+- **README cleanup** — removed the original CodePen author's tribute-to-an-old-game wording. Kept `license.txt` intact (MIT-style grant from Dario Corsi requires preserving the copyright notice — that's the legal floor, not optional).
+
+**Main site footer**
+- **BookHockeys cross-link** — 70px logo at 35% opacity (rises to 65% on hover) linking to bookhockeys.com. Sits just above the version display in the footer.
+
 ### v0.9.0 — 2026-04-25
 
 Minor — added `/game/` (slot machine mini-game, currently with placeholder artwork).

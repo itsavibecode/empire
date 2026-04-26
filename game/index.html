@@ -5,26 +5,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>EmpireX Spin</title>
+  <title>EmpireX - Slots</title>
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body>
+<body class="set-fun">
+  <!-- Tab switcher: pick which symbol set to spin -->
+  <nav class="tabs" aria-label="Choose symbol set">
+    <button type="button" class="tab is-active" data-set="fun">Fun</button>
+    <button type="button" class="tab" data-set="more-fun">More Fun</button>
+  </nav>
+
   <div class="app"></div>
+
   <div class="helper">Press a key or tap on mobile</div>
 
-  <!--
-    Symbol artwork is currently the original SVG strips by Dario Corsi
-    (CodePen pen AXyxpp, MIT license — see license.txt). They will be
-    replaced with EmpireX-themed symbols once the new artwork lands in
-    /game/img/ and css/style.css is updated to reference it.
-  -->
+  <!-- This caption is captured into the PNG download so the URL travels
+       with anyone the player shares the win to. -->
+  <div class="game-url">ourempirex.com/game</div>
+  <div class="game-version">v0.10.0</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.1.0/react.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.1.0/react-dom.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/index.js"></script>
 </body>
 

@@ -15,11 +15,47 @@ body:after {
   -webkit-transform: translateY(-50%);
           transform: translateY(-50%);
   box-sizing: border-box;
+  pointer-events: none;
+}
+
+/* ---- Tabs (Fun / More Fun) ---- */
+.tabs {
+  position: fixed;
+  top: 1rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: .6rem;
+  z-index: 50;
+}
+.tab {
+  font-family: 'VT323', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: .15em;
+  padding: .35rem 1.2rem;
+  background: rgba(15,15,15,.55);
+  color: rgba(255,255,255,.7);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all .2s ease;
+  -webkit-appearance: none;
+          appearance: none;
+}
+.tab:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.5);
+}
+.tab.is-active {
+  background: #8E5CCB;
+  color: #fff;
+  border-color: #8E5CCB;
 }
 
 .helper {
   position: fixed;
-  bottom: 1rem;
+  bottom: 4.2rem;
   z-index: 100;
   color: #fff;
   text-align: center;
@@ -28,6 +64,37 @@ body:after {
   pointer-events: none;
   font-size: 3vw;
   opacity: .5;
+}
+
+/* ---- URL caption + version (the "ourempirex.com/game" branding that
+       gets captured into the PNG download) ---- */
+.game-url {
+  position: fixed;
+  bottom: 1.6rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-family: 'VT323', sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: .12em;
+  opacity: .55;
+  pointer-events: none;
+  z-index: 100;
+}
+.game-version {
+  position: fixed;
+  bottom: .4rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-family: 'VT323', sans-serif;
+  font-size: .85rem;
+  letter-spacing: .1em;
+  opacity: .3;
+  pointer-events: none;
+  z-index: 100;
 }
 
 .viewport {
@@ -73,6 +140,7 @@ body:after {
           transform: translateY(-50%);
 }
 
+/* ---- Result text + Save-as-PNG button ---- */
 .results {
   position: absolute;
   top: 0;
@@ -80,38 +148,59 @@ body:after {
   bottom: 0;
   left: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
   -webkit-transform: translateY(100%);
           transform: translateY(100%);
   transition: -webkit-transform 1s ease;
   transition: transform 1s ease;
   transition: transform 1s ease, -webkit-transform 1s ease;
-  color: #B53121;
+  color: #FFD566;
   font-size: 6vw;
-  text-shadow: 2px 2px 2px #fff;
+  text-shadow: 2px 2px 2px rgba(0,0,0,.6);
+  z-index: 20;
 }
 .results.shown {
   -webkit-transform: translateY(0);
           transform: translateY(0);
 }
+.results.lost {
+  color: #f4f4f4;
+}
+.save-btn {
+  font-family: 'VT323', sans-serif;
+  font-size: 2vw;
+  letter-spacing: .15em;
+  padding: .4rem 1.4rem;
+  background: rgba(15,15,15,.7);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  transition: all .2s ease;
+}
+.save-btn:hover {
+  background: #8E5CCB;
+  border-color: #8E5CCB;
+  color: #fff;
+}
+.save-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
 
+/* ---- The reels themselves. Background image is set per "set" below. ---- */
 .columns {
-  background-color: #FDCBC4;
+  background-color: #8E5CCB;
   background-size: 100% 100%;
   -webkit-animation-timing-function: linear;
           animation-timing-function: linear;
   -webkit-animation-fill-mode: forwards;
           animation-fill-mode: forwards;
-}
-.columns.columns-top {
-  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/233661/mario-top.svg");
-}
-.columns.columns-center {
-  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/233661/mario-center.svg");
-}
-.columns.columns-bottom {
-  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/233661/mario-bottom.svg");
 }
 .columns:after {
   content: '';
@@ -119,100 +208,64 @@ body:after {
   padding-top: 12.07%;
 }
 
-@-webkit-keyframes ltr-transition-0 {
-  0% {
-    background-position: 0vw;
-  }
-  100% {
-    background-position: 33.3333vw;
-  }
+/* "Fun" set — built from 1symbol-{a,b,c}.png by build-game-strips.py */
+body.set-fun .columns.columns-top,
+body.set-fun .columns.columns-center,
+body.set-fun .columns.columns-bottom {
+  background-image: url("img/strip-1.png");
+}
+/* "More Fun" set — built from 2symbol-{a,b,c}.png */
+body.set-more-fun .columns.columns-top,
+body.set-more-fun .columns.columns-center,
+body.set-more-fun .columns.columns-bottom {
+  background-image: url("img/strip-2.png");
 }
 
+@-webkit-keyframes ltr-transition-0 {
+  0% { background-position: 0vw; }
+  100% { background-position: 33.3333vw; }
+}
 @keyframes ltr-transition-0 {
-  0% {
-    background-position: 0vw;
-  }
-  100% {
-    background-position: 33.3333vw;
-  }
+  0% { background-position: 0vw; }
+  100% { background-position: 33.3333vw; }
 }
 @-webkit-keyframes ltr-transition-1 {
-  0% {
-    background-position: 33.3333vw;
-  }
-  100% {
-    background-position: 66.6666vw;
-  }
+  0% { background-position: 33.3333vw; }
+  100% { background-position: 66.6666vw; }
 }
 @keyframes ltr-transition-1 {
-  0% {
-    background-position: 33.3333vw;
-  }
-  100% {
-    background-position: 66.6666vw;
-  }
+  0% { background-position: 33.3333vw; }
+  100% { background-position: 66.6666vw; }
 }
 @-webkit-keyframes ltr-transition-2 {
-  0% {
-    background-position: 66.6666vw;
-  }
-  100% {
-    background-position: 100vw;
-  }
+  0% { background-position: 66.6666vw; }
+  100% { background-position: 100vw; }
 }
 @keyframes ltr-transition-2 {
-  0% {
-    background-position: 66.6666vw;
-  }
-  100% {
-    background-position: 100vw;
-  }
+  0% { background-position: 66.6666vw; }
+  100% { background-position: 100vw; }
 }
 @-webkit-keyframes rtl-transition-0 {
-  0% {
-    background-position: -33.3333vw;
-  }
-  100% {
-    background-position: -66.6666vw;
-  }
+  0% { background-position: -33.3333vw; }
+  100% { background-position: -66.6666vw; }
 }
 @keyframes rtl-transition-0 {
-  0% {
-    background-position: -33.3333vw;
-  }
-  100% {
-    background-position: -66.6666vw;
-  }
+  0% { background-position: -33.3333vw; }
+  100% { background-position: -66.6666vw; }
 }
 @-webkit-keyframes rtl-transition-1 {
-  0% {
-    background-position: -100vw;
-  }
-  100% {
-    background-position: -133.3333vw;
-  }
+  0% { background-position: -100vw; }
+  100% { background-position: -133.3333vw; }
 }
 @keyframes rtl-transition-1 {
-  0% {
-    background-position: -100vw;
-  }
-  100% {
-    background-position: -133.3333vw;
-  }
+  0% { background-position: -100vw; }
+  100% { background-position: -133.3333vw; }
 }
 @-webkit-keyframes rtl-transition-2 {
-  0% {
-    background-position: -166.6666vw;
-  }
-  100% {
-    background-position: -200vw;
-  }
+  0% { background-position: -166.6666vw; }
+  100% { background-position: -200vw; }
 }
 @keyframes rtl-transition-2 {
-  0% {
-    background-position: -166.6666vw;
-  }
-  100% {
-    background-position: -200vw;
-  }
+  0% { background-position: -166.6666vw; }
+  100% { background-position: -200vw; }
 }
