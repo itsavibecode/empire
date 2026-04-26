@@ -78,6 +78,18 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
         this.determinePrize();
         // Play woosh on each reel-stop tap.
         if (typeof window.playWoosh === 'function') window.playWoosh();
+        // GA: first tap of the spin = "slot_spin" event; final tap that
+        // stops the last reel = "slot_result" event with the prize tier.
+        if (typeof window.gtag === 'function') {
+          var setName = document.body.classList.contains('set-more-fun') ? 'more-fun' : 'fun';
+          if (index === 0) {
+            window.gtag('event', 'slot_spin', { set: setName });
+          }
+          if (index === this.state.rows.length - 1) {
+            var prizeName = ['cx', 'nick-white', '400', 'loser'][this.state.prize];
+            window.gtag('event', 'slot_result', { prize: prizeName, set: setName });
+          }
+        }
       }
       this.updateActiveRow();
     }},
@@ -227,6 +239,7 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         console.warn('html2canvas not loaded');
         return;
       }
+      var thisRef = this; // captured for use inside the html2canvas .then callback
       // Snapshot the slot's bounding box BEFORE capture. Two coordinate
       // systems are at play: CSS pixels (window/getBoundingClientRect)
       // and canvas pixels (devicePixelRatio scaled). We tell html2canvas
@@ -331,6 +344,10 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        if (typeof window.gtag === 'function') {
+          var prizeName = ['cx', 'nick-white', '400', 'loser'][thisRef.props.prize];
+          window.gtag('event', 'slot_screenshot_saved', { prize: prizeName });
+        }
       });
     }},
     { key: 'render', value: function render() {
@@ -374,6 +391,9 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       document.body.classList.add('set-' + setName);
       Array.prototype.forEach.call(tabs, function (t) { t.classList.remove('is-active'); });
       tab.classList.add('is-active');
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'slot_set_changed', { set: setName });
+      }
     });
   });
 })();
@@ -433,6 +453,7 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
   }
 
   if (slider) {
+    var volEventDebounce = null;
     slider.addEventListener('input', function (e) {
       e.stopPropagation();
       bgVolume = parseFloat(slider.value) / 100;
@@ -445,6 +466,14 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         applyMute();
         if (bgMusic) bgMusic.play().catch(function () {});
       }
+      // GA event debounced so a continuous drag fires ONCE per ~1 sec
+      // (otherwise slider drags would spam GA with dozens of events).
+      if (volEventDebounce) clearTimeout(volEventDebounce);
+      volEventDebounce = setTimeout(function () {
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'slot_volume_changed', { volume: Math.round(bgVolume * 100) });
+        }
+      }, 1000);
     });
   }
 

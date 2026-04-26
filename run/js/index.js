@@ -328,6 +328,16 @@
   }
 
   // ============================================================
+  // GA event wrapper. Defaults to a no-op if gtag isn't loaded (so the
+  // game still works if GA fails to load or is blocked by adblock).
+  // ============================================================
+  function ga(eventName, params) {
+    if (typeof window.gtag === 'function') {
+      try { window.gtag('event', eventName, params || {}); } catch (e) {}
+    }
+  }
+
+  // ============================================================
   // Pause — toggleable via P key, ESC, or the pause button. When paused,
   // the game loop skips its update step (positions/spawns frozen) but
   // keeps rendering so the world stays on screen with a "PAUSED"
@@ -498,6 +508,7 @@
     if (now - state.player.jumpStart < JUMP_DURATION * 1000) return;
     state.player.jumpStart = now;
     playSfx('jump');
+    ga('jump', { at_distance: Math.floor(state.distance) });
   }
   function isAirborne(now) {
     var elapsed = now - state.player.jumpStart;
@@ -660,6 +671,7 @@
     var now = performance.now();
     state.effects.lastPickupKind = kind;
     state.effects.lastPickupShownAt = now;
+    ga(kind + '_collected', { at_distance: Math.floor(state.distance) });
     if (kind === 'ham') {
       state.effects.hamFreezeUntil = now + HAM_FREEZE_MS;
       state.effects.hamBonusUntil = now + HAM_FREEZE_MS + HAM_BONUS_MS;
@@ -794,6 +806,11 @@
         if (now > state.invulnUntil) {
           state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
+          ga('obstacle_hit', {
+            at_distance: Math.floor(state.distance),
+            lives_left: state.lives,
+            obstacle_kind: o.type ? o.type.id : 'unknown',
+          });
           // Damage SFX on every hit; full death sting only when lives = 0
           if (state.lives > 0) {
             playSfx('damage');
@@ -1227,6 +1244,7 @@
     // Audio: random bg music + ambient mob loop in the distance
     startBackgroundMusic();
     startLoop('mob-angry');
+    ga('game_started');
   }
 
   function endRun() {
@@ -1244,6 +1262,13 @@
     if (fs) fs.textContent = Math.floor(state.distance) + ' m';
     if (fc) fc.textContent = 'Cx ' + state.coins + ' ×' + state.multiplier
       + '  (+' + totalCoinScore + ')';
+    ga('game_over', {
+      final_distance: Math.floor(state.distance),
+      final_coins: state.coins,
+      final_multiplier: state.multiplier,
+      final_score: Math.floor(state.distance) + totalCoinScore,
+      duration_sec: Math.floor(state.elapsedMs / 1000),
+    });
   }
 
   // ============================================================

@@ -16,6 +16,32 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.1 + Slots v0.14.0 — 2026-04-26
+
+Minor — Google Analytics + custom-event tracking on both games.
+
+**Both games:**
+
+- Added gtag snippet pointing at `G-PCSJJENWY2` (the unified property already used on the main site). All traffic + events now flow into one GA dashboard regardless of subpath.
+
+**Run v0.17.1 custom events:**
+
+- `game_started` — fires when player taps START
+- `jump` — fires on each jump trigger, params: `at_distance`
+- `obstacle_hit` — fires on every collision (non-fatal + fatal), params: `at_distance`, `lives_left`, `obstacle_kind` (e.g. `walk-hoodie`, `cop-car`)
+- `ham_collected`, `h400_collected`, `weed_collected` — fires when each pickup is grabbed, params: `at_distance`
+- `game_over` — fires when lives hit 0, params: `final_distance`, `final_coins`, `final_multiplier`, `final_score`, `duration_sec`
+
+**Slots v0.14.0 custom events:**
+
+- `slot_spin` — fires on the FIRST tap of each new spin (when reel 0 stops first), params: `set` (`fun` or `more-fun`)
+- `slot_result` — fires when the LAST reel stops and prize resolves, params: `prize` (`cx` / `nick-white` / `400` / `loser`), `set`
+- `slot_set_changed` — fires when player taps Fun ↔ More Fun tab, params: `set`
+- `slot_screenshot_saved` — fires when Save-as-PNG completes, params: `prize` (which result was saved)
+- `slot_volume_changed` — fires when bg-volume slider changes, debounced to once per 1 sec so slider drags don't spam GA. Params: `volume` (0-100)
+
+All events have a graceful no-op fallback if `gtag` isn't loaded (so blocked tracking or load failure doesn't break gameplay).
+
 ### Run v0.17.0 — 2026-04-26
 
 Minor — JUMP mechanic + cop car obstacle + 3 special pickups (HAM / 400 / WEED) with full Mario-style effects.
