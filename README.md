@@ -16,6 +16,13 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.9 — 2026-04-25
+
+Patch — fix prize-message-to-symbol mapping + bump 1symbol-b crop.
+
+- **Prize messages reordered.** The visible cell at the center of the viewport when a row stops is NOT the same as the row's `value` — because of how the keyframes offset background-position, value 0 ends with cell 0 centered, value 1 ends with cell 2 centered, value 2 ends with cell 1 centered. Symbol B (the mid-prize person) was matching at value 2, but the message printed was `PRIZE_MESSAGES[2] = "Nick White wins"` (the low prize). Reordered the array so the message shown matches the visible matched person: `['Cx', 'Nick White wins', '400', 'LOSER']` for values `[0, 1, 2, 3]`. Symbol A → top, Symbol B → mid, Symbol C → low.
+- **1symbol-b crop bumped 0.30 → 0.40.** More of the shoulders cropped off so the face sits higher in the strip — eyes stay in the middle reel, nose visible alongside, mouth in the bottom reel as intended.
+
 ### v0.10.8 — 2026-04-25
 
 Patch — three game polish fixes.

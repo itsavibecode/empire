@@ -12,9 +12,22 @@ function _classCallCheck(instance, Constructor) {if (!(instance instanceof Const
 function _possibleConstructorReturn(self, call) {if (!self) {throw new ReferenceError("this hasn't been initialised - super() hasn't been called");}return call && (typeof call === "object" || typeof call === "function") ? call : self;}
 function _inherits(subClass, superClass) {if (typeof superClass !== "function" && superClass !== null) {throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;}
 
-// Index 0 / 1 / 2 = winning prize messages (tap landed on the same value
-// across all 3 rows). Index 3 = "no match" message.
-var PRIZE_MESSAGES = ['Cx', '400', 'Nick White wins', 'LOSER'];
+// Index = `endValue` recorded when all 3 rows match. Index 3 = no match.
+//
+// Note on ordering: the visible cell at the center of the viewport when
+// the reels stop is NOT the same as the row's `value`. Because of the
+// keyframe background-position offsets:
+//   value 0 ends with cell 0 (symbol A) centered
+//   value 1 ends with cell 2 (symbol C) centered
+//   value 2 ends with cell 1 (symbol B) centered
+// Prize messages are arranged so the message shown matches the SYMBOL
+// the user sees: symbol A = top, symbol B = mid, symbol C = low.
+var PRIZE_MESSAGES = [
+  'Cx',                // value 0 -> shows symbol A (top prize)
+  'Nick White wins',   // value 1 -> shows symbol C (low prize)
+  '400',               // value 2 -> shows symbol B (mid prize)
+  'LOSER'              // index 3 -> no match
+];
 var NO_PRIZE_INDEX = 3;
 
 var App = function (_React$Component) {_inherits(App, _React$Component);

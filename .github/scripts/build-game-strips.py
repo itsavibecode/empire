@@ -54,7 +54,11 @@ BG = (0x8E, 0x5C, 0xCB)
 # subject's face is high in the frame and the bottom is shoulders/torso
 # we don't want eating up the reel slices).
 SYMBOL_OVERRIDES = {
-    '1symbol-b.png': {'crop_bottom': 0.30},
+    # Crops more of the shoulders/torso off the bottom so the face is
+    # bigger in the strip and the mouth lands in the bottom reel. Bump
+    # this value if the eyes still fall above the middle reel; lower it
+    # if too much of the chin gets cut off.
+    '1symbol-b.png': {'crop_bottom': 0.40},
 }
 
 
