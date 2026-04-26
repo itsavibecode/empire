@@ -16,6 +16,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.7 — 2026-04-26
+
+Patch — version label now readable.
+
+- The `Run v0.X.Y` text at the bottom-center of the title and game screens was 0.85 rem at 30 % opacity — essentially invisible against the busy title-screen art and most gameplay backgrounds. Now rendered as a centered pill: 1 rem text, 90 % opacity, dark-purple translucent background with a subtle purple border + text shadow. Sits at `bottom: 0.5rem` like before but centered via `transform: translateX(-50%)` instead of full-width. Easy to read at a glance, doesn't dominate the screen.
+
 ### Run v0.18.6 — 2026-04-26
 
 Patch — Ice properly tall + neck-stretch actually visible on coin grab.

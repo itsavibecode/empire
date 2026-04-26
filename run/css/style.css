@@ -802,10 +802,23 @@ html, body {
   opacity: .55;
 }
 .game-version {
+  /* Override the full-width base rule — make this a centered pill so
+     the version stays readable against any background. Was 0.85rem at
+     30% opacity (basically invisible). */
   bottom: .5rem;
-  font-size: .85rem;
-  letter-spacing: .1em;
-  opacity: .3;
+  left: 50%;
+  right: auto;
+  -webkit-transform: translateX(-50%);
+          transform: translateX(-50%);
+  width: auto;
+  font-size: 1rem;
+  letter-spacing: .12em;
+  opacity: .9;
+  background: rgba(20, 14, 36, .7);
+  padding: .15rem .7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 164, 255, .45);
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
 
 /* ---- Mobile tweaks ---- */
