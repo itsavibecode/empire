@@ -16,6 +16,14 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.8 — 2026-04-25
+
+Patch — three game polish fixes.
+
+- **PNG export now matches the screen.** When a row stops, the saved image was sometimes capturing a mid-animation frame rather than the resting cell, so the screenshot didn't show the win lined up. Fix: when a row's `isRunning` flips to false, the React component now kills the keyframe animation and pins `background-position` to the end-of-cycle value via inline style. `html2canvas` reads that as a static value and captures it accurately.
+- **1symbol-b crop adjustment.** Added a per-symbol override system in `build-game-strips.py`. For `1symbol-b.png`, 30% is now cropped off the bottom before the cover-fit, so the face fills more of the strip and the mouth lands in the bottom reel instead of being eaten by shoulders/torso.
+- **Mobile sizing.** On viewports ≤ 768px the slot now fills much more of the screen: side black bars shrunk from 20% → 5%, white frame tightened to match, and reel height bumped from 12.07% → 18%. The strip image stretches slightly but the larger visual is the priority on portrait phones.
+
 ### v0.10.7 — 2026-04-25
 
 Patch — fixed the slot's symbol layout to match the SMB3-style "stack the slices" effect, removed the diagnostic counter.

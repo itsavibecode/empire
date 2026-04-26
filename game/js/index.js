@@ -161,8 +161,23 @@ var Row = function (_React$Component2) {_inherits(Row, _React$Component2);
     { key: 'render', value: function render() {
       var activeClass = this.props.index === this.props.data.activeRowIndex ? 'active' : '';
       var columnsClassList = 'columns columns-' + this.props.name;
-      var animation = this.props.direction + '-transition-' + this.state.value;
-      var style = { animationName: animation, animationDuration: this.props.speed + 'ms' };
+      var style;
+      if (this.props.isRunning) {
+        // Spinning — let the keyframe animation drive background-position.
+        var animation = this.props.direction + '-transition-' + this.state.value;
+        style = { animationName: animation, animationDuration: this.props.speed + 'ms' };
+      } else {
+        // Stopped — kill the animation and pin background-position to the
+        // end of the cycle that was running when the row stopped. This
+        // makes the visible cell deterministic (no mid-animation snapshot
+        // captured by html2canvas during Save-as-PNG, which was the bug
+        // where the saved image didn't show the win lined up).
+        var endV = this.props.data.rows[this.props.index].endValue;
+        var pos = this.props.direction === 'ltr'
+          ? ((endV + 1) * 33.3333) + 'vw'
+          : (-(endV + 2) * 33.3333) + 'vw';
+        style = { animationName: 'none', backgroundPosition: pos };
+      }
 
       return React.createElement('div', { className: 'row ' + activeClass },
         React.createElement('div', { className: columnsClassList, style: style },

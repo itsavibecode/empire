@@ -160,6 +160,28 @@ body:after {
   z-index: 10;
 }
 
+/* On mobile portrait, give the slot more of the screen: shrink the side
+   black bars (so each cell is wider) and bump the reel height (so each
+   cell is taller). The strip image stretches slightly but the larger
+   visual is the priority on small screens. */
+@media (max-width: 768px) {
+  .viewport:before,
+  .viewport:after {
+    width: 5%;
+  }
+  body:after {
+    /* white frame: pull in tighter to match the bigger reels */
+    right: 4%;
+    left: 4%;
+    bottom: 30%;
+    padding-top: 60%;
+  }
+  .columns:after {
+    /* taller per-row aspect — was 12.07% — gives a much bigger slot */
+    padding-top: 18%;
+  }
+}
+
 .game {
   position: absolute;
   top: 50%;

@@ -48,6 +48,16 @@ SYMBOL_H = STRIP_H * len(ROW_NAMES)  # 338 * 3 = 1014
 BG = (0x8E, 0x5C, 0xCB)
 
 
+# Per-source-image crop overrides applied AFTER autocrop. Each value is
+# the fraction of the image to remove from each side. e.g.
+# {'crop_bottom': 0.30} removes 30% off the bottom (useful when the
+# subject's face is high in the frame and the bottom is shoulders/torso
+# we don't want eating up the reel slices).
+SYMBOL_OVERRIDES = {
+    '1symbol-b.png': {'crop_bottom': 0.30},
+}
+
+
 def load_symbol(filename, autocrop):
     path = os.path.join(IMG_DIR, filename)
     if not os.path.exists(path):
@@ -57,6 +67,15 @@ def load_symbol(filename, autocrop):
         bbox = img.getbbox()  # tightest box of non-fully-transparent pixels
         if bbox:
             img = img.crop(bbox)
+    override = SYMBOL_OVERRIDES.get(filename)
+    if override:
+        w, h = img.size
+        left   = int(w * override.get('crop_left',   0))
+        top    = int(h * override.get('crop_top',    0))
+        right  = w - int(w * override.get('crop_right',  0))
+        bottom = h - int(h * override.get('crop_bottom', 0))
+        img = img.crop((left, top, right, bottom))
+        print(f'    applied override {override} -> new size {img.size}')
     return img
 
 
