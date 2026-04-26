@@ -79,6 +79,12 @@
   });
   // Background skyline — wide panorama, drawn at top stripe of canvas.
   SPRITE_PATHS['bg-pano'] = 'img/bg/bg-chile-pano.png';
+  // Vertical-tiling road (top-down view, ~1:2 aspect). Replaces the
+  // procedural road-fallback when present. Multiple variants — picked
+  // randomly per run for variety.
+  for (var bgi = 1; bgi <= 4; bgi++) {
+    SPRITE_PATHS['bg-road-' + bgi] = 'img/bg/bg-road-tile-' + bgi + '.png';
+  }
 
   // ============================================================
   // Audio catalog. Three logical channels — music, sfx, dialogue —
@@ -198,7 +204,6 @@
   }
 
   function startBackgroundMusic() {
-    // Stop whatever's playing first
     if (currentMusicKey) stopLoop(currentMusicKey);
     currentMusicKey = pickRandomMusic();
     if (currentMusicKey) startLoop(currentMusicKey);
@@ -211,13 +216,52 @@
     }
   }
 
+  function nextMusicTrack() {
+    var keys = Object.keys(AUDIO_DEFS).filter(function (k) {
+      return AUDIO_DEFS[k].channel === 'music';
+    });
+    if (!keys.length) return;
+    var idx = currentMusicKey ? keys.indexOf(currentMusicKey) : -1;
+    if (currentMusicKey) stopLoop(currentMusicKey);
+    currentMusicKey = keys[(idx + 1) % keys.length];
+    startLoop(currentMusicKey);
+  }
+
+  // Browsers (Safari, Chrome since 2018) block audio.play() until the
+  // user interacts with the page. We optimistically call play() right
+  // away; if it rejects, we wait for the first click/tap/keydown and
+  // retry. This lets the title-screen music kick in as soon as the
+  // user does literally anything.
+  var autoplayUnlocked = false;
+  function bindAutoplayUnlock() {
+    if (autoplayUnlocked) return;
+    var unlock = function () {
+      if (autoplayUnlocked) return;
+      autoplayUnlocked = true;
+      document.removeEventListener('click', unlock, true);
+      document.removeEventListener('touchstart', unlock, true);
+      document.removeEventListener('keydown', unlock, true);
+      // Retry whichever music track is "current" — startBackgroundMusic
+      // already set currentMusicKey, but the play() call inside it may
+      // have been blocked.
+      if (currentMusicKey) {
+        var inst = audioInstances[currentMusicKey];
+        if (inst) inst.play().catch(function () {});
+      }
+    };
+    document.addEventListener('click', unlock, true);
+    document.addEventListener('touchstart', unlock, true);
+    document.addEventListener('keydown', unlock, true);
+  }
+
   // ============================================================
   // State.
   // ============================================================
   var sprites = {}; // key -> Image (loaded async)
   var canvas, ctx;
   var lastTime = 0;
-  var bgScrollX = 0; // for parallax scroll of skyline
+  var bgScrollX = 0;          // for parallax scroll of skyline panorama
+  var currentRoadKey = null;  // which bg-road-N is being used this run
 
   var state = {
     phase: 'loading',  // 'loading' | 'menu' | 'playing' | 'gameover'
@@ -280,8 +324,13 @@
   }
 
   function playerY() {
-    // Bottom of canvas, with a margin for the URL caption.
-    return viewH() - viewH() * 0.10;
+    // Mike is now PINNED NEAR THE TOP of the screen — he's running
+    // DOWN-hill, so the top of the screen represents higher elevation
+    // and the bottom is where the road descends to. Obstacles spawn at
+    // the bottom (far ahead in the distance below) and travel UP toward
+    // Mike's fixed Y position.
+    // Returns the Y coordinate of Mike's FEET (sprite is bottom-anchored).
+    return viewH() * 0.32;
   }
 
   // ============================================================
@@ -358,7 +407,7 @@
     var lane = Math.floor(Math.random() * LANES);
     state.obstacles.push({
       lane: lane,
-      y: -size.h,         // start above visible area
+      y: viewH() + size.h,    // start BELOW visible area (will travel UP)
       spriteKey: key,
       w: size.w,
       h: size.h,
@@ -371,7 +420,7 @@
     var size = scaledSize('cx-coin-01', COIN_TARGET_HEIGHT_FRAC);
     state.coinsArr.push({
       lane: pickRandomLane(avoidLane),
-      y: -size.h - 80,    // a bit higher than the obstacle so they don't overlap
+      y: viewH() + size.h + 80, // a bit further than the obstacle so they don't overlap
       w: size.w,
       h: size.h,
       picked: false,
@@ -391,21 +440,23 @@
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
 
-    // Move obstacles + coins down.
+    // Move obstacles + coins UP toward Mike (he's at the top, world
+    // scrolls up past him — he's running DOWN-hill so the world
+    // appears to move up across the camera).
     var i;
     for (i = 0; i < state.obstacles.length; i++) {
-      state.obstacles[i].y += state.speed * dt;
+      state.obstacles[i].y -= state.speed * dt;
     }
     for (i = 0; i < state.coinsArr.length; i++) {
-      state.coinsArr[i].y += state.speed * dt;
+      state.coinsArr[i].y -= state.speed * dt;
     }
 
-    // Cull off-screen.
+    // Cull off-screen (above the top edge).
     state.obstacles = state.obstacles.filter(function (o) {
-      return o.y < viewH() + 100;
+      return o.y > -o.h - 50;
     });
     state.coinsArr = state.coinsArr.filter(function (c) {
-      return c.y < viewH() + 100 && !c.picked;
+      return c.y > -c.h - 50 && !c.picked;
     });
 
     // Spawn timer.
@@ -500,23 +551,16 @@
     var w = viewW();
     var h = viewH();
 
-    // Sky / road background — flat fills (cheap, predictable)
-    ctx.fillStyle = '#1a1230'; // night purple
+    // Background fill (visible behind any unfilled regions)
+    ctx.fillStyle = '#1a1230';
     ctx.fillRect(0, 0, w, h);
 
-    // Skyline strip — top 30% of canvas, panorama tiled horizontally
-    var skyH = h * 0.30;
-    var bg = sprites['bg-pano'];
-    if (bg) {
-      var bgScale = skyH / bg.height;
-      var bgW = bg.width * bgScale;
-      var offset = ((bgScrollX % bgW) + bgW) % bgW;
-      ctx.drawImage(bg, -offset, 0, bgW, skyH);
-      ctx.drawImage(bg, -offset + bgW, 0, bgW, skyH);
-    }
-
-    // Road area (below skyline)
-    drawRoad(skyH, h);
+    // Road covers the WHOLE viewport — Mike is now near the top of the
+    // playfield rather than the bottom, and the bg-road tile already
+    // contains everything (asphalt, sidewalks, painted markings, manhole
+    // covers, shops on the edges). The previous separate skyline strip
+    // would have overlapped Mike's sprite, so we drop it for v0.14.
+    drawRoad(0, h);
 
     // Obstacles (sort by Y so closer ones draw over far ones)
     var allDrawables = state.obstacles.concat(state.coinsArr);
@@ -533,42 +577,67 @@
   function drawRoad(yTop, yBot) {
     var w = viewW();
     var roadH = yBot - yTop;
-    var sidewalkW = w * 0.07;            // sidewalks on far edges
+    var bg = currentRoadKey ? sprites[currentRoadKey] : null;
+
+    if (bg) {
+      // --- Image-based road: tile the vertical-tiling bg image ---
+      // Scale to fit viewport width; tile vertically with scrolling
+      // offset that ties to distance traveled. The road moves UP past
+      // the player, so as distancePx grows, the offset shifts the
+      // tile's drawn Y position UP.
+      var bgScale = w / bg.width;
+      var tileH = bg.height * bgScale;
+      var offset = state.distancePx % tileH;
+      // First tile starts BELOW yTop by `offset` (so it visually
+      // scrolls up). Then we draw additional copies above to fill the
+      // whole road area.
+      var firstY = yTop - offset + tileH;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, yTop, w, roadH);
+      ctx.clip();
+      for (var ty = firstY - tileH; ty - tileH < yBot; ty += tileH) {
+        ctx.drawImage(bg, 0, ty, w, tileH);
+      }
+      ctx.restore();
+    } else {
+      // --- Procedural fallback (used if road image fails to load) ---
+      drawRoadProcedural(yTop, yBot);
+    }
+  }
+
+  function drawRoadProcedural(yTop, yBot) {
+    var w = viewW();
+    var roadH = yBot - yTop;
+    var sidewalkW = w * 0.07;
     var roadL = sidewalkW;
     var roadR = w - sidewalkW;
     var roadW = roadR - roadL;
 
-    // --- Sidewalk strips (scroll downward) ---
-    // Concrete grey base
+    // Sidewalks
     ctx.fillStyle = '#5a5a64';
     ctx.fillRect(0, yTop, sidewalkW, roadH);
     ctx.fillRect(roadR, yTop, sidewalkW, roadH);
-    // Curb edge — slightly darker line at the road boundary
     ctx.fillStyle = '#3a3a40';
     ctx.fillRect(sidewalkW - 3, yTop, 3, roadH);
     ctx.fillRect(roadR, yTop, 3, roadH);
-    // Periodic darker tiles along sidewalks (manholes/grates) — scroll down
-    // with distance so they appear to fly past the player
+    // Sidewalk grates — scroll UP (start below, move up)
     var detailScroll = state.distancePx % SIDEWALK_DETAIL_INTERVAL_PX;
-    for (var sy = yTop - SIDEWALK_DETAIL_INTERVAL_PX + detailScroll;
-         sy < yBot;
-         sy += SIDEWALK_DETAIL_INTERVAL_PX) {
+    for (var sy = yBot + SIDEWALK_DETAIL_INTERVAL_PX - detailScroll;
+         sy > yTop - SIDEWALK_DETAIL_INTERVAL_PX;
+         sy -= SIDEWALK_DETAIL_INTERVAL_PX) {
       ctx.fillStyle = '#3e3e46';
       ctx.fillRect(sidewalkW * 0.20, sy, sidewalkW * 0.60, 22);
       ctx.fillRect(roadR + sidewalkW * 0.20, sy, sidewalkW * 0.60, 22);
     }
-
-    // --- Asphalt road ---
+    // Asphalt
     ctx.fillStyle = '#2a2a2e';
     ctx.fillRect(roadL, yTop, roadW, roadH);
-
-    // --- Crosswalks (white stripes spanning the road) ---
-    // Periodic — every CROSSWALK_INTERVAL_PX pixels of distance traveled
+    // Crosswalks scrolling UP
     var cwScroll = state.distancePx % CROSSWALK_INTERVAL_PX;
-    var cwY = yTop - CROSSWALK_INTERVAL_PX + cwScroll;
-    while (cwY < yBot) {
-      if (cwY + 60 > yTop && cwY < yBot) {
-        // Draw 7 stripes across the road
+    var cwY = yBot + CROSSWALK_INTERVAL_PX - cwScroll;
+    while (cwY > yTop - CROSSWALK_INTERVAL_PX) {
+      if (cwY + 22 > yTop && cwY < yBot) {
         var stripeCount = 7;
         var stripeW = roadW / (stripeCount * 2 - 1);
         ctx.fillStyle = '#f4f4f4';
@@ -577,15 +646,13 @@
           ctx.fillRect(sx, cwY, stripeW, 22);
         }
       }
-      cwY += CROSSWALK_INTERVAL_PX;
+      cwY -= CROSSWALK_INTERVAL_PX;
     }
-
-    // --- Lane divider dashes (scrolling downward) ---
+    // Lane dashes scrolling UP (positive offset shifts dashes upward)
     ctx.strokeStyle = '#FFD566';
     ctx.lineWidth = 3;
     ctx.setLineDash([26, 24]);
-    // lineDashOffset goes negative to make dashes appear to move DOWN the road
-    ctx.lineDashOffset = -state.distancePx % 50;
+    ctx.lineDashOffset = state.distancePx % 50;
     for (var i = 1; i < LANES; i++) {
       var lx = roadL + (roadW / LANES) * i;
       ctx.beginPath();
@@ -651,6 +718,13 @@
   // ============================================================
   // Game-state transitions.
   // ============================================================
+  function pickRandomRoadTile() {
+    var keys = ['bg-road-1', 'bg-road-2', 'bg-road-3', 'bg-road-4'];
+    var loaded = keys.filter(function (k) { return sprites[k]; });
+    if (!loaded.length) return null;
+    return loaded[Math.floor(Math.random() * loaded.length)];
+  }
+
   function startRun() {
     state.phase = 'playing';
     state.speed = SPEED_INITIAL;
@@ -666,6 +740,7 @@
     state.coinsArr = [];
     state.spawnTimer = 0;
     state.invulnUntil = 0;
+    currentRoadKey = pickRandomRoadTile();
     document.getElementById('overlay-start').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');
     updateHUD();
@@ -749,6 +824,15 @@
       });
     }
 
+    // Skip-to-next-track button (cycles through the bg music tracks)
+    var skipBtn = document.getElementById('audio-next-track');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        nextMusicTrack();
+      });
+    }
+
     // Click toggle to expand/collapse panel
     toggle.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -793,6 +877,14 @@
 
     loadAll().then(function () {
       state.phase = 'menu';
+      // Pick a road tile for the title-screen backdrop and start the
+      // ambient horizontal drift so menu doesn't look flat.
+      currentRoadKey = pickRandomRoadTile();
+      // Try to start music immediately. Browsers will block this until
+      // first user interaction — bindAutoplayUnlock catches that case
+      // and retries on the first click/tap/keypress.
+      startBackgroundMusic();
+      bindAutoplayUnlock();
       requestAnimationFrame(function (t) { lastTime = t; loop(t); });
     });
   }

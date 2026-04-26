@@ -6,15 +6,39 @@ A static promotional site (GitHub Pages) hosted at [ourempirex.com](https://oure
 
 ## Versioning
 
-This project uses [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH). The current version appears in:
+Each subproject under this repo has its **own independent SemVer**. Going forward each ticks separately, so a change to `/run/` doesn't bump `/game/` or the main site, and vice versa. Each footer shows its own scoped label so it's clear which version you're looking at:
 
-- `<meta name="version">` tag in `index.html`
-- The footer of the site (small grey text below the legal links)
-- This changelog
+- **Site v0.X.Y** — main marketing/event site (`index.html`, `obs/`, etc.)
+- **Slots v0.X.Y** — the slot mini-game at `/game/`
+- **Run v0.X.Y** — the runner game ("On Baby!") at `/run/`
 
-Every release bumps the version in all three places.
+The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
+
+### Run v0.14.0 — 2026-04-26
+
+Iteration 2 on the runner. Big visual + UX changes.
+
+- **Per-project SemVer.** Footer labels now read `Run v0.14.0` / `Slots v0.13.0` / `Site v0.13.0` so it's clear which game you're looking at and what version it is. Each ticks independently from now on.
+- **Title is cursive now** — `On Baby!` rendered in Pacifico with the leading `O` and `B` ~45% bigger than the rest of the word, retaining the purple drop-shadow and a slight `-3deg` tilt for that hand-drawn-sign feel.
+- **Mike pinned near the top of the screen** instead of the bottom. He's running DOWN-hill, so visually higher on screen = higher elevation. Obstacles now spawn off the bottom edge and travel UP toward him. All the procedural road details (lane dashes, crosswalks, sidewalk grates) flipped direction to scroll UP too.
+- **Vertical-tiling road art is in.** The 4 new `bg-road-tile-N.png` images (1440×2912 top-down Chilean street tiles with sidewalks, manholes, painted markings, shop fronts) replace the procedural road. The renderer picks one at random per game start, scales it to viewport width, and tiles it vertically as Mike runs. Procedural road remains as a fallback if the tile fails to load.
+- **Settings icon** changed from speaker to gear/cog at top-right, ~25% larger, with a purple ring + drop-shadow + a 45° hover rotation so it actually reads as "settings" at a glance against any background.
+- **Background music starts at the title screen.** Browsers block audio until user interaction, so we optimistically call `.play()` when the page loads, and bind a one-time click/tap/keydown listener that retries the play call on first interaction. Result: music plays as soon as the player does anything (move mouse over the START button counts).
+- **Skip-track button** in the audio panel — `⏭` next to the Music slider. Cycles through the 3 background tracks in order. Useful both because the random pick on START might not be your favorite, and because long-running sessions can rotate to keep things fresh.
+
+### Slots v0.13.0 — 2026-04-26
+
+(Inherited the v0.13.0 number from the previous shared-version scheme. No functional changes since the OG/Twitter share metadata + cropped PNG export work in v0.10.16/0.10.17.)
+
+### Site v0.13.0 — 2026-04-26
+
+(Inherited from the shared-version scheme. No content changes — last meaningful update was the SEO/Decap CMS work in earlier v0.x.)
+
+---
+
+### v0.13.0 — 2026-04-26
 
 ### v0.13.0 — 2026-04-26
 

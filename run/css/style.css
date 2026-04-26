@@ -72,6 +72,31 @@ html, body {
   color: #C9A4FF;
   text-shadow: 4px 4px 0 rgba(142,92,203,.4);
 }
+/* Cursive title — used for "On Baby!" on the start screen. The .big
+   spans wrapping the O and the B render larger than the rest of the
+   word, with the same purple drop-shadow inheriting from the parent. */
+.overlay h1.title-cursive {
+  font-family: 'Pacifico', 'VT323', cursive;
+  font-size: 6rem;
+  letter-spacing: 0;
+  color: #fff;
+  text-shadow:
+    4px 4px 0 #8E5CCB,
+    8px 8px 0 rgba(142, 92, 203, .35);
+  line-height: 1;
+  /* Slight tilt for that hand-drawn-sign feel */
+  transform: rotate(-3deg);
+}
+.overlay h1.title-cursive .big {
+  font-size: 1.45em;
+  display: inline-block;
+  /* Same color + shadow inherited from parent. line-height adjustment
+     keeps the bigger letters from pushing the rest of the word down. */
+  vertical-align: -.05em;
+}
+@media (max-width: 600px) {
+  .overlay h1.title-cursive { font-size: 4rem; }
+}
 .overlay p {
   font-size: 1.6rem;
   letter-spacing: .08em;
@@ -113,7 +138,7 @@ html, body {
   transform: scale(.95);
 }
 
-/* ---- Audio control panel (top-right speaker icon + collapsible sliders) ---- */
+/* ---- Settings (audio) panel — gear icon top-right + collapsible panel ---- */
 .audio-controls {
   position: fixed;
   top: 1rem;
@@ -121,12 +146,15 @@ html, body {
   z-index: 30;
 }
 .audio-toggle {
-  width: 44px;
-  height: 44px;
+  /* Larger + more contrasted than v0.13. The previous speaker icon was
+     getting lost on busy backgrounds; this is a chunky gear-cog with a
+     purple-tinted ring so it reads as "settings" at a glance. */
+  width: 56px;
+  height: 56px;
   border-radius: 999px;
-  background: rgba(15,15,15,.65);
-  color: rgba(255,255,255,.85);
-  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(20, 16, 32, .85);
+  color: #fff;
+  border: 2px solid #8E5CCB;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,17 +162,16 @@ html, body {
   -webkit-appearance: none;
           appearance: none;
   padding: 0;
-  transition: all .2s ease;
+  transition: transform .25s ease, background .2s ease, box-shadow .2s ease;
+  box-shadow: 0 4px 14px rgba(142, 92, 203, .35);
 }
 .audio-toggle:hover {
   background: #8E5CCB;
-  color: #fff;
-  border-color: #8E5CCB;
+  transform: rotate(45deg);
+  box-shadow: 0 6px 20px rgba(142, 92, 203, .55);
 }
-.audio-toggle svg { width: 22px; height: 22px; }
-.audio-toggle .icon-off { display: none; }
-.audio-toggle.is-muted .icon-on { display: none; }
-.audio-toggle.is-muted .icon-off { display: block; }
+.audio-toggle svg { width: 30px; height: 30px; }
+.audio-toggle.is-muted { color: #ff5a6b; border-color: #ff5a6b; }
 
 .audio-panel {
   position: absolute;
@@ -161,6 +188,30 @@ html, body {
   box-shadow: 0 8px 24px rgba(0,0,0,.45);
 }
 .audio-panel.open { display: flex; }
+.audio-panel-title {
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  letter-spacing: .25em;
+  color: rgba(201,164,255,.6);
+  text-align: center;
+  margin-bottom: .2rem;
+}
+.audio-skip {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #C9A4FF;
+  border: 1px solid rgba(255,255,255,.2);
+  font-size: .85rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  padding: 0;
+  transition: all .15s ease;
+  flex: 0 0 28px;
+}
+.audio-skip:hover { color: #fff; border-color: #fff; background: #8E5CCB; }
 .audio-panel-row {
   display: flex;
   align-items: center;

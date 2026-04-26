@@ -7,7 +7,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.13.0">
+  <meta name="version" content="0.14.0">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -29,7 +29,7 @@
   <meta name="twitter:image" content="https://ourempirex.com/run/og-runner.jpg">
 
   <link rel="icon" href="/logo.png">
-  <link href="https://fonts.googleapis.com/css?family=VT323" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=VT323&family=Pacifico&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -47,18 +47,20 @@
     </div>
   </div>
 
-  <!-- Audio control panel — speaker icon top-right, click to expand
-       per-channel sliders (Music / SFX / Dialogue) + master mute. -->
+  <!-- Settings panel — gear icon top-right, click to expand audio
+       controls (per-channel sliders, mute, skip-track, master mute). -->
   <div class="audio-controls">
-    <button type="button" id="audio-toggle" class="audio-toggle" aria-label="Audio settings">
-      <svg class="icon-on" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-      <svg class="icon-off" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.96 8.96 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.17v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    <button type="button" id="audio-toggle" class="audio-toggle" aria-label="Settings">
+      <!-- Gear / cog icon for "settings" affordance -->
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65c-.04-.24-.24-.42-.49-.42h-4c-.25 0-.45.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98L2.46 14.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.24.42.49.42h4c.25 0 .45-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
     </button>
     <div id="audio-panel" class="audio-panel">
+      <div class="audio-panel-title">AUDIO</div>
       <div class="audio-panel-row">
         <button type="button" class="audio-channel-mute" data-mute-channel="music" aria-label="Mute music">♪</button>
         <label>Music</label>
         <input type="range" min="0" max="100" value="50" data-channel="music" aria-label="Music volume">
+        <button type="button" id="audio-next-track" class="audio-skip" aria-label="Next track" title="Skip to next track">⏭</button>
       </div>
       <div class="audio-panel-row">
         <button type="button" class="audio-channel-mute" data-mute-channel="sfx" aria-label="Mute SFX">★</button>
@@ -76,7 +78,7 @@
 
   <!-- Start overlay — shown until "START" tapped (assets must be loaded first) -->
   <div class="overlay" id="overlay-start">
-    <h1>ON BABY!</h1>
+    <h1 class="title-cursive"><span class="big">O</span>n <span class="big">B</span>aby!</h1>
     <p class="subtitle">an EmpireX runner</p>
     <p>Mike Smalls Jr is being chased through Chile. Help him outrun the mob.</p>
     <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>5 lanes — collect Cx coins for score multiplier</p>
@@ -93,7 +95,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">v0.13.0</div>
+  <div class="game-version">Run v0.14.0</div>
 
   <script src="js/index.js"></script>
 </body>
