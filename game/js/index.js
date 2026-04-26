@@ -4,9 +4,8 @@
  * license — see ../license.txt). Heavily modified for EmpireX:
  *   - Two symbol sets switchable via tabs ("Fun" / "More Fun")
  *   - EmpireX prize messages
- *   - Save-as-PNG export on win (uses html2canvas) with branded top bar
- *   - Audio (background music + per-prize sound effects)
- *   - Dev mode (?dev=1) for testing each prize outcome without spinning
+ *   - Save-as-PNG export (uses html2canvas) with branded top bar
+ *   - Audio (background music + per-prize sound effects + woosh-on-stop)
  */
 
 var _createClass = function () {function defineProperties(target, props) {for (var i = 0; i < props.length; i++) {var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);}}return function (Constructor, protoProps, staticProps) {if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;};}();
@@ -56,9 +55,6 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
     document.body.addEventListener('click', _this.handleClick);
     window.addEventListener('keydown', _this.handleClick);
 
-    // Expose the App instance so the dev panel can force prize states
-    // without going through a real spin.
-    window.__app = _this;
     return _this;
   }
 
@@ -71,8 +67,7 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
       var isKey = e && (e.type === 'keydown' || e.type === 'keypress');
       if (e && !isKey && e.target && e.target.closest) {
         if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') ||
-            e.target.closest('.save-btn') || e.target.closest('.audio-controls') ||
-            e.target.closest('.dev-panel')) {
+            e.target.closest('.save-btn') || e.target.closest('.audio-controls')) {
           return;
         }
       }
@@ -252,7 +247,7 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
           // Hide all chrome — we'll synthesize the top bar in the
           // post-capture canvas instead so it sits at the very top
           // edge regardless of viewport size.
-          ['.tabs', '.audio-controls', '.dev-panel', '.helper', '.save-btn',
+          ['.tabs', '.audio-controls', '.helper', '.save-btn',
            '.game-bookhockeys', '.game-url', '.game-version'].forEach(function (sel) {
             var el = clonedDoc.querySelector(sel);
             if (el) el.style.display = 'none';
@@ -447,53 +442,6 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       sound.play().catch(function () {});
     }
   };
-})();
-
-
-// ---- Dev mode (?dev=1 in URL) ----
-// Buttons to force each prize outcome without spinning. Useful for
-// testing the win sounds, the PNG export, and the LOSER copy.
-(function () {
-  var params = new URLSearchParams(window.location.search);
-  if (params.get('dev') !== '1') return;
-
-  var panel = document.getElementById('dev-panel');
-  if (!panel) return;
-  panel.removeAttribute('hidden');
-
-  panel.addEventListener('click', function (e) {
-    e.stopPropagation();
-    var btn = e.target.closest && e.target.closest('button[data-prize]');
-    if (!btn) return;
-    var prize = btn.getAttribute('data-prize');
-    if (!window.__app) return;
-
-    if (prize === 'reset') {
-      window.__app.resetGame();
-      return;
-    }
-
-    var rows = window.__app.state.rows;
-    if (prize === 'loser') {
-      // Mismatched values guarantee no-match.
-      rows[0].endValue = 0;
-      rows[1].endValue = 1;
-      rows[2].endValue = 2;
-    } else {
-      var v = parseInt(prize, 10);
-      rows[0].endValue = v;
-      rows[1].endValue = v;
-      rows[2].endValue = v;
-    }
-    rows.forEach(function (r) { r.isRunning = false; });
-
-    var prizeIdx = (prize === 'loser') ? NO_PRIZE_INDEX : parseInt(prize, 10);
-    window.__app.setState({
-      rows: rows,
-      activeRowIndex: 3,
-      prize: prizeIdx
-    });
-  });
 })();
 
 

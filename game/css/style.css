@@ -184,45 +184,6 @@ body:after {
   .bg-volume { width: 80px; }
 }
 
-/* ---- Dev panel (?dev=1 in URL) ---- */
-.dev-panel {
-  position: fixed;
-  top: .5rem;
-  left: .5rem;
-  z-index: 200;
-  background: rgba(0,0,0,.85);
-  padding: .5rem;
-  border-radius: 4px;
-  border: 1px solid #FFD566;
-  display: flex;
-  flex-direction: column;
-  gap: .25rem;
-}
-.dev-panel-title {
-  color: #FFD566;
-  font-family: monospace;
-  font-size: .7rem;
-  letter-spacing: .15em;
-  margin-bottom: .25rem;
-  text-align: center;
-}
-.dev-panel button {
-  font-family: monospace;
-  font-size: .8rem;
-  padding: .25rem .5rem;
-  background: #333;
-  color: #fff;
-  border: 1px solid #555;
-  border-radius: 3px;
-  cursor: pointer;
-  text-align: left;
-  -webkit-appearance: none;
-          appearance: none;
-}
-.dev-panel button:hover {
-  background: #8E5CCB;
-  border-color: #8E5CCB;
-}
 
 /* ---- URL caption + version (the "ourempirex.com/game" branding that
        gets captured into the PNG download) ---- */

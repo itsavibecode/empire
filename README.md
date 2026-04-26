@@ -16,6 +16,12 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.14 — 2026-04-25
+
+Patch — removed the dev-mode panel.
+
+- The `?dev=1` panel (force-win buttons + reset) was a temporary debugging aid for the slot iteration; pulled it out now that the game is dialed in. Removed the HTML element, CSS rules, JS handler, and the `closest('.dev-panel')` guard from the body click handler. Also removed the `window.__app` expose hook that the dev panel relied on, and simplified the export onclone hide list.
+
 ### v0.10.13 — 2026-04-25
 
 Patch — game polish round 13.
