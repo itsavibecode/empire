@@ -1,6 +1,9 @@
 body {
   font-family: 'VT323', sans-serif;
   background: #000000;
+  /* iOS Safari needs cursor:pointer on non-button elements for the
+     'click' event to actually fire when tapped. */
+  cursor: pointer;
 }
 body:after {
   content: '';

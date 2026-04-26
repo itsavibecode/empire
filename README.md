@@ -16,6 +16,14 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.3 — 2026-04-25
+
+Patch — defensive fixes for the game's input handling.
+
+- **`keydown` instead of deprecated `keypress`.** Some modern browsers no longer fire `keypress` for unmodified keys, which would have left desktop users unable to spin even after the v0.10.2 fix.
+- **`cursor: pointer` on body.** iOS Safari has a long-standing quirk where `click` events don't fire on non-button elements unless they have a pointer cursor. Adding it makes taps work reliably without needing a separate `touchstart` handler.
+- Game version bumped to v0.10.3.
+
 ### v0.10.2 — 2026-04-25
 
 Patch — game wasn't responding to clicks or keys after v0.10.1.

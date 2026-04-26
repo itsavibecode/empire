@@ -36,22 +36,24 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
     _this.resetGame = _this.resetGame.bind(_this);
     _this.determinePrize = _this.determinePrize.bind(_this);
 
-    // 'click' fires for both desktop mouse and mobile tap (with the
-    // proper viewport meta the old 300ms tap delay is gone), so we don't
-    // need a separate touchstart handler.
+    // 'click' fires for both desktop mouse and mobile tap. iOS Safari
+    // additionally needs body to have cursor:pointer for click to fire
+    // on non-button elements (handled in style.css).
     document.body.addEventListener('click', _this.handleClick);
-    window.addEventListener('keypress', _this.handleClick);
+    // 'keydown' instead of deprecated 'keypress' (which doesn't fire for
+    // some keys in modern browsers).
+    window.addEventListener('keydown', _this.handleClick);
     return _this;
   }
 
   _createClass(App, [
     { key: 'handleClick', value: function handleClick(e) {
-      // For pointer events (click/tap), ignore presses on tabs and the
-      // save button so they can do their own thing without ALSO
-      // triggering a spin. Keypress events always spin, regardless of
-      // which element happens to have focus (avoids the "tab button is
-      // still focused, so keys go to nothing" bug).
-      if (e && e.type !== 'keypress' && e.target && e.target.closest) {
+      // For pointer events, ignore presses on tabs / bookhockeys link /
+      // save button so they can do their own thing without also spinning.
+      // Key events always spin regardless of which element has focus
+      // (avoids the "tab still focused, key goes nowhere" bug).
+      var isKey = e && (e.type === 'keydown' || e.type === 'keypress');
+      if (e && !isKey && e.target && e.target.closest) {
         if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') || e.target.closest('.save-btn')) {
           return;
         }
