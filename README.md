@@ -16,6 +16,14 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.16 — 2026-04-26
+
+Patch — PNG export now crops the side black bars too.
+
+- **Save-as-PNG output is now cropped horizontally to the visible slot window.** Previously the export captured the full body width, including the wide black bars on the left and right of the slot (the `.viewport:before` / `:after` strips that frame the playfield). The exported image now starts at the left edge of the leftmost reel and ends at the right edge of the rightmost reel, matching what the slot actually looks like in the playable view.
+- The crop reads the same breakpoint the CSS uses (20% side bars on desktop, 5% on mobile via `(max-width: 768px)`) so the export math stays in sync with the visual.
+- The branded purple top bar above the slot now matches the cropped width too — no more purple band stretching past the slot edges.
+
 ### v0.10.15 — 2026-04-26
 
 Patch — Open Graph / Twitter share metadata for the `/game/` page.

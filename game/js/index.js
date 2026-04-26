@@ -236,6 +236,15 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       var slotTop    = firstRect.top;
       var slotBottom = lastRect.bottom;
       var slotHeight = slotBottom - slotTop;
+      // The .row element spans the full viewport width, but the visible
+      // slot window sits BETWEEN the .viewport:before / :after black side
+      // bars. Compute the same fraction the CSS uses (20% desktop, 5%
+      // mobile) so the export crops in to just the actual slot content.
+      var isMobile = window.matchMedia('(max-width: 768px)').matches;
+      var sideBarFrac = isMobile ? 0.05 : 0.20;
+      var slotLeft  = Math.round(window.innerWidth * sideBarFrac);
+      var slotRight = Math.round(window.innerWidth * (1 - sideBarFrac));
+      var slotWidth = slotRight - slotLeft;
       // Padding so the white border + result text don't get clipped.
       var pad = Math.max(20, Math.round(slotHeight * 0.08));
 
@@ -257,12 +266,18 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         // html2canvas may render at a higher pixel ratio than CSS pixels.
         var scale = canvas.width / window.innerWidth;
         var topBarH = Math.max(60, Math.round(slotHeight * 0.10));
+        // Source rectangle in the captured canvas (in canvas pixels).
         var srcY = Math.max(0, Math.round((slotTop - pad) * scale));
         var srcH = Math.round((slotHeight + 2 * pad) * scale);
         if (srcY + srcH > canvas.height) srcH = canvas.height - srcY;
+        var srcX = Math.max(0, Math.round(slotLeft * scale));
+        var srcW = Math.round(slotWidth * scale);
+        if (srcX + srcW > canvas.width) srcW = canvas.width - srcX;
 
         // Output canvas: top bar + cropped slot region edge-to-edge.
-        var outW = canvas.width;
+        // Width matches the cropped slot window so the side black bars
+        // don't appear in the saved image.
+        var outW = srcW;
         var outH = topBarH + srcH;
         var out = document.createElement('canvas');
         out.width = outW;
@@ -295,7 +310,9 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         }
 
         // Draw the captured slot region under the top bar, edge-to-edge.
-        ctx.drawImage(canvas, 0, srcY, outW, srcH, 0, topBarH, outW, srcH);
+        // Source: (srcX, srcY) sized (srcW, srcH) — the cropped window
+        // between the side black bars. Dest: (0, topBarH) full output width.
+        ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, topBarH, outW, srcH);
 
         var link = document.createElement('a');
         var ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
