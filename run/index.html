@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.12">
+  <meta name="version" content="0.18.13">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -132,11 +132,10 @@
     <div class="cutscene-dialogue">
       <div class="cutscene-name" id="cutscene-name">ICE POSEIDON</div>
       <p class="cutscene-text" id="cutscene-text"></p>
-      <div class="cutscene-choices hidden" id="cutscene-choices">
-        <button type="button" data-choice="0">"What did you just say horse boy?"</button>
-        <button type="button" data-choice="1">"DON'T GRAB MY DICK BITCH ASS N*GGA!"</button>
-        <button type="button" data-choice="2">"ALLAT! Let's team up!"</button>
-      </div>
+      <!-- Choice / continue buttons are populated dynamically by JS
+           per panel — different cut scenes have different button sets
+           (3-choice for first meeting, single CONTINUE for the others). -->
+      <div class="cutscene-choices hidden" id="cutscene-choices"></div>
     </div>
   </div>
 
@@ -171,7 +170,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.12</div>
+  <div class="game-version">Run v0.18.13</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

@@ -384,89 +384,193 @@
   }
 
   // ============================================================
-  // CUT SCENE — Mike-meets-Ice first-encounter dialogue.
-  // Triggered once per browser (localStorage flag) when the player
-  // crosses CUTSCENE_TRIGGER_DISTANCE_M during a run. Pauses the game
-  // world (similar to ham-freeze but indefinite), shows a typewriter
-  // dialogue with mouth-frame cycling, then 3 player-choice buttons.
-  // All choices set state.iceSidekickJoined = true (the side-kick
-  // mechanic itself lands in v0.18.1).
+  // CUT SCENE SYSTEM — Multi-stage Ice arc that plays out across each
+  // run at distance milestones:
+  //   First Meet (250m)  — Ice intro + 3 player choices → Ice joins
+  //   Mike Tells Off (~600m) — Mike rejects Ice → Ice departs
+  //   Ice Returns (~1100m) — 2-panel weird Ice line + Mike reaction
+  //                          → Ice rejoins
+  // Each cut scene has 1+ panels. Each panel = one speaker + one line.
+  // After a panel's text finishes typing, either choice buttons (if
+  // panel.choices exists) or a single CONTINUE button appears.
   // ============================================================
-  var CUTSCENE_TRIGGER_DISTANCE_M = 250;
-  var CUTSCENE_LINE = "Mike Smalls? Aren't you the guy who always just wants to fuck?";
   var CUTSCENE_TYPE_MS = 35;     // ms per character of dialogue
   var CUTSCENE_MOUTH_MS = 110;   // ms per mouth-frame swap
 
+  var CUTSCENE_DEFS = {
+    'first-meet': {
+      triggerDistanceM: 250,
+      requires: function () { return !state.iceSidekickJoined; },
+      panels: [
+        {
+          speaker: 'ICE POSEIDON',
+          bgPrefix: 'cutscene-', bgExt: '.jpg',
+          line: "Mike Smalls? Aren't you the guy who always just wants to fuck?",
+          choices: [
+            '"What did you just say horse boy?"',
+            '"DON\'T GRAB MY DICK BITCH ASS N*GGA!"',
+            '"ALLAT! Let\'s team up!"',
+          ],
+        },
+      ],
+      onComplete: function () { state.iceSidekickJoined = true; },
+    },
+    'mike-tells-off': {
+      triggerDistanceM: 600,
+      requires: function () { return state.iceSidekickJoined; },
+      panels: [
+        {
+          speaker: 'MIKE SMALLS JR',
+          bgPrefix: 'cutscene-mike-', bgExt: '.png',
+          line: "Listen, you pissing me off dude! Stop following and leeching me! 400 shit.",
+        },
+      ],
+      onComplete: function () { state.iceSidekickJoined = false; },
+    },
+    'ice-returns': {
+      triggerDistanceM: 1100,
+      requires: function () { return !state.iceSidekickJoined; },
+      panels: [
+        {
+          speaker: 'ICE POSEIDON',
+          bgPrefix: 'cutscene-', bgExt: '.jpg',
+          line: "Yo Mike, lemme grab that dick!",
+        },
+        {
+          speaker: 'MIKE SMALLS JR',
+          bgPrefix: 'cutscene-mike-', bgExt: '.png',
+          line: "AHHH WHAT THE FUCK!",
+        },
+      ],
+      onComplete: function () { state.iceSidekickJoined = true; },
+    },
+  };
+
   var cutscene = {
     active: false,
+    defId: null,
+    panelIdx: 0,
     startedAt: 0,
     typedChars: 0,
     showingChoices: false,
   };
 
-  function maybeTriggerCutscene() {
-    if (cutscene.active) return;
-    if (state.iceSidekickJoined) return;
-    if (state.distance < CUTSCENE_TRIGGER_DISTANCE_M) return;
-    // Cut scene plays every run at the trigger distance — the dialogue
-    // is short enough to tolerate the repetition, and it gives every
-    // fresh attempt a story-beat moment when Ice joins.
-    startCutscene();
+  function currentDef() { return cutscene.defId ? CUTSCENE_DEFS[cutscene.defId] : null; }
+  function currentPanel() {
+    var def = currentDef();
+    return def ? def.panels[cutscene.panelIdx] : null;
   }
 
-  function startCutscene() {
+  function maybeTriggerCutscene() {
+    if (cutscene.active) return;
+    for (var defId in CUTSCENE_DEFS) {
+      var def = CUTSCENE_DEFS[defId];
+      if (state.distance < def.triggerDistanceM) continue;
+      if (state.cutscenesTriggered[defId]) continue;
+      if (def.requires && !def.requires()) continue;
+      state.cutscenesTriggered[defId] = true;
+      startCutscene(defId);
+      return;
+    }
+  }
+
+  function startCutscene(defId) {
     cutscene.active = true;
+    cutscene.defId = defId;
+    cutscene.panelIdx = 0;
+    var ov = document.getElementById('overlay-cutscene');
+    if (ov) ov.classList.remove('hidden');
+    ga('cutscene_played', { def: defId });
+    transitionToPanel(0);
+  }
+
+  function transitionToPanel(idx) {
+    cutscene.panelIdx = idx;
     cutscene.startedAt = performance.now();
     cutscene.typedChars = 0;
     cutscene.showingChoices = false;
-    var ov = document.getElementById('overlay-cutscene');
-    var txt = document.getElementById('cutscene-text');
-    var ch = document.getElementById('cutscene-choices');
-    if (ov) ov.classList.remove('hidden');
-    if (txt) txt.textContent = '';
-    if (ch) ch.classList.add('hidden');
-    ga('cutscene_played');
+    var panel = currentPanel();
+    if (!panel) return;
+    var nameEl = document.getElementById('cutscene-name');
+    var txtEl = document.getElementById('cutscene-text');
+    var chEl = document.getElementById('cutscene-choices');
+    var bgEl = document.getElementById('cutscene-bg');
+    if (nameEl) nameEl.textContent = panel.speaker;
+    if (txtEl) txtEl.textContent = '';
+    if (chEl) { chEl.classList.add('hidden'); chEl.innerHTML = ''; }
+    if (bgEl) { bgEl.dataset.mouth = 'closed'; bgEl.src = 'img/' + panel.bgPrefix + 'closed' + panel.bgExt; }
   }
 
   function tickCutscene(now) {
     if (!cutscene.active) return;
+    var panel = currentPanel();
+    if (!panel) return;
+    if (cutscene.showingChoices) return; // text done, waiting for input
     // Mouth animation cycle while typing
-    if (!cutscene.showingChoices) {
-      var mouthIdx = Math.floor((now - cutscene.startedAt) / CUTSCENE_MOUTH_MS) % 3;
-      var mouthVariant = ['closed', 'mid', 'open'][mouthIdx];
-      var bg = document.getElementById('cutscene-bg');
-      if (bg && bg.dataset.mouth !== mouthVariant) {
-        bg.dataset.mouth = mouthVariant;
-        bg.src = 'img/cutscene-' + mouthVariant + '.jpg';
-      }
-      // Typewriter
-      var elapsed = now - cutscene.startedAt;
-      var targetChars = Math.min(CUTSCENE_LINE.length, Math.floor(elapsed / CUTSCENE_TYPE_MS));
-      if (targetChars > cutscene.typedChars) {
-        // Play the dialogue beep on each new character (very short blip)
-        playSfx('dialogue-beep');
-        cutscene.typedChars = targetChars;
-        var txt2 = document.getElementById('cutscene-text');
-        if (txt2) txt2.textContent = CUTSCENE_LINE.slice(0, targetChars);
-      }
-      // Once text completes — settle on closed mouth + show choices
-      if (cutscene.typedChars >= CUTSCENE_LINE.length) {
-        cutscene.showingChoices = true;
-        var bg2 = document.getElementById('cutscene-bg');
-        if (bg2) { bg2.dataset.mouth = 'closed'; bg2.src = 'img/cutscene-closed.jpg'; }
-        var ch2 = document.getElementById('cutscene-choices');
-        if (ch2) ch2.classList.remove('hidden');
-        playSfx('ice-neck'); // Ice's "neck stretch" cue marks the end of his line
-      }
+    var mouthIdx = Math.floor((now - cutscene.startedAt) / CUTSCENE_MOUTH_MS) % 3;
+    var mouthVariant = ['closed', 'mid', 'open'][mouthIdx];
+    var bg = document.getElementById('cutscene-bg');
+    if (bg && bg.dataset.mouth !== mouthVariant) {
+      bg.dataset.mouth = mouthVariant;
+      bg.src = 'img/' + panel.bgPrefix + mouthVariant + panel.bgExt;
+    }
+    // Typewriter
+    var elapsed = now - cutscene.startedAt;
+    var targetChars = Math.min(panel.line.length, Math.floor(elapsed / CUTSCENE_TYPE_MS));
+    if (targetChars > cutscene.typedChars) {
+      playSfx('dialogue-beep');
+      cutscene.typedChars = targetChars;
+      var txt2 = document.getElementById('cutscene-text');
+      if (txt2) txt2.textContent = panel.line.slice(0, targetChars);
+    }
+    // Text complete — settle on closed mouth + show buttons
+    if (cutscene.typedChars >= panel.line.length) {
+      cutscene.showingChoices = true;
+      if (bg) { bg.dataset.mouth = 'closed'; bg.src = 'img/' + panel.bgPrefix + 'closed' + panel.bgExt; }
+      showCutsceneButtons(panel);
+      // Punctuation cue at panel end — ice-neck for Ice panels, damage for Mike's
+      playSfx(panel.speaker === 'ICE POSEIDON' ? 'ice-neck' : 'damage');
     }
   }
 
-  function dismissCutscene(choiceIdx) {
-    cutscene.active = false;
-    state.iceSidekickJoined = true;
-    var ov = document.getElementById('overlay-cutscene');
-    if (ov) ov.classList.add('hidden');
-    ga('cutscene_choice', { selected_option: choiceIdx });
+  function showCutsceneButtons(panel) {
+    var ch = document.getElementById('cutscene-choices');
+    if (!ch) return;
+    ch.innerHTML = '';
+    if (panel.choices && panel.choices.length) {
+      panel.choices.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.choice = String(i);
+        b.textContent = text;
+        ch.appendChild(b);
+      });
+    } else {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.choice = '0';
+      b.textContent = 'CONTINUE ▶';
+      ch.appendChild(b);
+    }
+    ch.classList.remove('hidden');
+  }
+
+  // Called when player clicks a choice/continue button.
+  function advanceCutscene(choiceIdx) {
+    var def = currentDef();
+    if (!def) return;
+    ga('cutscene_choice', { def: cutscene.defId, panel: cutscene.panelIdx, selected_option: choiceIdx });
+    var nextIdx = cutscene.panelIdx + 1;
+    if (nextIdx >= def.panels.length) {
+      // All panels done — fire the onComplete effect + dismiss
+      if (def.onComplete) def.onComplete();
+      cutscene.active = false;
+      cutscene.defId = null;
+      var ov = document.getElementById('overlay-cutscene');
+      if (ov) ov.classList.add('hidden');
+    } else {
+      transitionToPanel(nextIdx);
+    }
   }
 
   // ============================================================
@@ -540,7 +644,8 @@
     spawnTimer: 0,
     seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
     seagullSpawnTimer: 0,
-    iceSidekickJoined: false, // true after first cut scene; persisted via localStorage
+    iceSidekickJoined: false, // toggles via cut scenes during a run
+    cutscenesTriggered: {},   // { defId: true } — per-run flags so each fires once
     ice: {
       neckStretchUntil: 0,    // ms timestamp when neck-stretch animation ends (0 = idle running pose)
       lastSide: 1,            // -1 = Mike's left, +1 = Mike's right (Ice mirrors when Mike lane-shifts)
@@ -1615,11 +1720,12 @@
     state.effects.horseBoostUntil = 0;
     state.effects.textShownUntil = 0;
     state.effects.textLabel = '';
-    // Cut scene resets: each new run starts with Ice gone and the
-    // cut scene un-triggered. The cut scene only re-plays if it
-    // hasn't been seen this page-load session — otherwise Ice silently
-    // joins again at the trigger distance (250m by default).
+    // Cut scene resets: each new run starts with Ice gone and all
+    // cutscene triggers cleared so the multi-stage Ice arc replays
+    // (First Meet → Mike Tells Off → Ice Returns) every fresh run.
     cutscene.active = false;
+    cutscene.defId = null;
+    state.cutscenesTriggered = {};
     state.iceSidekickJoined = false;
     state.ice.neckStretchUntil = 0;
     state.iceCoinsCollected = 0;
@@ -1857,14 +1963,16 @@
       e.target.blur();
       quitToTitle();
     });
-    // Cut-scene choice buttons (all 3 dismiss with Ice joining)
+    // Cut-scene choice/continue buttons — advances to next panel or
+    // finishes the cut scene. Buttons are populated dynamically per
+    // panel by showCutsceneButtons().
     var choiceContainer = document.getElementById('cutscene-choices');
     if (choiceContainer) {
       choiceContainer.addEventListener('click', function (e) {
         var btn = e.target.closest('button[data-choice]');
         if (!btn) return;
         e.target.blur();
-        dismissCutscene(parseInt(btn.dataset.choice, 10));
+        advanceCutscene(parseInt(btn.dataset.choice, 10));
       });
     }
 

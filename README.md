@@ -16,6 +16,27 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.13 — 2026-04-26
+
+Minor — multi-stage Ice arc throughout each run.
+
+The cut scene system has been restructured into a generic multi-panel + multi-cutscene engine. Each run now plays out a 3-act arc with Ice depending on distance milestones:
+
+| Trigger | Cut scene | Effect |
+|---|---|---|
+| **250 m** | **First Meet** — Ice's existing intro line + 3 player choices | Ice joins as side-kick |
+| **600 m** | **Mike Tells Off** — Mike (new chroma-keyed art) tells Ice: *"Listen, you pissing me off dude! Stop following and leeching me! 400 shit."* + CONTINUE | Ice DEPARTS (no longer follows) |
+| **1100 m** | **Ice Returns** — 2 panels: Ice says *"Yo Mike, lemme grab that dick!"*, then Mike replies *"AHHH WHAT THE FUCK!"* + CONTINUE | Ice REJOINS |
+
+**Implementation details:**
+
+- **Mike's reply art** chroma-keyed from the new green-screen source images (`cutscene-mike-mouth-{closed,mid,open}.png` from `concept/`). The chile bg behind these PNGs shows through cleanly because Mike has no green on him — the per-pixel chroma key (tolerance 80) safely strips all green without affecting the sprite.
+- **Cut scenes are data-defined** in a `CUTSCENE_DEFS` map: each entry has `triggerDistanceM`, optional `requires` predicate (e.g. mike-tells-off only fires if Ice is currently following), `panels[]` (each with speaker name, bg image prefix/extension, dialogue line, and optional `choices[]`), and `onComplete` callback.
+- **Choice/continue buttons populate dynamically** per panel — 3 choice buttons for the first panel, single CONTINUE for the others. Click handler is one event-delegated listener.
+- **Per-run trigger flags** in `state.cutscenesTriggered` reset on every `startRun` so the full arc replays each new run.
+- **End-of-line SFX cue** chosen per speaker — `ice-neck.mp3` for Ice panels, `damage.mp3` for Mike's frustrated panels.
+- Old single-cutscene state cleaned up; `dismissCutscene` replaced by generic `advanceCutscene` that handles both panel-to-panel transitions and final dismissal.
+
 ### Run v0.18.12 — 2026-04-26
 
 Patch — reverted the cut scene background swap (kept the cop-car fix).
