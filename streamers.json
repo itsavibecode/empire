@@ -8,25 +8,18 @@
       "avatar": "avatars/mikesmallsjr.jpg"
     },
     {
-      "slug": "saltygummibear",
-      "name": "SaltyGummiBear",
-      "url": "https://kick.com/saltygummibear",
-      "initials": "SG",
-      "avatar": "avatars/saltygummibear.jpg"
-    },
-    {
-      "slug": "xenathewitch",
-      "name": "XenaTheWitch",
-      "url": "https://kick.com/xenathewitch",
-      "initials": "XT",
-      "avatar": "avatars/xenathewitch.jpg"
-    },
-    {
       "slug": "iceposeidon",
       "name": "Ice Poseidon",
       "url": "https://kick.com/iceposeidon",
       "initials": "IP",
       "avatar": "avatars/iceposeidon.jpg"
+    },
+    {
+      "slug": "shangel",
+      "name": "Shangel",
+      "url": "https://kick.com/shangel",
+      "initials": "SH",
+      "avatar": "/avatars/screenshot-2026-04-26-152009.png"
     },
     {
       "slug": "kimmee",
@@ -36,11 +29,18 @@
       "avatar": "avatars/kimmee.jpg"
     },
     {
-      "slug": "jjstream",
-      "name": "JJStream",
-      "url": "https://kick.com/jjstream",
-      "initials": "JJ",
-      "avatar": "avatars/jjstream.jpg"
+      "slug": "sashawest",
+      "name": "Sasha West",
+      "url": "https://kick.com/sashawest",
+      "initials": "SW",
+      "avatar": "/avatars/screenshot-2026-04-26-151109.png"
+    },
+    {
+      "slug": "xenathewitch",
+      "name": "XenaTheWitch",
+      "url": "https://kick.com/xenathewitch",
+      "initials": "XT",
+      "avatar": "avatars/xenathewitch.jpg"
     },
     {
       "slug": "woodbaby",
@@ -50,11 +50,11 @@
       "avatar": "avatars/woodbaby.jpg"
     },
     {
-      "slug": "taylorstarlight",
-      "name": "TaylorStarlight",
-      "url": "https://kick.com/taylorstarlight",
-      "initials": "TS",
-      "avatar": "avatars/taylorstarlight.jpg"
+      "slug": "jjstream",
+      "name": "JJStream",
+      "url": "https://kick.com/jjstream",
+      "initials": "JJ",
+      "avatar": "avatars/jjstream.jpg"
     },
     {
       "slug": "ashwilder",
@@ -62,6 +62,13 @@
       "url": "https://kick.com/ashwilder",
       "initials": "AW",
       "avatar": "avatars/ashwilder.jpg"
+    },
+    {
+      "slug": "taylorstarlight",
+      "name": "TaylorStarlight",
+      "url": "https://kick.com/taylorstarlight",
+      "initials": "TS",
+      "avatar": "avatars/taylorstarlight.jpg"
     },
     {
       "slug": "floridaboy",
@@ -83,6 +90,13 @@
       "url": "https://kick.com/feef",
       "initials": "FE",
       "avatar": "avatars/feef.jpg"
+    },
+    {
+      "slug": "saltygummibear",
+      "name": "SaltyGummiBear",
+      "url": "https://kick.com/saltygummibear",
+      "initials": "SG",
+      "avatar": "avatars/saltygummibear.jpg"
     },
     {
       "slug": "blackassdave",
@@ -155,11 +169,11 @@
       "avatar": "avatars/dtanmanb.png"
     },
     {
-      "slug": "shangel",
-      "name": "Shangel",
-      "url": "https://kick.com/shangel",
-      "initials": "SH",
-      "avatar": "avatars/shangel.jpg"
+      "slug": "riddaw",
+      "name": "RiddaW",
+      "url": "https://kick.com/riddaw",
+      "initials": "RW",
+      "avatar": "avatars/riddaw.jpg"
     },
     {
       "slug": "ozemi",
@@ -174,20 +188,6 @@
       "url": "https://kick.com/lifeismizzy",
       "initials": "LM",
       "avatar": "/avatars/screenshot-2026-04-26-151507.png"
-    },
-    {
-      "slug": "riddaw",
-      "name": "RiddaW",
-      "url": "https://kick.com/riddaw",
-      "initials": "RW",
-      "avatar": "avatars/riddaw.jpg"
-    },
-    {
-      "slug": "sashawest",
-      "name": "Sasha West",
-      "url": "https://kick.com/sashawest",
-      "initials": "SW",
-      "avatar": "/avatars/screenshot-2026-04-26-151109.png"
     }
   ]
 }
