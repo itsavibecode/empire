@@ -1784,6 +1784,12 @@
     document.getElementById('btn-start').addEventListener('click', startAndBlur);
     document.getElementById('btn-restart').addEventListener('click', startAndBlur);
 
+    // Mirror the bottom-of-screen version label inside the audio
+    // settings panel so it's also visible there (handy for bug reports).
+    var gv = document.querySelector('.game-version');
+    var apv = document.getElementById('audio-panel-version');
+    if (gv && apv) apv.textContent = gv.textContent;
+
     // Leaderboard buttons (require window.RunnerLeaderboard which is
     // loaded as an ES module — may not be ready immediately on first
     // paint, but will be by the time game-over fires).

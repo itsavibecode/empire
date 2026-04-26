@@ -16,6 +16,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.8 — 2026-04-26
+
+Patch — version label inside the audio settings panel.
+
+- Added `Run v0.X.Y` line at the bottom of the audio settings panel (the gear-icon dropdown). Auto-syncs from the existing `.game-version` element on init so I don't have to remember to bump it in two places — single source of truth, mirrored. Useful when reporting bugs from inside the game without scrolling.
+
 ### Run v0.18.7 — 2026-04-26
 
 Patch — version label now readable.

@@ -448,6 +448,16 @@ html, body {
   color: #fff;
   border-color: #ff5a6b;
 }
+.audio-panel-version {
+  margin-top: .6rem;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: .9rem;
+  letter-spacing: .12em;
+  color: rgba(201, 164, 255, .7);
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: .55rem;
+}
 
 /* Title-screen subtitle ("an EmpireX runner") under the giant ON BABY! */
 .overlay .subtitle {
