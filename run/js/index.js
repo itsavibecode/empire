@@ -182,6 +182,12 @@
   }
   // Horse pickup item icon — use the same horse-overhead frame as the item sprite
   SPRITE_PATHS['horse-icon'] = 'img/sprites/mike-horse-05.png';
+  // Ice Poseidon side-kick frames — preload all 29 from the source sheet
+  // so the run cycle + neck-stretch animations have everything they need.
+  for (var ic = 1; ic <= 29; ic++) {
+    var ick = 'ice-' + (ic < 10 ? '0' + ic : ic);
+    SPRITE_PATHS[ick] = 'img/sprites/' + ick + '.png';
+  }
   // Cop car sprites (referenced by OBSTACLE_TYPES below)
   ['01', '02', '05', '09'].forEach(function (n) {
     SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
@@ -821,8 +827,17 @@
   function spawnPickup(avoidLane) {
     var type = pickWeightedPickupType();
     var size = scaledSize(type.frames[0], PICKUP_TARGET_HEIGHT_FRAC);
+    // HORSE spawns on the SIDEWALK only — placed in lane 0 or lane LANES-1
+    // (the edge lanes) so the player has to swerve to the side of the
+    // road to grab it. Other pickups spawn anywhere as before.
+    var lane;
+    if (type.kind === 'horse') {
+      lane = (Math.random() < 0.5) ? 0 : (LANES - 1);
+    } else {
+      lane = pickRandomLane(avoidLane);
+    }
     state.pickups.push({
-      lane: pickRandomLane(avoidLane),
+      lane: lane,
       y: viewH() + size.h + 140,
       type: type,
       spawnedAt: performance.now(),
@@ -1275,9 +1290,11 @@
   }
 
   function drawSeagull(g, now) {
-    // Cycle through flying frames 09-12 every 130 ms (wing-flap cadence)
-    var idx = 9 + Math.floor((now + g.flapPhase) / 130) % 4;
-    var key = 'seagull-' + (idx < 10 ? '0' + idx : idx);
+    // Cycle through flying frames 10-12 every 130 ms (wing-flap cadence).
+    // Skipping frame 09 because it has a ground shadow blob at the bird's
+    // feet that looks weird on a clearly-airborne sprite.
+    var idx = 10 + Math.floor((now + g.flapPhase) / 130) % 3;
+    var key = 'seagull-' + idx;
     var img = sprites[key];
     if (!img) return;
     var w = img.width * g.scale;
@@ -1429,18 +1446,18 @@
   }
 
   function pickIceFrame(now) {
-    // Neck-stretching after a fresh coin grab — cycle ice-22..29
-    // (the 6-frame neck-growing-upward sequence from the source sheet,
-    // mapped to extracted ice-22..27 range. We use 22..27 here since
-    // the extraction yielded those 6 ascending frames.)
+    // Neck-stretching after a fresh coin grab — neck-stretch frames in
+    // the extracted set are ice-23..29 (7 frames of the neck growing
+    // longer). Animate forward through them over the stretch duration.
     if (now < state.ice.neckStretchUntil) {
-      var stretchFrame = 22 + Math.floor((ICE_NECK_STRETCH_MS - (state.ice.neckStretchUntil - now)) / (ICE_NECK_STRETCH_MS / 6));
-      stretchFrame = Math.min(27, Math.max(22, stretchFrame));
-      return 'ice-' + stretchFrame;
+      var t = 1 - (state.ice.neckStretchUntil - now) / ICE_NECK_STRETCH_MS; // 0→1
+      var stretchFrame = 23 + Math.floor(t * 7);
+      if (stretchFrame > 29) stretchFrame = 29;
+      return 'ice-' + (stretchFrame < 10 ? '0' + stretchFrame : stretchFrame);
     }
-    // Otherwise, run-cycle on side-view frames (ice-13..16 from the
-    // running-side-view row of the source sheet)
-    var frame = 13 + Math.floor(now / RUN_FRAME_MS) % 4;
+    // Otherwise, run-cycle on side-view frames (ice-19..22 are clean
+    // side-view running poses from the source sheet)
+    var frame = 19 + Math.floor(now / RUN_FRAME_MS) % 4;
     return 'ice-' + frame;
   }
 
@@ -1450,7 +1467,7 @@
     // During horse boost, Ice rides on Mike's horse (built into the
     // mike-ice-horse-* sprite), so no separate Ice render needed.
     if (performance.now() < state.effects.horseBoostUntil) return;
-    var size = scaledSize('ice-13', PLAYER_TARGET_HEIGHT_FRAC * 0.85);
+    var size = scaledSize('ice-19', PLAYER_TARGET_HEIGHT_FRAC * 0.85);
     var x = iceX();
     var y = playerY() - size.h;
     var key = pickIceFrame(now);
@@ -1474,7 +1491,7 @@
     if (!state.iceSidekickJoined) return false;
     if (coin.picked) return false;
     var ix = iceX();
-    var iy = playerY() - scaledSize('ice-13', PLAYER_TARGET_HEIGHT_FRAC * 0.85).h * 0.5;
+    var iy = playerY() - scaledSize('ice-19', PLAYER_TARGET_HEIGHT_FRAC * 0.85).h * 0.5;
     var coinCx = laneX(coin.lane);
     var coinCy = coin.y + coin.h / 2;
     var dx = coinCx - ix;

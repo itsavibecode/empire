@@ -16,6 +16,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.3 — 2026-04-26
+
+Patch — three playtest bugs from the v0.18.0-0.18.2 story round.
+
+- **Ice now actually appears alongside Mike** post-cutscene. Two bugs were stacked:
+  1. **Ice sprites were never preloaded** — `SPRITE_PATHS` had no entries for `ice-*`, so the sprite catalog never fetched them and `drawAt()` couldn't render him. All 29 frames now in the preload list.
+  2. **Wrong frame numbers** for the run cycle and neck-stretch sequence. Looking at the actual extracted sheet, `ice-19..22` are the side-view running poses (not `13..16`) and `ice-23..29` are the neck-growing-upward stretch (not `22..27`). Corrected both.
+- **Bad seagull frame trimmed** from the title-screen flap cycle. `seagull-09` had a ground-shadow blob baked under the bird's feet that looked weird on a clearly-airborne sprite. Now cycling frames `10`/`11`/`12` only (3-frame loop instead of 4).
+- **HORSE pickup spawns on the sidewalk** now, not in the middle lanes. Per spawn type, `kind === 'horse'` always picks lane 0 or lane LANES-1 (the edge lanes that visually overlap the painted sidewalks). Player has to swerve to the side of the road to grab it, which feels more like "you spotted a horse tied up on the side of the road" than "a horse appeared in your lane."
+
 ### Run v0.18.2 — 2026-04-26
 
 Patch — HORSE pickup with art-aware Mike-or-Mike+Ice swap.
