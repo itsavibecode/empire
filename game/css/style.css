@@ -13,7 +13,9 @@ body:after {
   right: 18%;
   left: 18%;
   border: .5vw solid white;
-  bottom: 44%;
+  /* bottom% controls how much room is left below the slot for the
+     bookhockeys logo + URL caption. Bigger = more room (slot moves up). */
+  bottom: 50%;
   padding-top: 39%;
   -webkit-transform: translateY(-50%);
           transform: translateY(-50%);
@@ -73,10 +75,12 @@ body:after {
 
 /* ---- BookHockeys cross-link ---- */
 /* Centered via translate so the link element is only as wide as the logo
-   itself — the rest of the bottom strip stays clickable for spinning. */
+   itself — the rest of the bottom strip stays clickable for spinning.
+   Sits well below the slot machine's white frame; tweak `bottom` if it
+   crowds the URL caption. */
 .game-bookhockeys {
   position: fixed;
-  bottom: 3.6rem;
+  bottom: 5.5rem;
   left: 50%;
   -webkit-transform: translateX(-50%);
           transform: translateX(-50%);
@@ -93,6 +97,80 @@ body:after {
   height: 70px;
   width: auto;
   display: block;
+}
+
+/* ---- Mute toggle (top-right) ---- */
+.mute-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(15,15,15,.55);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  color: rgba(255,255,255,.7);
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  padding: 0;
+  transition: all .2s ease;
+}
+.mute-toggle:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.5);
+  background: #8E5CCB;
+}
+.mute-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.mute-toggle .icon-off { display: none; }
+.mute-toggle.is-muted .icon-on { display: none; }
+.mute-toggle.is-muted .icon-off { display: block; }
+
+/* ---- Dev panel (?dev=1 in URL) ---- */
+.dev-panel {
+  position: fixed;
+  top: .5rem;
+  left: .5rem;
+  z-index: 200;
+  background: rgba(0,0,0,.85);
+  padding: .5rem;
+  border-radius: 4px;
+  border: 1px solid #FFD566;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.dev-panel-title {
+  color: #FFD566;
+  font-family: monospace;
+  font-size: .7rem;
+  letter-spacing: .15em;
+  margin-bottom: .25rem;
+  text-align: center;
+}
+.dev-panel button {
+  font-family: monospace;
+  font-size: .8rem;
+  padding: .25rem .5rem;
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+  -webkit-appearance: none;
+          appearance: none;
+}
+.dev-panel button:hover {
+  background: #8E5CCB;
+  border-color: #8E5CCB;
 }
 
 /* ---- URL caption + version (the "ourempirex.com/game" branding that

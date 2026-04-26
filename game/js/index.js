@@ -4,7 +4,9 @@
  * license — see ../license.txt). Heavily modified for EmpireX:
  *   - Two symbol sets switchable via tabs ("Fun" / "More Fun")
  *   - EmpireX prize messages
- *   - Save-as-PNG export on win (uses html2canvas)
+ *   - Save-as-PNG export on win (uses html2canvas) with branded top bar
+ *   - Audio (background music + per-prize sound effects)
+ *   - Dev mode (?dev=1) for testing each prize outcome without spinning
  */
 
 var _createClass = function () {function defineProperties(target, props) {for (var i = 0; i < props.length; i++) {var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);}}return function (Constructor, protoProps, staticProps) {if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;};}();
@@ -29,6 +31,8 @@ var PRIZE_MESSAGES = [
   'LOSER'              // index 3 -> no match
 ];
 var NO_PRIZE_INDEX = 3;
+// Audio element id per prize index. window.playSound() looks these up.
+var SOUND_IDS = ['sound-cx', 'sound-nickwhite', 'sound-400', 'sound-loser'];
 
 var App = function (_React$Component) {_inherits(App, _React$Component);
   function App() {_classCallCheck(this, App);var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this));
@@ -49,24 +53,26 @@ var App = function (_React$Component) {_inherits(App, _React$Component);
     _this.resetGame = _this.resetGame.bind(_this);
     _this.determinePrize = _this.determinePrize.bind(_this);
 
-    // 'click' fires for both desktop mouse and mobile tap. iOS Safari
-    // additionally needs body to have cursor:pointer for click to fire
-    // on non-button elements (handled in style.css).
     document.body.addEventListener('click', _this.handleClick);
-    // 'keydown' instead of deprecated 'keypress' (which doesn't fire for
-    // some keys in modern browsers).
     window.addEventListener('keydown', _this.handleClick);
+
+    // Expose the App instance so the dev panel can force prize states
+    // without going through a real spin.
+    window.__app = _this;
     return _this;
   }
 
   _createClass(App, [
     { key: 'handleClick', value: function handleClick(e) {
       // For pointer events, ignore presses on tabs / bookhockeys link /
-      // save button so they can do their own thing without also spinning.
-      // Key events always spin regardless of which element has focus.
+      // mute / save / dev so they can do their own thing without also
+      // spinning. Key events always spin regardless of which element
+      // has focus.
       var isKey = e && (e.type === 'keydown' || e.type === 'keypress');
       if (e && !isKey && e.target && e.target.closest) {
-        if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') || e.target.closest('.save-btn')) {
+        if (e.target.closest('.tabs') || e.target.closest('.game-bookhockeys') ||
+            e.target.closest('.save-btn') || e.target.closest('.mute-toggle') ||
+            e.target.closest('.dev-panel')) {
           return;
         }
       }
@@ -181,18 +187,13 @@ var Row = function (_React$Component2) {_inherits(Row, _React$Component2);
         style = { animationName: animation, animationDuration: this.props.speed + 'ms' };
       } else {
         // Stopped — kill the animation and pin background-position to the
-        // end of the cycle that was running when the row stopped. This
-        // makes the visible cell deterministic (no mid-animation snapshot
-        // captured by html2canvas during Save-as-PNG, which was the bug
-        // where the saved image didn't show the win lined up).
-        //
+        // end of the cycle that was running when the row stopped. Makes
+        // the visible cell deterministic (avoids html2canvas mid-animation
+        // capture) and matches the recorded endValue (so visual matches
+        // line up with prize logic).
         // End-of-cycle positions per direction (from the keyframes):
         //   ltr-V end: (V + 1) * 33.3333 vw       [33.3, 66.6, 100]
         //   rtl-V end: -2 * (V + 1) * 33.3333 vw  [-66.6, -133.3, -200]
-        // Earlier (v0.10.8) the rtl formula was wrong (-(V+2)*33.3),
-        // which left the center row showing a different cell than the
-        // ltr rows — so visual wins didn't match the recorded endValues
-        // and you'd get LOSER even though the face looked aligned.
         var endV = this.props.data.rows[this.props.index].endValue;
         var pos = this.props.direction === 'ltr'
           ? ((endV + 1) * 33.3333) + 'vw'
@@ -217,17 +218,50 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
     return _this3;
   }
   _createClass(Results, [
+    { key: 'componentDidUpdate', value: function componentDidUpdate(prevProps) {
+      // Play sound effect once when the result panel transitions in.
+      if (this.props.shown && !prevProps.shown && typeof window.playSound === 'function') {
+        window.playSound(this.props.prize);
+      }
+    }},
     { key: 'handleSave', value: function handleSave(e) {
       if (e) { e.stopPropagation(); }
       if (typeof html2canvas !== 'function') {
         console.warn('html2canvas not loaded');
         return;
       }
-      // Capture body so the URL caption + version line at the bottom are included.
+      // Capture the body but inject a branded top bar + hide the chrome
+      // (tabs, mute toggle, dev panel, helper, save button) only inside
+      // the cloned document — original page is untouched.
       html2canvas(document.body, {
         backgroundColor: '#000000',
         useCORS: true,
-        logging: false
+        logging: false,
+        onclone: function (clonedDoc) {
+          // Add a branded purple top bar with the URL.
+          var bar = clonedDoc.createElement('div');
+          bar.style.cssText = [
+            'position:fixed', 'top:0', 'left:0', 'right:0',
+            'height:60px',
+            'background:#8E5CCB',
+            'display:flex', 'align-items:center', 'justify-content:center',
+            'color:#fff',
+            "font-family:'VT323',monospace",
+            'font-size:1.8rem',
+            'letter-spacing:0.2em',
+            'z-index:1000',
+            'box-shadow:0 2px 8px rgba(0,0,0,0.4)'
+          ].join(';');
+          bar.textContent = 'OUREMPIREX.COM/GAME';
+          clonedDoc.body.insertBefore(bar, clonedDoc.body.firstChild);
+
+          // Hide bits that don't belong in a screenshot
+          ['.tabs', '.mute-toggle', '.dev-panel', '.helper', '.save-btn',
+           '.game-url', '.game-version'].forEach(function (sel) {
+            var el = clonedDoc.querySelector(sel);
+            if (el) el.style.display = 'none';
+          });
+        }
       }).then(function (canvas) {
         var link = document.createElement('a');
         var ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -277,6 +311,105 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       document.body.classList.add('set-' + setName);
       Array.prototype.forEach.call(tabs, function (t) { t.classList.remove('is-active'); });
       tab.classList.add('is-active');
+    });
+  });
+})();
+
+
+// ---- Audio: mute toggle + per-prize playback ----
+// Drop your own audio files into game/audio/ to enable sound. If a file
+// is missing, the audio element silently does nothing — game still works.
+(function () {
+  var muted = localStorage.getItem('empirex-slots-muted') !== '0'; // muted by default
+  var btn = document.getElementById('mute-toggle');
+  var bgMusic = document.getElementById('bg-music');
+
+  function applyMute() {
+    if (btn) btn.classList.toggle('is-muted', muted);
+    var els = document.querySelectorAll('audio');
+    Array.prototype.forEach.call(els, function (a) { a.muted = muted; });
+  }
+
+  applyMute();
+
+  // Browsers block autoplay until first user interaction. Try to start
+  // bg-music on first click/keydown.
+  function startMusic() {
+    document.removeEventListener('click', startMusic);
+    document.removeEventListener('keydown', startMusic);
+    if (bgMusic && !muted) {
+      bgMusic.play().catch(function () {});
+    }
+  }
+  document.addEventListener('click', startMusic);
+  document.addEventListener('keydown', startMusic);
+
+  if (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      muted = !muted;
+      localStorage.setItem('empirex-slots-muted', muted ? '1' : '0');
+      applyMute();
+      if (!muted && bgMusic) bgMusic.play().catch(function () {});
+    });
+  }
+
+  // Called from <Results> when the result panel transitions in.
+  window.playSound = function (prize) {
+    if (muted) return;
+    var id = SOUND_IDS[prize];
+    if (!id) return;
+    var sound = document.getElementById(id);
+    if (sound) {
+      try { sound.currentTime = 0; } catch (_) {}
+      sound.play().catch(function () {});
+    }
+  };
+})();
+
+
+// ---- Dev mode (?dev=1 in URL) ----
+// Buttons to force each prize outcome without spinning. Useful for
+// testing the win sounds, the PNG export, and the LOSER copy.
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('dev') !== '1') return;
+
+  var panel = document.getElementById('dev-panel');
+  if (!panel) return;
+  panel.removeAttribute('hidden');
+
+  panel.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var btn = e.target.closest && e.target.closest('button[data-prize]');
+    if (!btn) return;
+    var prize = btn.getAttribute('data-prize');
+    if (!window.__app) return;
+
+    if (prize === 'reset') {
+      window.__app.resetGame();
+      return;
+    }
+
+    var rows = window.__app.state.rows;
+    if (prize === 'loser') {
+      // Mismatched values guarantee no-match.
+      rows[0].endValue = 0;
+      rows[1].endValue = 1;
+      rows[2].endValue = 2;
+    } else {
+      var v = parseInt(prize, 10);
+      rows[0].endValue = v;
+      rows[1].endValue = v;
+      rows[2].endValue = v;
+    }
+    rows.forEach(function (r) { r.isRunning = false; });
+
+    var prizeIdx = (prize === 'loser') ? NO_PRIZE_INDEX : parseInt(prize, 10);
+    window.__app.setState({
+      rows: rows,
+      activeRowIndex: 3,
+      prize: prizeIdx
     });
   });
 })();

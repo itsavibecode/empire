@@ -16,6 +16,16 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.11 — 2026-04-25
+
+Patch — five game improvements:
+
+- **1symbol-b crop reversed direction** (face was moving down, user wanted up). New override: `crop_top: 0.07, crop_bottom: 0.50` — face center at ~53% of strip with eyes/nose in the middle reel and mouth in the bottom reel.
+- **BookHockeys logo spacing.** Bumped `bottom: 3.6rem` → `5.5rem` so it sits further from the slot's white frame, and the slot itself moved up (body:after `bottom: 44%` → `50%`) for more breathing room below.
+- **PNG export top bar.** `html2canvas` now uses an `onclone` callback to inject a branded purple top bar reading `OUREMPIREX.COM/GAME` and to hide the tabs/mute/dev/helper/version chrome — only in the captured image, not the live page.
+- **Dev mode at `?dev=1`.** A small panel in the top-left of `/game/?dev=1` exposes "Force win: Cx / 400 / Nick White wins / LOSER" and a "Reset" button. Lets the admin trigger every prize outcome without actually spinning, to test the new sounds and the PNG export.
+- **Audio infrastructure.** Five `<audio>` elements are wired up (background music + 4 prize sounds); a mute toggle in the top-right persists state via `localStorage` (defaults to muted to respect autoplay policies). Files are NOT in the repo — drop your own MP3/OGG into `game/audio/` (filenames documented in `game/index.html`) and they auto-load. Background music starts on first user interaction; per-prize sounds play when the result panel transitions in.
+
 ### v0.10.10 — 2026-04-25
 
 Patch — fixes the "won but got LOSER" bug + bumps 1symbol-b crop again.

@@ -56,10 +56,10 @@ BG = (0x8E, 0x5C, 0xCB)
 SYMBOL_OVERRIDES = {
     # 1symbol-b: face needs to ride higher in the strip so the nose
     # joins the eyes in the middle reel and only the mouth/chin land
-    # in the bottom reel. crop_top trims a bit off the top of the head
-    # (head was sitting too low overall) and crop_bottom takes more of
-    # the shoulders/torso off so the face fills more of the strip.
-    '1symbol-b.png': {'crop_top': 0.05, 'crop_bottom': 0.55},
+    # in the bottom reel. Iterated to crop_top 0.07 + crop_bottom 0.50
+    # which puts face center at ~53% of strip, with eyes/nose in the
+    # middle reel and mouth in the bottom reel.
+    '1symbol-b.png': {'crop_top': 0.07, 'crop_bottom': 0.50},
 }
 
 
