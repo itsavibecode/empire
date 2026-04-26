@@ -16,6 +16,17 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.17.5 — 2026-04-26
+
+Patch — pickup-text overlays for 400 + weed, and live duration countdowns in the HUD.
+
+- **Generalized the Mario-1UP-style pickup text overlay** so it fires on every pickup, not just ham. Each pickup now flashes a big centered text-burst that scales 1.0× → 1.5× over its duration while fading out:
+  - 🍖 **HAM** → `HAM!` (yellow, 600 ms — same as before, during the freeze)
+  - ❤ **400** → `+1 LIFE!` (red, 900 ms)
+  - 🌿 **WEED** → `STONED` (green, 900 ms)
+- **HUD effect-badge row** added under the lives. While a ham bonus or weed debuff is active, a pill-shaped badge appears with an emoji + countdown ticking down to one decimal (`🍖 6.5s`, `🌿 8.2s`). Ham badge has a subtle pulse animation; weed badge stays steady. Both auto-disappear when the effect ends.
+- 400-pickup audio promoted from a placeholder coin-pickup sound to the celebratory `1up3.mp3` jingle so it actually feels rewarding.
+
 ### Run v0.17.4 — 2026-04-26
 
 Patch — three more bugs caught from playtest.

@@ -53,6 +53,43 @@ html, body {
      corner stays clear for the pause + settings control buttons. */
 }
 
+/* Active-effect badges with countdown — populated by updateHUD()
+   while ham bonus / weed debuff are active. Each is a small pill
+   under the lives row with an emoji + remaining seconds. */
+.effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-top: .35rem;
+}
+.eff {
+  display: inline-block;
+  font-size: 1.2rem;
+  padding: .15rem .55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .55);
+  border: 1px solid rgba(255, 255, 255, .25);
+  letter-spacing: .05em;
+}
+.eff-ham {
+  color: #FFD566;
+  border-color: rgba(255, 213, 102, .65);
+  -webkit-animation: eff-pulse-ham 1.2s ease-in-out infinite;
+          animation: eff-pulse-ham 1.2s ease-in-out infinite;
+}
+.eff-weed {
+  color: #90EE90;
+  border-color: rgba(144, 238, 144, .65);
+}
+@keyframes eff-pulse-ham {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 102, .55); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 213, 102, 0); }
+}
+@-webkit-keyframes eff-pulse-ham {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 102, .55); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 213, 102, 0); }
+}
+
 /* ---- Full-screen overlays (start, game-over) ---- */
 .overlay {
   position: fixed;

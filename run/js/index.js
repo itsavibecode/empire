@@ -427,8 +427,12 @@
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
       weedDebuffUntil: 0, // slow + red tint until this timestamp
-      lastPickupKind: null, // for HUD overlay text
-      lastPickupShownAt: 0,
+      // Center-screen text overlay (Mario-1UP style for ham + brief
+      // burst for 400 / weed pickups)
+      textLabel: '',
+      textColor: '#FFD566',
+      textShownAt: 0,
+      textShownUntil: 0,
     },
   };
 
@@ -709,23 +713,34 @@
     return t.frames[idx];
   }
 
+  function showPickupText(label, color, durationMs) {
+    var now = performance.now();
+    state.effects.textLabel = label;
+    state.effects.textColor = color;
+    state.effects.textShownAt = now;
+    state.effects.textShownUntil = now + durationMs;
+  }
+
   function applyPickup(kind) {
     var now = performance.now();
-    state.effects.lastPickupKind = kind;
-    state.effects.lastPickupShownAt = now;
     ga(kind + '_collected', { at_distance: Math.floor(state.distance) });
     if (kind === 'ham') {
       state.effects.hamFreezeUntil = now + HAM_FREEZE_MS;
       state.effects.hamBonusUntil = now + HAM_FREEZE_MS + HAM_BONUS_MS;
+      showPickupText('HAM!', '#FFD566', HAM_FREEZE_MS);
       playSfx('ham-pickup');
       // Music goes 4x chipmunk-speed during the bonus window
       var mInst = currentMusicKey ? audioInstances[currentMusicKey] : null;
       if (mInst) mInst.playbackRate = 4;
     } else if (kind === 'h400') {
       state.lives = Math.min(state.lives + 1, LIVES_MAX);
-      playSfx('coin-pickup'); // placeholder until a fancier 400 SFX lands
+      // Red — matches the 400 sprite color and signals "life gained"
+      showPickupText('+1 LIFE!', '#ff5a6b', 900);
+      playSfx('ham-pickup'); // reuse the celebratory 1up jingle
     } else if (kind === 'weed') {
       state.effects.weedDebuffUntil = now + WEED_DEBUFF_MS;
+      // Green — weed-themed; debuff vibe via shaky text
+      showPickupText('STONED', '#90EE90', 900);
       // Music slows to 0.6x to amplify the debuff feel
       var mInst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
       if (mInst2) mInst2.playbackRate = 0.6;
@@ -924,6 +939,21 @@
       }
       livesEl.textContent = hearts;
     }
+    // Active-effect badges with live countdowns
+    var effEl = document.getElementById('hud-effects');
+    if (effEl) {
+      var nowMs = performance.now();
+      var html = '';
+      if (nowMs < state.effects.hamBonusUntil) {
+        var hamRem = ((state.effects.hamBonusUntil - nowMs) / 1000).toFixed(1);
+        html += '<span class="eff eff-ham">🍖 ' + hamRem + 's</span>';
+      }
+      if (nowMs < state.effects.weedDebuffUntil) {
+        var weedRem = ((state.effects.weedDebuffUntil - nowMs) / 1000).toFixed(1);
+        html += '<span class="eff eff-weed">🌿 ' + weedRem + 's</span>';
+      }
+      effEl.innerHTML = html;
+    }
   }
   function formatTime(ms) {
     var totalSec = Math.floor(ms / 1000);
@@ -996,24 +1026,31 @@
   function drawEffects(now) {
     var w = viewW();
     var h = viewH();
-    // HAM FREEZE — white→purple flash + big "HAM!" text
+    // HAM FREEZE — white→purple flash full-screen
     if (now < state.effects.hamFreezeUntil) {
-      var ft = (state.effects.hamFreezeUntil - now) / HAM_FREEZE_MS; // 1→0
       var flashOn = (Math.floor(now / 60) % 2 === 0);
       ctx.fillStyle = flashOn ? 'rgba(255,255,255,.6)' : 'rgba(142,92,203,.4)';
       ctx.fillRect(0, 0, w, h);
-      // HAM! text
-      ctx.fillStyle = '#FFD566';
-      ctx.font = 'bold ' + Math.floor(h * 0.18) + 'px "VT323", monospace';
+    }
+    // Generic pickup-text overlay — fires for HAM (during freeze),
+    // 400 (+1 LIFE!), and WEED (STONED). Scales up + fades out.
+    if (now < state.effects.textShownUntil && state.effects.textLabel) {
+      var dur = state.effects.textShownUntil - state.effects.textShownAt;
+      var elapsed = now - state.effects.textShownAt;
+      var t = elapsed / dur; // 0 → 1
+      var fade = 1 - t;       // 1 → 0
+      var scale = 1 + t * 0.5; // grows from 1.0× to 1.5×
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, fade * 1.6); // hold full alpha most of the duration, then fade
+      ctx.fillStyle = state.effects.textColor;
+      ctx.font = 'bold ' + Math.floor(h * 0.16) + 'px "VT323", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      var scale = 1 + (1 - ft) * 0.4; // grows over freeze
-      ctx.save();
       ctx.translate(w / 2, h / 2);
       ctx.scale(scale, scale);
-      ctx.shadowColor = 'rgba(0,0,0,.7)';
-      ctx.shadowBlur = 18;
-      ctx.fillText('HAM!', 0, 0);
+      ctx.shadowColor = 'rgba(0,0,0,.75)';
+      ctx.shadowBlur = 20;
+      ctx.fillText(state.effects.textLabel, 0, 0);
       ctx.restore();
     }
     // HAM BONUS — pulsing purple border + countdown bar at top
@@ -1292,6 +1329,8 @@
     state.effects.hamFreezeUntil = 0;
     state.effects.hamBonusUntil = 0;
     state.effects.weedDebuffUntil = 0;
+    state.effects.textShownUntil = 0;
+    state.effects.textLabel = '';
     // Reset music playback rate in case prior run ended mid-bonus
     if (currentMusicKey && audioInstances[currentMusicKey]) {
       audioInstances[currentMusicKey].playbackRate = 1;
