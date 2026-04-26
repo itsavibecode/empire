@@ -16,6 +16,21 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### OBS overlay — 2026-04-26
+
+Performance — first paint went from **3-5 minutes worst case → ~1 second** when the cache is warm, ~5-10 sec from cold start.
+
+The `/obs/` BRB overlay polls Kick's API for each streamer in the roster (currently 26) through public CORS proxies. Old behavior was layered slowness:
+
+| Layer | Old | New |
+|---|---|---|
+| Per-channel proxy attempts | **Sequential** with 12s timeout each (worst case 36s per channel) | **Parallel** via `Promise.any` — first proxy that responds wins (typical <1s, 6s timeout) |
+| Roster concurrency | **3 workers** at a time | **8 workers** |
+| UI render timing | **Wait for all 26 results, then render once** | **Incremental** — re-render the grid as each live streamer is discovered |
+| Cold start | Empty grid for the entire poll duration | **localStorage cache** of last-known live set (< 5 min old) renders instantly on page load while fresh poll runs in background |
+
+Net effect: when 3 streamers are live, you should now see them within 1-2 seconds of page load (cache hit) or 5-10 seconds (cold start), versus minutes previously. The poll interval (90 sec) and rotation cadence (45 sec) are unchanged — these were already fine.
+
 ### Run v0.18.14 — 2026-04-26
 
 Patch — cut scene polish + audio fixes + weed icon swap.

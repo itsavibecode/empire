@@ -704,77 +704,97 @@
     }),
   ];
 
-  async function fetchChannelLive(slug) {
+  // Try ONE proxy. Resolves with a valid live-status object on success,
+  // REJECTS on any failure (so Promise.any below picks the first success).
+  async function tryProxy(build, slug) {
     const lower = slug.toLowerCase();
-
-    for (const build of PROXIES) {
-      const { url, wrapped } = build(lower);
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-        if (!res.ok) continue;
-
-        const text = await res.text();
-        if (!text) continue;
-
-        // Figure out the actual Kick JSON from whatever the proxy returned.
-        let data;
-        if (wrapped) {
-          // allorigins /get: { contents: "<json string>", status: {...} }
-          let wrapper;
-          try { wrapper = JSON.parse(text); } catch { continue; }
-          if (!wrapper || !wrapper.contents) continue;
-          try { data = JSON.parse(wrapper.contents); } catch { continue; }
-        } else {
-          // Direct pass-through: text IS the Kick JSON.
-          try { data = JSON.parse(text); } catch { continue; }
-        }
-
-        if (!data || typeof data !== 'object') continue;
-
-        // Sanity check: real Kick channel responses have an `id` or `slug` field.
-        // If they don't, this proxy returned an error page disguised as JSON.
-        if (data.id == null && data.slug == null && data.user_id == null) continue;
-
-        // Kick's `livestream` field is non-null when live, null when offline.
-        // We accept EITHER an explicit is_live flag OR just the presence of
-        // the livestream object with a viewer_count — some responses omit
-        // is_live but always include viewer_count when live.
-        const ls = data.livestream;
-        const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
-
-        return {
-          username: slug,
-          isLive,
-          viewers: isLive ? Number(ls.viewer_count || 0) : 0,
-          title: isLive ? (ls.session_title || '') : '',
-          known: true,
-        };
-      } catch (_) {
-        // Network error, timeout, parse failure — try next proxy.
-      }
+    const { url, wrapped } = build(lower);
+    // Reduced from 12s → 6s. Healthy proxies respond in <1 sec; if a
+    // proxy is taking longer than 6s it's almost certainly never going
+    // to come back, and we have other proxies racing in parallel.
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('http ' + res.status);
+    const text = await res.text();
+    if (!text) throw new Error('empty');
+    let data;
+    if (wrapped) {
+      const wrapper = JSON.parse(text);
+      if (!wrapper || !wrapper.contents) throw new Error('no contents');
+      data = JSON.parse(wrapper.contents);
+    } else {
+      data = JSON.parse(text);
     }
-
-    // All proxies failed. Return unknown (caller can decide what to do).
-    // Crucially: DO NOT claim they're offline — we just don't know.
-    return { username: slug, isLive: false, viewers: 0, known: false };
+    if (!data || typeof data !== 'object') throw new Error('not object');
+    // Sanity check: real Kick channel responses have id/slug/user_id.
+    if (data.id == null && data.slug == null && data.user_id == null) {
+      throw new Error('not a kick channel response');
+    }
+    const ls = data.livestream;
+    const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
+    return {
+      username: slug,
+      isLive,
+      viewers: isLive ? Number(ls.viewer_count || 0) : 0,
+      title: isLive ? (ls.session_title || '') : '',
+      known: true,
+    };
   }
 
-  // Concurrency limit — keep low to be polite to the free public proxies,
-  // which rate-limit aggressively and silently drop excess requests.
-  async function fetchAllLive() {
+  // Race ALL proxies in parallel. Promise.any resolves with the first
+  // proxy that returns a valid result — no more sequential fallback
+  // waiting up to 36s per channel. Typical case is <1s for the fastest
+  // proxy. If ALL proxies fail, we return an "unknown" result.
+  async function fetchChannelLive(slug) {
+    try {
+      return await Promise.any(PROXIES.map(build => tryProxy(build, slug)));
+    } catch {
+      return { username: slug, isLive: false, viewers: 0, known: false };
+    }
+  }
+
+  // Bumped WORKERS 3 → 8 so larger rosters parallelize better. Each
+  // worker now also receives an `onResult` callback so the UI can
+  // re-render incrementally as live streamers are discovered, instead
+  // of waiting for all 26 fetches to settle.
+  async function fetchAllLive(onResult) {
     const results = new Array(CONFIG.ROSTER.length);
     let cursor = 0;
-    const WORKERS = 3;
+    const WORKERS = 8;
 
     async function worker() {
       while (cursor < CONFIG.ROSTER.length) {
         const i = cursor++;
-        results[i] = await fetchChannelLive(CONFIG.ROSTER[i]);
+        const r = await fetchChannelLive(CONFIG.ROSTER[i]);
+        results[i] = r;
+        if (onResult) onResult(r, results);
       }
     }
 
     await Promise.all(Array.from({ length: WORKERS }, worker));
     return results;
+  }
+
+  // localStorage cache so the page shows the last-known live grid
+  // INSTANTLY on load while fresh polling happens in the background.
+  // Cache is considered fresh for 5 minutes.
+  const LIVE_CACHE_KEY = 'obs-live-cache-v1';
+  const LIVE_CACHE_TTL_MS = 5 * 60 * 1000;
+  function saveLiveCache(results) {
+    try {
+      localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
+        ts: Date.now(),
+        results: results.filter(r => r && r.isLive),
+      }));
+    } catch (e) { /* quota / private mode — ignore */ }
+  }
+  function loadLiveCache() {
+    try {
+      const raw = localStorage.getItem(LIVE_CACHE_KEY);
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (Date.now() - c.ts > LIVE_CACHE_TTL_MS) return null;
+      return c.results;
+    } catch (e) { return null; }
   }
 
   /* ==================================================================
@@ -895,38 +915,53 @@
       : `— ${liveCount} Live · ${viewers} Viewers —`;
   }
 
-  async function poll() {
-    try {
-      const results = await fetchAllLive();
-      const live = results.filter(r => r && r.isLive);
-      live.sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
+  // Re-render the grid given a list of (currently known) live streamers.
+  // Extracted so we can call it incrementally as fetch results arrive.
+  function applyLiveResults(live, options = {}) {
+    live = live.slice().sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
+    const totalViewers = live.reduce((sum, s) => sum + (s.viewers || 0), 0);
+    updateSummary(live.length, totalViewers);
 
-      const totalViewers = live.reduce((sum, s) => sum + (s.viewers || 0), 0);
-      updateSummary(live.length, totalViewers);
-
-      if (live.length === 0) {
+    if (live.length === 0) {
+      // Only show the "none live" state if this is a final result
+      // (otherwise an in-progress poll would keep flicking the grid
+      // empty as the first few non-live results come back).
+      if (options.final) {
         livePages = [];
         currentPageIdx = 0;
         if (rotateTimer) clearInterval(rotateTimer);
         renderNoneLive();
         rotationProgress.style.width = '0%';
-        return;
       }
+      return;
+    }
 
-      // Split into pages of 6
-      const pages = [];
-      for (let i = 0; i < live.length; i += 6) {
-        pages.push(live.slice(i, i + 6));
-      }
+    const pages = [];
+    for (let i = 0; i < live.length; i += 6) {
+      pages.push(live.slice(i, i + 6));
+    }
 
-      // If the set of live streamers is the same as before, keep current
-      // page position to avoid jumpiness. Otherwise reset.
-      const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.username))) ===
-                           JSON.stringify(livePages.map(p => p.map(x => x.username)));
-      livePages = pages;
-      if (!sameAsBefore) currentPageIdx = 0;
+    // Preserve current page index if the live set hasn't changed
+    const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.username))) ===
+                         JSON.stringify(livePages.map(p => p.map(x => x.username)));
+    livePages = pages;
+    if (!sameAsBefore) currentPageIdx = 0;
+    startRotation();
+  }
 
-      startRotation();
+  async function poll() {
+    try {
+      // Stream results in as each channel resolves. The first live
+      // streamer found shows up in the grid within a second or two
+      // instead of waiting for the entire roster to finish polling.
+      const results = await fetchAllLive((r, allSoFar) => {
+        const liveSoFar = allSoFar.filter(x => x && x.isLive);
+        if (liveSoFar.length > 0) applyLiveResults(liveSoFar);
+      });
+      const live = results.filter(r => r && r.isLive);
+      applyLiveResults(live, { final: true });
+      // Save successful poll to cache so next page-load is instant
+      saveLiveCache(results);
     } catch (err) {
       console.warn('[BRB] poll failed:', err);
       // Keep showing whatever we had last time; don't crash the UI.
@@ -940,6 +975,14 @@
     .then(data => {
       const list = Array.isArray(data) ? data : (data.streamers || []);
       CONFIG.ROSTER = list.map(s => s.name);
+      // INSTANT FIRST PAINT: if we have a recent cache (< 5 min old),
+      // render those streamers right away so the page isn't blank
+      // while the first poll is in flight. Fresh data overwrites this
+      // as soon as it arrives.
+      const cached = loadLiveCache();
+      if (cached && cached.length > 0) {
+        applyLiveResults(cached);
+      }
       poll();
       setInterval(poll, CONFIG.POLL_MS);
     })
