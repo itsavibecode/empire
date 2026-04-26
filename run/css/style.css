@@ -1,0 +1,146 @@
+/* EmpireX Runner — v0.12.0 first playable
+   Single-canvas runner game. CSS keeps it simple: full-viewport canvas,
+   pixel-art font for HUD, dark sky color so empty regions don't flash. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a14;
+  font-family: 'VT323', monospace;
+  color: #fff;
+  /* Block iOS pinch-zoom + double-tap-zoom so taps register cleanly as
+     game input. user-scalable=no in HTML alone isn't enough on Safari. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  /* Crisp pixel-art scaling (don't smooth our pixel sprites blurry) */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* ---- HUD overlay (always on top, no input blocking) ---- */
+.hud {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 1.4rem;
+  pointer-events: none;
+  z-index: 10;
+  font-size: 1.6rem;
+  letter-spacing: .1em;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.6);
+}
+.hud-left { text-align: left; }
+.hud-right { text-align: right; }
+.score { font-size: 2.4rem; line-height: 1; }
+.coins { color: #C9A4FF; margin-top: .2rem; }
+.lives { font-size: 2rem; color: #ff5a6b; }
+
+/* ---- Full-screen overlays (start, game-over) ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  background: rgba(10, 10, 20, .82);
+  z-index: 20;
+  text-align: center;
+  padding: 2rem;
+  transition: opacity .3s ease;
+}
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.overlay h1 {
+  font-size: 5rem;
+  letter-spacing: .15em;
+  color: #C9A4FF;
+  text-shadow: 4px 4px 0 rgba(142,92,203,.4);
+}
+.overlay p {
+  font-size: 1.6rem;
+  letter-spacing: .08em;
+  max-width: 28em;
+  color: rgba(255,255,255,.85);
+}
+.overlay p.hint {
+  color: rgba(255,255,255,.5);
+  font-size: 1.3rem;
+}
+.overlay .final-score {
+  font-size: 3.6rem;
+  color: #FFD566;
+  letter-spacing: .12em;
+}
+.overlay .final-coins {
+  font-size: 2rem;
+  color: #C9A4FF;
+}
+.overlay button {
+  font-family: 'VT323', monospace;
+  font-size: 2.2rem;
+  letter-spacing: .2em;
+  padding: .6rem 2.4rem;
+  margin-top: 1rem;
+  background: #8E5CCB;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  transition: transform .1s ease, background .2s ease;
+}
+.overlay button:hover {
+  background: #a674dc;
+}
+.overlay button:active {
+  transform: scale(.95);
+}
+
+/* ---- Footer caption + version (matches /game/ pattern) ---- */
+.game-url, .game-version {
+  position: fixed;
+  left: 0; right: 0;
+  text-align: center;
+  pointer-events: none;
+  font-family: 'VT323', monospace;
+  z-index: 5;
+  color: #fff;
+}
+.game-url {
+  bottom: 1.8rem;
+  font-size: 1.3rem;
+  letter-spacing: .12em;
+  opacity: .55;
+}
+.game-version {
+  bottom: .5rem;
+  font-size: .85rem;
+  letter-spacing: .1em;
+  opacity: .3;
+}
+
+/* ---- Mobile tweaks ---- */
+@media (max-width: 600px) {
+  .score { font-size: 1.8rem; }
+  .coins, .lives { font-size: 1.4rem; }
+  .overlay h1 { font-size: 3.4rem; }
+  .overlay p { font-size: 1.3rem; }
+  .game-url { font-size: 1rem; bottom: 2.5rem; }
+}

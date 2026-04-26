@@ -16,6 +16,20 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.12.0 — 2026-04-26
+
+Minor — **EmpireX Runner** is now playable at [ourempirex.com/run/](https://ourempirex.com/run/). First v0.1.
+
+The game: SkiFree-style endless runner. Mike Smalls Jr (front-facing, animated 8-frame run cycle) stays at the bottom-center of the screen. Stream snipers and pedestrians (NPCs from the v0.11 extraction) spawn at the top in one of 3 lanes and slide down toward Mike. Cx coins spawn in the gaps for a score multiplier (1× → 2× at 6 coins → 3× at 16 coins). Player taps left/right or uses arrow keys to dodge between lanes. Three hits and the mob "catches up" — game over.
+
+Files added:
+
+- **`run/index.html`** — single-page scaffold with full OG/Twitter share metadata (`/run/og-runner.jpg` will be generated next round), HUD overlay, start + game-over panels, URL caption + version display matching the `/game/` pattern.
+- **`run/css/style.css`** — full-viewport canvas with crisp pixel-art scaling (`image-rendering: pixelated`), VT323-styled HUD, slide-in overlays. `touch-action: none` to suppress iOS double-tap-zoom so taps register as game input.
+- **`run/js/index.js`** — vanilla-JS game (no framework), self-contained IIFE. Sections: config knobs, async sprite preloader, canvas + DPR-aware resize, keyboard + touch input, lane-shift lerp, AABB collision, spawn timer with difficulty ramp (speed grows 4 px/sec², capped at 900 px/sec), HUD updater, run/restart state machine. ~28 sprites preloaded.
+
+Mechanics live in v0.1 but rough — speed-ramp is conservative, no audio yet, no Ice Poseidon side-kick (he'll join in v0.13), no phone-thief side attacks, no save-as-PNG share button. Game-over is "3 hits and out" rather than the eventual mob-catches-up-when-you-fall-behind dynamic. Plenty of room to iterate, but the core loop is in.
+
 ### v0.11.1 — 2026-04-26
 
 Patch — runner asset library expanded with NPCs and mob crowd backdrops.

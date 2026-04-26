@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
+  <link rel="canonical" href="https://ourempirex.com/run/">
+  <meta name="author" content="Our Empire">
+  <meta name="version" content="0.12.0">
+  <title>EmpireX Runner — Don't Get Sniped</title>
+
+  <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ourempirex.com/run/">
+  <meta property="og:title" content="EmpireX Runner — Don't Get Sniped">
+  <meta property="og:description" content="Help Mike Smalls Jr outrun the mob through Chile. Dodge stream snipers, collect Cx coins. SkiFree-style endless runner.">
+  <meta property="og:image" content="https://ourempirex.com/run/og-runner.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="EmpireX Runner — Mike Smalls Jr running from a chasing mob">
+  <meta property="og:site_name" content="EmpireX by Our Empire">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="EmpireX Runner — Don't Get Sniped">
+  <meta name="twitter:description" content="Help Mike Smalls Jr outrun the mob through Chile. Dodge stream snipers, collect Cx coins.">
+  <meta name="twitter:image" content="https://ourempirex.com/run/og-runner.jpg">
+
+  <link rel="icon" href="/logo.png">
+  <link href="https://fonts.googleapis.com/css?family=VT323" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Game canvas. Resized to viewport via JS on load + resize. -->
+  <canvas id="game"></canvas>
+
+  <!-- HUD overlay (always-on, pointer-events: none so taps pass through to canvas) -->
+  <div class="hud">
+    <div class="hud-left">
+      <div class="score">0 m</div>
+      <div class="coins">Cx 0 ×1</div>
+    </div>
+    <div class="hud-right">
+      <div class="lives">❤❤❤</div>
+    </div>
+  </div>
+
+  <!-- Start overlay — shown until "START" tapped (assets must be loaded first) -->
+  <div class="overlay" id="overlay-start">
+    <h1>EMPIREX RUNNER</h1>
+    <p>Mike Smalls Jr is being chased through Chile. Help him outrun the mob.</p>
+    <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>collect Cx coins for score multiplier</p>
+    <button type="button" id="btn-start">START</button>
+  </div>
+
+  <!-- Game-over overlay — shown when lives hit 0 -->
+  <div class="overlay hidden" id="overlay-gameover">
+    <h1>SNIPED</h1>
+    <p class="final-score">0 m</p>
+    <p class="final-coins">Cx 0</p>
+    <button type="button" id="btn-restart">RUN AGAIN</button>
+  </div>
+
+  <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
+  <div class="game-url">ourempirex.com/run</div>
+  <div class="game-version">v0.12.0</div>
+
+  <script src="js/index.js"></script>
+</body>
+</html>
