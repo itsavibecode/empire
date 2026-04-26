@@ -232,43 +232,80 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
         console.warn('html2canvas not loaded');
         return;
       }
-      // Capture the body but inject a branded top bar + hide the chrome
-      // (tabs, mute toggle, dev panel, helper, save button) only inside
-      // the cloned document — original page is untouched.
+      // Snapshot the slot's bounding box BEFORE capture (we'll crop the
+      // raw canvas to just this region after html2canvas finishes).
+      var rows = document.querySelectorAll('.row');
+      if (!rows.length) { return; }
+      var firstRect = rows[0].getBoundingClientRect();
+      var lastRect  = rows[rows.length - 1].getBoundingClientRect();
+      var slotTop    = firstRect.top;
+      var slotBottom = lastRect.bottom;
+      var slotHeight = slotBottom - slotTop;
+      // Padding so the white border + result text don't get clipped.
+      var pad = Math.max(20, Math.round(slotHeight * 0.08));
+
       html2canvas(document.body, {
         backgroundColor: '#000000',
         useCORS: true,
         logging: false,
         onclone: function (clonedDoc) {
-          // Add a branded purple top bar with the URL.
-          var bar = clonedDoc.createElement('div');
-          bar.style.cssText = [
-            'position:fixed', 'top:0', 'left:0', 'right:0',
-            'height:60px',
-            'background:#8E5CCB',
-            'display:flex', 'align-items:center', 'justify-content:center',
-            'color:#fff',
-            "font-family:'VT323',monospace",
-            'font-size:1.8rem',
-            'letter-spacing:0.2em',
-            'z-index:1000',
-            'box-shadow:0 2px 8px rgba(0,0,0,0.4)'
-          ].join(';');
-          bar.textContent = 'OUREMPIREX.COM/GAME';
-          clonedDoc.body.insertBefore(bar, clonedDoc.body.firstChild);
-
-          // Hide bits that don't belong in a screenshot
+          // Hide all chrome — we'll synthesize the top bar in the
+          // post-capture canvas instead so it sits at the very top
+          // edge regardless of viewport size.
           ['.tabs', '.audio-controls', '.dev-panel', '.helper', '.save-btn',
-           '.game-url', '.game-version'].forEach(function (sel) {
+           '.game-bookhockeys', '.game-url', '.game-version'].forEach(function (sel) {
             var el = clonedDoc.querySelector(sel);
             if (el) el.style.display = 'none';
           });
         }
       }).then(function (canvas) {
+        // html2canvas may render at a higher pixel ratio than CSS pixels.
+        var scale = canvas.width / window.innerWidth;
+        var topBarH = Math.max(60, Math.round(slotHeight * 0.10));
+        var srcY = Math.max(0, Math.round((slotTop - pad) * scale));
+        var srcH = Math.round((slotHeight + 2 * pad) * scale);
+        if (srcY + srcH > canvas.height) srcH = canvas.height - srcY;
+
+        // Output canvas: top bar + cropped slot region edge-to-edge.
+        var outW = canvas.width;
+        var outH = topBarH + srcH;
+        var out = document.createElement('canvas');
+        out.width = outW;
+        out.height = outH;
+        var ctx = out.getContext('2d');
+
+        // Purple top bar with URL.
+        ctx.fillStyle = '#8E5CCB';
+        ctx.fillRect(0, 0, outW, topBarH);
+        var fontSize = Math.max(20, Math.round(topBarH * 0.5));
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 ' + fontSize + 'px "VT323", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Mimic letter-spacing: 0.2em by drawing characters spaced out.
+        var text = 'OUREMPIREX.COM/GAME';
+        var trackedSpacing = fontSize * 0.20;
+        var glyphWidths = [];
+        var totalW = 0;
+        for (var i = 0; i < text.length; i++) {
+          var w = ctx.measureText(text[i]).width;
+          glyphWidths.push(w);
+          totalW += w + trackedSpacing;
+        }
+        totalW -= trackedSpacing;
+        var x = (outW - totalW) / 2;
+        for (var j = 0; j < text.length; j++) {
+          ctx.fillText(text[j], x + glyphWidths[j] / 2, topBarH / 2);
+          x += glyphWidths[j] + trackedSpacing;
+        }
+
+        // Draw the captured slot region under the top bar, edge-to-edge.
+        ctx.drawImage(canvas, 0, srcY, outW, srcH, 0, topBarH, outW, srcH);
+
         var link = document.createElement('a');
         var ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         link.download = 'empirex-slots-' + ts + '.png';
-        link.href = canvas.toDataURL('image/png');
+        link.href = out.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -283,7 +320,9 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
       var children = [
         React.createElement('div', { key: 'msg' }, PRIZE_MESSAGES[prize])
       ];
-      if (this.props.shown && !isLoser) {
+      // Save-as-PNG appears for any visible result, including LOSER —
+      // the screenshot's still worth sharing (the joke lands either way).
+      if (this.props.shown) {
         children.push(
           React.createElement('button', {
             key: 'save',
@@ -322,7 +361,12 @@ var Results = function (_React$Component3) {_inherits(Results, _React$Component3
 // Drop your own audio files into game/audio/ to enable sound. If a file
 // is missing, the audio element silently does nothing — game still works.
 (function () {
-  var muted = localStorage.getItem('empirex-slots-muted') !== '0'; // muted by default
+  // Default to UNMUTED so the background music starts as soon as the
+  // user's first interaction unlocks autoplay. Pre-v0.10.13 we defaulted
+  // to muted, which made the background track silent until the user
+  // explicitly unmuted (often after their first slot tap).
+  var savedMuted = localStorage.getItem('empirex-slots-muted');
+  var muted = savedMuted === '1';
   var savedVol = parseFloat(localStorage.getItem('empirex-slots-bg-volume'));
   var bgVolume = isNaN(savedVol) ? 0.5 : Math.max(0, Math.min(1, savedVol));
 

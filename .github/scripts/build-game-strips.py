@@ -54,12 +54,14 @@ BG = (0x8E, 0x5C, 0xCB)
 # subject's face is high in the frame and the bottom is shoulders/torso
 # we don't want eating up the reel slices).
 SYMBOL_OVERRIDES = {
-    # 1symbol-b: face rides higher in the strip than the others. Pushing
-    # the crop_top up trims more of the head/forehead off so what remains
-    # of the face is biased toward the top of the cropped image; reducing
-    # crop_bottom keeps the face from sliding back down. Net: face center
-    # at ~44% of strip (vs the natural 50% for centered images).
-    '1symbol-b.png': {'crop_top': 0.10, 'crop_bottom': 0.45},
+    # 1symbol-b: the source face actually spans almost the entire 2049
+    # px height (hat at y~30, chin at y~1500). Earlier attempts cropped
+    # too aggressively — crop_bottom > 0.37 was actually slicing the
+    # mouth out of the source image entirely, which is why the mouth
+    # wasn't appearing on the bottom reel at all. Light cropping now:
+    # nip the very top and a bit of shoulder/torso, let the face fill
+    # the strip naturally.
+    '1symbol-b.png': {'crop_top': 0.02, 'crop_bottom': 0.15},
 }
 
 

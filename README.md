@@ -16,6 +16,15 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.13 — 2026-04-25
+
+Patch — game polish round 13.
+
+- **1symbol-b crop calibrated to the actual face dimensions.** Looked at the source image and realised the face spans almost the entire 2049 px (hat at ~y30, chin at ~y1500). Earlier overrides with `crop_bottom > 0.37` were literally slicing the mouth out of the source image — that's why the mouth wasn't showing in the bottom reel. New override: `crop_top: 0.02, crop_bottom: 0.15`. Hat in top reel, eyes/nose in middle reel, mouth/chin in bottom reel.
+- **Save-as-PNG now shown for the LOSER outcome too.** The screenshot is still worth sharing.
+- **PNG export is now edge-to-edge.** After `html2canvas` captures the body, the result canvas is cropped to just the slot machine region (plus a small breathing-room pad) and a custom-drawn purple top bar with `OUREMPIREX.COM/GAME` is composited above it. No more black margin around the slot in the saved image.
+- **Background music defaults to UNMUTED.** Pre-v0.10.13 the default was muted, so audio stayed silent until the user explicitly unmuted (often after their first slot tap). Now audio plays as soon as the user's first click anywhere unlocks the autoplay policy.
+
 ### v0.10.12 — 2026-04-25
 
 Patch — game polish round 12:
