@@ -55,7 +55,7 @@ body:after {
 
 .helper {
   position: fixed;
-  bottom: 4.2rem;
+  bottom: 9.5rem;
   z-index: 100;
   color: #fff;
   text-align: center;
@@ -64,6 +64,28 @@ body:after {
   pointer-events: none;
   font-size: 3vw;
   opacity: .5;
+}
+
+/* ---- BookHockeys cross-link ---- */
+.game-bookhockeys {
+  position: fixed;
+  bottom: 3.6rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  opacity: .35;
+  transition: opacity .3s ease;
+  z-index: 100;
+  text-decoration: none;
+}
+.game-bookhockeys:hover {
+  opacity: .65;
+}
+.game-bookhockeys img {
+  height: 70px;
+  width: auto;
+  display: block;
 }
 
 /* ---- URL caption + version (the "ourempirex.com/game" branding that

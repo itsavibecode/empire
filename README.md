@@ -16,6 +16,14 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.1 — 2026-04-25
+
+Patch — moved BookHockeys cross-link from the main site footer to the /game/ page (was a misread of the previous spec).
+
+- **Main site footer** — removed the BookHockeys logo. Footer is back to the way it was at v0.9.0 (legal links + version display only).
+- **`/game/`** — added the BookHockeys cross-link at the bottom: 70px logo at 35% opacity (rises to 65% on hover), links to bookhockeys.com. Sits above the `ourempirex.com/game` caption + version line. The Save-as-PNG capture still includes the full bottom block, so screenshots now show the BookHockeys cross-link too.
+- Game version display bumped to `v0.10.1` to match.
+
 ### v0.10.0 — 2026-04-25
 
 Minor — game customization (Fun / More Fun tabs, EmpireX artwork, PNG export) + main-footer cross-link to BookHockeys.
