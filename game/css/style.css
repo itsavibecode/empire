@@ -21,21 +21,6 @@ body:after {
   pointer-events: none;
 }
 
-/* ---- Debug click counter (v0.10.4) ---- */
-.click-debug {
-  position: fixed;
-  top: .5rem;
-  left: .8rem;
-  z-index: 200;
-  color: #FFD566;
-  font-family: monospace;
-  font-size: .9rem;
-  background: rgba(0,0,0,.6);
-  padding: .25rem .6rem;
-  border-radius: 4px;
-  pointer-events: none;
-}
-
 /* ---- Tabs (Fun / More Fun) ---- */
 /* width: max-content so the container only covers the actual buttons,
    leaving the rest of the top strip clickable for spinning the reels. */
@@ -262,21 +247,23 @@ body:after {
   padding-top: 12.07%;
 }
 
-/* "Fun" set — built from 1symbol-{a,b,c}.png by build-game-strips.py.
-   Paths are relative to THIS CSS file's location (game/css/), so we go
-   up one level to get to game/img/. Using "img/..." resolves to
-   game/css/img/... which doesn't exist. */
-body.set-fun .columns.columns-top,
-body.set-fun .columns.columns-center,
-body.set-fun .columns.columns-bottom {
-  background-image: url("../img/strip-1.png");
-}
-/* "More Fun" set — built from 2symbol-{a,b,c}.png */
-body.set-more-fun .columns.columns-top,
-body.set-more-fun .columns.columns-center,
-body.set-more-fun .columns.columns-bottom {
-  background-image: url("../img/strip-2.png");
-}
+/* SMB3-style stacked-symbol slot. Each ROW uses a different strip
+   containing only that row's slice (top third / middle third / bottom
+   third) of the 3 symbols. When all 3 reels stop on the same cell index,
+   the three slices stack vertically into the complete symbol.
+   Strips built by .github/scripts/build-game-strips.py.
+   Paths are relative to this CSS file's location (game/css/) — hence
+   ../img/ to escape up to game/img/. */
+
+/* "Fun" set — sliced from 1symbol-{a,b,c}.png */
+body.set-fun .columns.columns-top    { background-image: url("../img/strip-1-top.png"); }
+body.set-fun .columns.columns-center { background-image: url("../img/strip-1-center.png"); }
+body.set-fun .columns.columns-bottom { background-image: url("../img/strip-1-bottom.png"); }
+
+/* "More Fun" set — sliced from 2symbol-{a,b,c}.png (auto-cropped first) */
+body.set-more-fun .columns.columns-top    { background-image: url("../img/strip-2-top.png"); }
+body.set-more-fun .columns.columns-center { background-image: url("../img/strip-2-center.png"); }
+body.set-more-fun .columns.columns-bottom { background-image: url("../img/strip-2-bottom.png"); }
 
 @-webkit-keyframes ltr-transition-0 {
   0% { background-position: 0vw; }

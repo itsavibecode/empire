@@ -16,6 +16,15 @@ Every release bumps the version in all three places.
 
 ## Changelog
 
+### v0.10.7 — 2026-04-25
+
+Patch — fixed the slot's symbol layout to match the SMB3-style "stack the slices" effect, removed the diagnostic counter.
+
+- **Reel slicing rebuilt.** Previously each cell held a whole face, so a "win" just showed three of the same face in three rows — visually meh and not what the original mini-game does. Now each symbol is fitted to one cell wide × three rows tall, then sliced into top/middle/bottom thirds. Each row gets its own strip containing only that row's slice. When all three reels stop on the same cell index, the slices stack vertically to recompose the complete face.
+- **6 strip files instead of 2.** `.github/scripts/build-game-strips.py` now writes `strip-1-top.png`, `strip-1-center.png`, `strip-1-bottom.png` for "Fun" and equivalents for "More Fun". The script removes the legacy `strip-1.png` / `strip-2.png` if it finds them.
+- **CSS** now references the per-row strips instead of one strip per set.
+- **Removed the diagnostic click counter** (the on-screen `clicks: N | last: ...` indicator from v0.10.4) — game's working again.
+
 ### v0.10.6 — 2026-04-25
 
 Patch — root cause of the "game doesn't work" bug found.
