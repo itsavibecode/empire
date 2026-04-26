@@ -1632,6 +1632,7 @@
     document.getElementById('overlay-start').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');
     updateHUD();
+    syncChromeForPhase();
     // Audio: random bg music + ambient mob loop in the distance
     startBackgroundMusic();
     startLoop('mob-angry');
@@ -1650,10 +1651,22 @@
     document.getElementById('overlay-start').classList.remove('hidden');
     document.getElementById('overlay-pause').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');
+    syncChromeForPhase();
+  }
+
+  // Show/hide chrome (pause button) based on game phase. Pause is
+  // meaningless on title + game-over screens so we hide the button
+  // there to keep the corner clean.
+  function syncChromeForPhase() {
+    var pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) {
+      pauseBtn.classList.toggle('hidden', state.phase !== 'playing');
+    }
   }
 
   function endRun() {
     state.phase = 'gameover';
+    syncChromeForPhase();
     // Audio: death sting first, then queue the gameover music
     stopBackgroundMusic();
     stopLoop('mob-angry');
@@ -1838,6 +1851,12 @@
       e.target.blur();
       quitToTitle();
     });
+    // QUIT-TO-TITLE button on game-over screen
+    var goQuitBtn = document.getElementById('btn-gameover-quit');
+    if (goQuitBtn) goQuitBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      quitToTitle();
+    });
     // Cut-scene choice buttons (all 3 dismiss with Ice joining)
     var choiceContainer = document.getElementById('cutscene-choices');
     if (choiceContainer) {
@@ -1866,6 +1885,7 @@
 
     loadAll().then(function () {
       state.phase = 'menu';
+      syncChromeForPhase(); // hide pause button on title (only relevant during play)
       // Pick a road tile for the title-screen backdrop and start the
       // ambient horizontal drift so menu doesn't look flat.
       currentRoadKey = pickRandomRoadTile();

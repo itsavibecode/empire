@@ -185,7 +185,10 @@ html, body {
   transform: scale(.95);
 }
 
-/* ---- Pause button (sits LEFT of the settings gear) ---- */
+/* ---- Pause button (sits LEFT of the settings gear) ----
+   Hidden when on title or game-over screens since pause is meaningless
+   outside of an active run. Visibility toggled by JS via .hidden class. */
+.btn-pause.hidden { display: none; }
 .btn-pause {
   position: fixed;
   top: 1rem;

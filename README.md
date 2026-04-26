@@ -16,6 +16,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.10 — 2026-04-26
+
+Patch — pause-button visibility + Quit-to-Title on game-over.
+
+- **Pause button hidden on title + game-over screens.** It did nothing in those phases anyway (pause only toggles during the playing phase). Now properly hidden via a `syncChromeForPhase()` helper called from boot, startRun, endRun, and quitToTitle. Settings gear stays visible everywhere since audio adjustments are useful regardless of phase.
+- **QUIT TO TITLE button on the game-over screen.** Sits below RUN AGAIN. Mirrors the equivalent button already in the pause overlay — same behavior (hard reset back to the title screen with bg music restarting). Useful when you want to bail to the title without burning a fresh run first.
+
 ### Run v0.18.9 — 2026-04-26
 
 Patch — title hint, controls reference, Ice cleanup.
