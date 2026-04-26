@@ -42,10 +42,15 @@ html, body {
   text-shadow: 2px 2px 0 rgba(0,0,0,.6);
 }
 .hud-left { text-align: left; }
-.hud-right { text-align: right; }
 .score { font-size: 2.4rem; line-height: 1; }
 .coins { color: #C9A4FF; margin-top: .2rem; }
-.lives { font-size: 2rem; color: #ff5a6b; }
+.lives {
+  font-size: 2rem;
+  color: #ff5a6b;
+  margin-top: .25rem;
+  /* Hearts now sit BELOW score+coins on the left so the top-right
+     corner stays clear for the pause + settings control buttons. */
+}
 
 /* ---- Full-screen overlays (start, game-over) ---- */
 .overlay {

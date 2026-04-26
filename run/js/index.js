@@ -413,6 +413,14 @@
       if (key === 'p' || key === 'P' || key === 'Escape') {
         togglePause(); e.preventDefault(); return;
       }
+      // Space is reserved for the JUMP action (landing in v0.17). For
+      // now: capture and no-op so it doesn't (a) scroll the page or
+      // (b) re-trigger any focused START/RESTART button. Once jump
+      // lands, this becomes `triggerJump()`.
+      if (key === ' ') {
+        e.preventDefault();
+        return;
+      }
       if (state.paused) return; // ignore lane input while paused
       if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
         shiftLane(-1); e.preventDefault();
@@ -967,8 +975,16 @@
     loadAudio();
     bindAudioUI();
 
-    document.getElementById('btn-start').addEventListener('click', startRun);
-    document.getElementById('btn-restart').addEventListener('click', startRun);
+    // After clicking START / RUN AGAIN, blur the button so it doesn't
+    // keep keyboard focus. Otherwise pressing space mid-game would
+    // re-trigger the focused button (browser default), restarting the
+    // game from scratch instead of doing nothing (or jumping in v0.17).
+    function startAndBlur(e) {
+      if (e && e.currentTarget && e.currentTarget.blur) e.currentTarget.blur();
+      startRun();
+    }
+    document.getElementById('btn-start').addEventListener('click', startAndBlur);
+    document.getElementById('btn-restart').addEventListener('click', startAndBlur);
 
     // Pause button (in HUD) + click on the pause overlay to resume.
     var pauseBtn = document.getElementById('btn-pause');

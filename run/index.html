@@ -7,7 +7,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.15.1">
+  <meta name="version" content="0.15.2">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -36,13 +36,13 @@
   <!-- Game canvas. Resized to viewport via JS on load + resize. -->
   <canvas id="game"></canvas>
 
-  <!-- HUD overlay (always-on, pointer-events: none so taps pass through to canvas) -->
+  <!-- HUD overlay (always-on, pointer-events: none so taps pass through to canvas).
+       Hearts moved from right to left side so the top-right corner stays
+       clear for the pause + settings control buttons. -->
   <div class="hud">
     <div class="hud-left">
       <div class="score">0 m</div>
       <div class="coins">Cx 0 ×1</div>
-    </div>
-    <div class="hud-right">
       <div class="lives">❤❤❤</div>
     </div>
   </div>
@@ -109,7 +109,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.15.1</div>
+  <div class="game-version">Run v0.15.2</div>
 
   <script src="js/index.js"></script>
 </body>

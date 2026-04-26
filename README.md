@@ -16,6 +16,15 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.15.2 — 2026-04-26
+
+Patch — HUD overlap + space-bar bug.
+
+- **Hearts moved from top-right to top-left.** They were getting visually overlapped by the pause button + settings gear. Now the lives row sits on the left below score + Cx counter, and the entire top-right corner is reserved for control buttons.
+- **Space-bar mid-game restart bug fixed.** Two layers of defense:
+    1. Clicking the `START` or `RUN AGAIN` buttons now `.blur()`s the button after firing — it no longer keeps keyboard focus, so a later space-press doesn't re-trigger the focused button via the browser's default activation behavior.
+    2. The keydown handler now explicitly `preventDefault`s the spacebar during the `playing` phase (before this, the keydown handler had no clause for space at all, so the browser default fired through). When the jump mechanic lands in v0.17 this no-op becomes `triggerJump()`.
+
 ### Run v0.15.1 — 2026-04-26
 
 Patch — fixed white halos around walking pedestrians.
