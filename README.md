@@ -16,6 +16,22 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.15.0 — 2026-04-26
+
+Polish round — pause + animated street people.
+
+- **Pause button** at top-right (left of the settings gear). Toggleable via the button, **P** key, or **ESC**. Tap on the PAUSED overlay to resume. Music + ambient mob loop pause along with the game (one-shot SFX are unaffected since they finish on their own). Pause is ignored on the menu / game-over screens.
+- **NPCs are alive now.** Obstacles are no longer single static frames — they're typed into groups:
+    - `walk-hoodie` (4-frame walk cycle of the hoodie pedestrian)
+    - `walk-woman` (4-frame walk cycle of the woman in red)
+    - `walk-reaching` (4-frame "reaching forward" cycle — phone-thief vibe, faster cadence)
+    - `static-protester` (each protester with their parody picket sign — FUCK ICE / WHERE'S ICE / Cx / etc.)
+    - `static-chibi` (chibi pixel-art Chilean street pedestrians)
+  - Walking obstacles cycle through their frames at 130-160 ms per frame, plus a subtle ±14-22 px sine-wave horizontal wobble so they look like they're swaying as they walk. The bob phase is randomized per spawn so two walkers in adjacent lanes don't sway in perfect sync.
+  - Static obstacles still just stand there but they're more visually varied because each spawn picks one of 12 distinct silhouettes.
+- **Sprite preload expanded** to cover all the obstacle frames the typed system references (was 6 protesters + 6 chibi = 12 sprites; now 12 pedestrian + 6 protester + 6 chibi = 24 sprites). Adds ~3-4 MB to first-load but variety jump is dramatic.
+- **Z-ordering fix.** With Mike at the top of the screen, "closer to camera" obstacles are the ones with LOWER Y values (just above where they pass Mike). Sort flipped so the closer obstacles draw on top of the farther ones for a tiny depth-cue.
+
 ### Run v0.14.0 — 2026-04-26
 
 Iteration 2 on the runner. Big visual + UX changes.

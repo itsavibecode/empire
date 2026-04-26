@@ -66,16 +66,38 @@
     var ck = 'cx-coin-' + (c < 10 ? '0' + c : c);
     SPRITE_PATHS[ck] = 'img/sprites/' + ck + '.png';
   }
-  // Obstacle pool — pull a varied set from protesters and the chibi
-  // grid so spawns don't all look identical.
-  var OBSTACLE_KEYS = [
-    'npc-protester-01', 'npc-protester-02', 'npc-protester-03',
-    'npc-protester-04', 'npc-protester-05', 'npc-protester-06',
-    'npc-grid-01', 'npc-grid-02', 'npc-grid-05',
-    'npc-grid-09', 'npc-grid-13', 'npc-grid-17',
+  // Obstacle TYPES — each entry is one kind of street-person spawn,
+  // either an animated walk cycle or a single static frame. Walking
+  // NPCs cycle through their `frames` at `frameMs` per frame and
+  // wobble horizontally by `bobPx` for a subtle "in motion" look.
+  // Static NPCs (signs/standing characters) just sit there.
+  var OBSTACLE_TYPES = [
+    // Walking pedestrian A (hoodie dude, 4-frame walk cycle)
+    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
+    // Walking woman in red (4-frame walk)
+    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22 },
+    // Reaching dude (4-frame "phone-thief" reach pose, faster cadence)
+    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14 },
+    // Static protesters (each holds a parody picket sign)
+    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 0 },
+    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 0 },
+    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 0 },
+    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 0 },
+    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 0 },
+    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 0 },
+    // Static chibi NPCs (street pedestrians from the grid sheet)
+    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 0 },
+    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 0 },
+    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 0 },
+    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 0 },
+    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 0 },
+    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 0 },
   ];
-  OBSTACLE_KEYS.forEach(function (k) {
-    SPRITE_PATHS[k] = 'img/sprites/' + k + '.png';
+  // Preload every sprite referenced by any obstacle type
+  OBSTACLE_TYPES.forEach(function (t) {
+    t.frames.forEach(function (k) {
+      SPRITE_PATHS[k] = 'img/sprites/' + k + '.png';
+    });
   });
   // Background skyline — wide panorama, drawn at top stripe of canvas.
   SPRITE_PATHS['bg-pano'] = 'img/bg/bg-chile-pano.png';
@@ -255,6 +277,40 @@
   }
 
   // ============================================================
+  // Pause — toggleable via P key, ESC, or the pause button. When paused,
+  // the game loop skips its update step (positions/spawns frozen) but
+  // keeps rendering so the world stays on screen with a "PAUSED"
+  // overlay. Music + ambient mob loop pause too; resumed on unpause.
+  // ============================================================
+  function togglePause() {
+    if (state.phase !== 'playing') return;
+    setPaused(!state.paused);
+  }
+  function setPaused(v) {
+    state.paused = !!v;
+    var ov = document.getElementById('overlay-pause');
+    if (ov) ov.classList.toggle('hidden', !state.paused);
+    var btn = document.getElementById('btn-pause');
+    if (btn) btn.classList.toggle('is-paused', state.paused);
+    // Pause/resume looping audio. SFX (one-shot) don't need to be touched.
+    Object.keys(AUDIO_DEFS).forEach(function (k) {
+      var def = AUDIO_DEFS[k];
+      if (!def.loop) return;
+      var inst = audioInstances[k];
+      if (!inst) return;
+      if (state.paused) {
+        if (!inst.paused) inst.pause();
+      } else {
+        // Only resume the tracks that should be playing in this state
+        // (current music + mob ambient).
+        if (k === currentMusicKey || k === 'mob-angry') {
+          inst.play().catch(function () {});
+        }
+      }
+    });
+  }
+
+  // ============================================================
   // State.
   // ============================================================
   var sprites = {}; // key -> Image (loaded async)
@@ -265,6 +321,7 @@
 
   var state = {
     phase: 'loading',  // 'loading' | 'menu' | 'playing' | 'gameover'
+    paused: false,     // true when player has paused (P / ESC / pause button)
     speed: SPEED_INITIAL,
     distance: 0,         // meters traveled (1 px ≈ 0.1 m for nicer numbers)
     distancePx: 0,       // raw pixel distance (used for procedural BG features)
@@ -273,7 +330,7 @@
     lives: LIVES_INITIAL,
     invulnUntil: 0,      // performance.now() timestamp; until then no hits register
     player: { lane: STARTING_LANE, targetLane: STARTING_LANE, lerpX: 1 },
-    obstacles: [],       // [{lane, y, sprite, w, h, hit}]
+    obstacles: [],       // [{lane, y, type, spawnedAt, bobPhase, w, h, hit}]
     coinsArr: [],        // [{lane, y, w, h, picked}]
     spawnTimer: 0,
   };
@@ -352,6 +409,11 @@
         if (key === ' ' || key === 'Enter') startRun();
         return;
       }
+      // Playing — handle pause + lane shift
+      if (key === 'p' || key === 'P' || key === 'Escape') {
+        togglePause(); e.preventDefault(); return;
+      }
+      if (state.paused) return; // ignore lane input while paused
       if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
         shiftLane(-1); e.preventDefault();
       } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
@@ -363,6 +425,7 @@
     // We listen on document so the HUD/overlays don't swallow taps.
     function tapHandler(e) {
       if (state.phase !== 'playing') return;
+      if (state.paused) return; // tap-to-resume handled by the pause overlay click
       // If the tap came from a button or overlay, let the click bubble.
       if (e.target.closest('button') || e.target.closest('.overlay:not(.hidden)')) {
         return;
@@ -402,18 +465,36 @@
   }
 
   function spawnObstacle() {
-    var key = OBSTACLE_KEYS[Math.floor(Math.random() * OBSTACLE_KEYS.length)];
-    var size = scaledSize(key, OBSTACLE_TARGET_HEIGHT_FRAC);
+    var type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+    // Use the first frame for sizing (all frames in a type came from
+    // the same source sheet so they share canvas dimensions).
+    var size = scaledSize(type.frames[0], OBSTACLE_TARGET_HEIGHT_FRAC);
     var lane = Math.floor(Math.random() * LANES);
     state.obstacles.push({
       lane: lane,
-      y: viewH() + size.h,    // start BELOW visible area (will travel UP)
-      spriteKey: key,
+      y: viewH() + size.h,         // start BELOW visible area (will travel UP)
+      type: type,
+      spawnedAt: performance.now(),
+      bobPhase: Math.random() * Math.PI * 2, // randomize so multiple walkers don't bob in sync
       w: size.w,
       h: size.h,
       hit: false,
     });
     return lane; // so coin spawner can avoid the same lane
+  }
+
+  function getObstacleSprite(o, now) {
+    var t = o.type;
+    if (!t.frames.length) return null;
+    if (t.frames.length === 1 || !t.frameMs) return t.frames[0];
+    var idx = Math.floor((now - o.spawnedAt) / t.frameMs) % t.frames.length;
+    return t.frames[idx];
+  }
+
+  function getObstacleDrift(o, now) {
+    if (!o.type.bobPx) return 0;
+    // Sine wobble — gives the look of a person swaying as they walk
+    return Math.sin((now - o.spawnedAt) / 380 + o.bobPhase) * o.type.bobPx;
   }
 
   function spawnCoin(avoidLane) {
@@ -562,12 +643,25 @@
     // would have overlapped Mike's sprite, so we drop it for v0.14.
     drawRoad(0, h);
 
-    // Obstacles (sort by Y so closer ones draw over far ones)
+    // Obstacles + coins. Sort by Y so the closer-to-Mike ones draw on
+    // top of farther ones (since Mike is at top, "closer to him" = lower Y).
+    // We sort DESCENDING by Y here — items with higher Y are farther
+    // away (further down the road) and should draw FIRST (under closer
+    // items). Closer items (lower Y) draw last, on top.
     var allDrawables = state.obstacles.concat(state.coinsArr);
-    allDrawables.sort(function (a, b) { return a.y - b.y; });
+    allDrawables.sort(function (a, b) { return b.y - a.y; });
     for (var i = 0; i < allDrawables.length; i++) {
       var d = allDrawables[i];
-      drawAt(d.spriteKey || pickCoinSprite(now), laneX(d.lane), d.y, d.w, d.h);
+      var spriteKey, drift = 0;
+      if (d.type) {
+        // Animated obstacle with frame cycle + wobble
+        spriteKey = getObstacleSprite(d, now);
+        drift = getObstacleDrift(d, now);
+      } else {
+        // Coin (spinning)
+        spriteKey = pickCoinSprite(now);
+      }
+      drawAt(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h);
     }
 
     // Player (last, on top)
@@ -727,6 +821,7 @@
 
   function startRun() {
     state.phase = 'playing';
+    setPaused(false); // ensure not stuck in paused state from a previous run
     state.speed = SPEED_INITIAL;
     state.distance = 0;
     state.distancePx = 0;
@@ -772,7 +867,7 @@
   function loop(now) {
     var dt = Math.min(0.05, (now - lastTime) / 1000); // clamp dt to avoid huge jumps after tab switch
     lastTime = now;
-    if (state.phase === 'playing') update(dt);
+    if (state.phase === 'playing' && !state.paused) update(dt);
     if (state.phase !== 'loading') render(now);
     requestAnimationFrame(loop);
   }
@@ -874,6 +969,21 @@
 
     document.getElementById('btn-start').addEventListener('click', startRun);
     document.getElementById('btn-restart').addEventListener('click', startRun);
+
+    // Pause button (in HUD) + click on the pause overlay to resume.
+    var pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        togglePause();
+      });
+    }
+    var pauseOv = document.getElementById('overlay-pause');
+    if (pauseOv) {
+      pauseOv.addEventListener('click', function () {
+        if (state.paused) togglePause();
+      });
+    }
 
     loadAll().then(function () {
       state.phase = 'menu';

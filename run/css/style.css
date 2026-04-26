@@ -138,6 +138,53 @@ html, body {
   transform: scale(.95);
 }
 
+/* ---- Pause button (sits LEFT of the settings gear) ---- */
+.btn-pause {
+  position: fixed;
+  top: 1rem;
+  right: calc(1rem + 56px + .6rem); /* leave room for the 56px gear + gap */
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: rgba(20, 16, 32, .85);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-appearance: none;
+          appearance: none;
+  padding: 0;
+  z-index: 30;
+  transition: background .2s ease, border-color .2s ease, transform .15s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.btn-pause:hover {
+  background: #8E5CCB;
+  border-color: #8E5CCB;
+}
+.btn-pause:active { transform: scale(.95); }
+.btn-pause svg { width: 28px; height: 28px; }
+.btn-pause .icon-play { display: none; }
+.btn-pause.is-paused .icon-pause { display: none; }
+.btn-pause.is-paused .icon-play  { display: block; }
+.btn-pause.is-paused {
+  background: #8E5CCB;
+  border-color: #fff;
+}
+
+/* Pause overlay — overlay base styles already cover positioning + fade */
+.overlay-pause {
+  background: rgba(10, 10, 20, .55); /* lighter than the gameover/start overlays so the world peeks through */
+  cursor: pointer;
+}
+.overlay-pause h1 {
+  font-size: 5rem;
+  letter-spacing: .25em;
+  color: #fff;
+}
+
 /* ---- Settings (audio) panel — gear icon top-right + collapsible panel ---- */
 .audio-controls {
   position: fixed;

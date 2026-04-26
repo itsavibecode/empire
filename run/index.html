@@ -7,7 +7,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.14.0">
+  <meta name="version" content="0.15.0">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -47,6 +47,13 @@
     </div>
   </div>
 
+  <!-- Pause button — left of the gear icon, top-right corner. P or ESC
+       also toggles. Tap on the PAUSED overlay to resume. -->
+  <button type="button" id="btn-pause" class="btn-pause" aria-label="Pause">
+    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+    <svg class="icon-play"  viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+
   <!-- Settings panel — gear icon top-right, click to expand audio
        controls (per-channel sliders, mute, skip-track, master mute). -->
   <div class="audio-controls">
@@ -85,6 +92,13 @@
     <button type="button" id="btn-start">START</button>
   </div>
 
+  <!-- Pause overlay — semi-transparent panel shown while paused.
+       Click anywhere on it (or press P / ESC again) to resume. -->
+  <div class="overlay overlay-pause hidden" id="overlay-pause">
+    <h1>PAUSED</h1>
+    <p class="hint">P / ESC or tap to resume</p>
+  </div>
+
   <!-- Game-over overlay — shown when lives hit 0 -->
   <div class="overlay hidden" id="overlay-gameover">
     <h1>SNIPED</h1>
@@ -95,7 +109,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.14.0</div>
+  <div class="game-version">Run v0.15.0</div>
 
   <script src="js/index.js"></script>
 </body>
