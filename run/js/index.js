@@ -42,6 +42,12 @@
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
   var JUMP_DURATION = 0.7;         // total seconds for a full jump arc
   var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
+  // Ice side-kick — once joined (post-cutscene), Ice runs alongside
+  // Mike at this lateral pixel offset and auto-grabs nearby coins.
+  var ICE_OFFSET_X_FRAC = 0.10;    // distance from Mike's center, as fraction of viewport width
+  var ICE_REACH_PX = 80;           // coin pickup radius around Ice
+  var ICE_NECK_STRETCH_MS = 600;   // duration of neck-stretch animation per coin grab
+  var ICE_COIN_BONUS = 0.5;        // bonus per Ice-collected coin (counts as 0.5x toward total)
 
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
@@ -516,6 +522,11 @@
     seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
     seagullSpawnTimer: 0,
     iceSidekickJoined: false, // true after first cut scene; persisted via localStorage
+    ice: {
+      neckStretchUntil: 0,    // ms timestamp when neck-stretch animation ends (0 = idle running pose)
+      lastSide: 1,            // -1 = Mike's left, +1 = Mike's right (Ice mirrors when Mike lane-shifts)
+    },
+    iceCoinsCollected: 0,     // Ice's running total this run (for HUD if we ever surface it)
     effects: {
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
@@ -985,6 +996,8 @@
     for (i = 0; i < state.coinsArr.length; i++) {
       var co = state.coinsArr[i];
       if (co.picked) continue;
+      // Ice gets first crack at the coin if it's within his reach radius
+      if (tryIceGrab(co, now)) continue;
       if (co.lane !== state.player.targetLane) continue;
       var coCenterY = co.y + co.h / 2;
       var pCenterY2 = py - playerSize.h * 0.4;
@@ -1027,7 +1040,7 @@
     var livesEl = document.querySelector('.lives');
     if (scoreEl) scoreEl.textContent = Math.floor(state.distance) + ' m';
     if (timeEl)  timeEl.textContent  = formatTime(state.elapsedMs);
-    if (coinsEl) coinsEl.textContent = 'Cx ' + state.coins + ' ×' + state.multiplier;
+    if (coinsEl) coinsEl.textContent = 'Cx ' + Math.floor(state.coins) + ' ×' + state.multiplier;
     if (livesEl) {
       var hearts = '';
       // Show as many filled hearts as current lives. If lives are above
@@ -1118,6 +1131,8 @@
 
     // Player (last, on top)
     drawPlayer(now);
+    // Ice side-kick (after Mike so they share the same Y plane)
+    drawIce(now);
 
     // Effect overlays
     drawEffects(now);
@@ -1365,6 +1380,86 @@
     ctx.drawImage(img, x - w/2, y, w, h);
   }
 
+  // ============================================================
+  // ICE side-kick — runs alongside Mike, auto-grabs nearby coins.
+  // Ice prefers to stand on the side of Mike with the most road room
+  // (so he doesn't immediately fly off-screen when Mike picks an edge
+  // lane). Each pickup triggers a neck-stretch animation.
+  // ============================================================
+  function iceX() {
+    // Position Ice on Mike's side that has more room. If Mike is in
+    // the leftmost lane, Ice goes to the right; rightmost lane → Ice
+    // goes left; otherwise Ice picks the side with more empty road.
+    var mikeX = laneX(state.player.targetLane);
+    var w = viewW();
+    var leftRoom = mikeX;
+    var rightRoom = w - mikeX;
+    var side = (leftRoom > rightRoom) ? -1 : +1;
+    state.ice.lastSide = side;
+    return mikeX + side * (w * ICE_OFFSET_X_FRAC);
+  }
+
+  function pickIceFrame(now) {
+    // Neck-stretching after a fresh coin grab — cycle ice-22..29
+    // (the 6-frame neck-growing-upward sequence from the source sheet,
+    // mapped to extracted ice-22..27 range. We use 22..27 here since
+    // the extraction yielded those 6 ascending frames.)
+    if (now < state.ice.neckStretchUntil) {
+      var stretchFrame = 22 + Math.floor((ICE_NECK_STRETCH_MS - (state.ice.neckStretchUntil - now)) / (ICE_NECK_STRETCH_MS / 6));
+      stretchFrame = Math.min(27, Math.max(22, stretchFrame));
+      return 'ice-' + stretchFrame;
+    }
+    // Otherwise, run-cycle on side-view frames (ice-13..16 from the
+    // running-side-view row of the source sheet)
+    var frame = 13 + Math.floor(now / RUN_FRAME_MS) % 4;
+    return 'ice-' + frame;
+  }
+
+  function drawIce(now) {
+    if (!state.iceSidekickJoined) return;
+    if (cutscene.active) return;
+    var size = scaledSize('ice-13', PLAYER_TARGET_HEIGHT_FRAC * 0.85);
+    var x = iceX();
+    var y = playerY() - size.h;
+    var key = pickIceFrame(now);
+    var img = sprites[key];
+    if (!img) return;
+    // Mirror Ice horizontally if he's on Mike's left (so he faces forward)
+    ctx.save();
+    if (state.ice.lastSide < 0) {
+      ctx.translate(x + size.w / 2, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, -size.w / 2, 0, size.w, size.h);
+    } else {
+      ctx.drawImage(img, x - size.w / 2, y, size.w, size.h);
+    }
+    ctx.restore();
+  }
+
+  // Called from coin-collision logic — Ice grabs any coin within his
+  // reach radius, regardless of lane. Returns true if Ice grabbed it.
+  function tryIceGrab(coin, now) {
+    if (!state.iceSidekickJoined) return false;
+    if (coin.picked) return false;
+    var ix = iceX();
+    var iy = playerY() - scaledSize('ice-13', PLAYER_TARGET_HEIGHT_FRAC * 0.85).h * 0.5;
+    var coinCx = laneX(coin.lane);
+    var coinCy = coin.y + coin.h / 2;
+    var dx = coinCx - ix;
+    var dy = coinCy - iy;
+    if (dx * dx + dy * dy < ICE_REACH_PX * ICE_REACH_PX) {
+      coin.picked = true;
+      state.iceCoinsCollected++;
+      // Ice's grabs add to player's score at the configured bonus rate
+      state.coins += ICE_COIN_BONUS;
+      state.ice.neckStretchUntil = now + ICE_NECK_STRETCH_MS;
+      playSfx('coin-pickup');
+      playSfx('ice-neck');
+      return true;
+    }
+    return false;
+  }
+
   function drawPlayer(now) {
     // Lerp X smoothly between current and target lane.
     var fromLane = state.player.lane;
@@ -1439,6 +1534,8 @@
     } catch (e) {
       state.iceSidekickJoined = false;
     }
+    state.ice.neckStretchUntil = 0;
+    state.iceCoinsCollected = 0;
     document.getElementById('overlay-cutscene').classList.add('hidden');
     // Reset music playback rate in case prior run ended mid-bonus
     if (currentMusicKey && audioInstances[currentMusicKey]) {

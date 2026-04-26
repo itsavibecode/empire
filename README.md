@@ -16,6 +16,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.1 — 2026-04-26
+
+Patch — Ice Poseidon side-kick is alive in the world.
+
+- **Ice renders alongside Mike** once `state.iceSidekickJoined === true` (set after the v0.18.0 cut scene). He's positioned at 10% of viewport width away from Mike's center, on whichever side has more road room (so he doesn't fly off-screen when Mike picks an edge lane). Auto-mirrors horizontally when he's on Mike's left so he always faces forward.
+- **Run cycle** uses Ice frames `ice-13` through `ice-16` (the running-side-view row of the source sheet) at the same cadence as Mike (80 ms per frame).
+- **Auto-coin grab** — when a Cx coin enters within `ICE_REACH_PX = 80` of Ice's center, he snaps it up. Each grab adds **0.5× to the coin total** (counts as helper, not replacer — Mike's direct grabs still count full). The HUD `Cx` counter now `Math.floor()`s the displayed value so 0.5 fractions don't look weird.
+- **Neck-stretch animation** triggers on each grab — cycles through the `ice-22` through `ice-27` frames (the 6-frame neck-growing-upward sequence) over 600 ms before returning to the run cycle. Pairs with `ice-neck.mp3` SFX so you both see and hear the stretch.
+- The cut scene from v0.18.0 unlocked this — first time you hit 400m in a run, Ice joins, then he's persistently with you across all future runs in that browser.
+
 ### Run v0.18.0 — 2026-04-26
 
 Minor — Mike-meets-Ice cut scene lands. First story moment in the runner.
