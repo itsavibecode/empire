@@ -43,16 +43,30 @@
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
   // CROSS TRAFFIC — overhead-view cop cars that drive across the screen
-  // perpendicular to Mike's lane. Difficulty scaler: spawns start at
-  // CROSS_CAR_START_DISTANCE_M and accelerate from CROSS_CAR_SPAWN_MS_FAR
-  // down to CROSS_CAR_SPAWN_MS_NEAR over the next 3000m of distance.
-  var CROSS_CAR_START_DISTANCE_M = 1500;   // earliest distance a cross car can spawn
-  var CROSS_CAR_SPAWN_MS_FAR = 9000;       // ~9 sec between spawns at start
-  var CROSS_CAR_SPAWN_MS_NEAR = 3500;      // ~3.5 sec at peak intensity (4500m+)
-  var CROSS_CAR_RAMP_M = 3000;             // distance over which spawn rate ramps
-  var CROSS_CAR_SPEED = 1100;              // px/sec horizontal velocity
-  var CROSS_CAR_HEIGHT_FRAC = 0.18;        // sprite height as frac of viewport
-  var CROSS_CAR_FRAME_MS = 110;            // R/B light flash cadence (faster than parked cop car)
+  // perpendicular to Mike's lane. Per playtest: should be RARE
+  // (telegraphed event, not constant pressure) and READABLE — the car
+  // does a feint-swerve (out-then-back) so the player has time to
+  // judge whether it's actually coming for them. Mike can also JUMP
+  // over them (jumpAvoid).
+  //
+  // Spawn cadence: lerps from FAR (early) -> NEAR (peak intensity)
+  // over CROSS_CAR_RAMP_M meters. With these values you get one every
+  // 18s at 1500m -> one every 8s once you're past 5500m+.
+  var CROSS_CAR_START_DISTANCE_M = 1500;
+  var CROSS_CAR_SPAWN_MS_FAR = 18000;       // one every ~18s at threshold
+  var CROSS_CAR_SPAWN_MS_NEAR = 8000;       // one every ~8s at peak
+  var CROSS_CAR_RAMP_M = 4000;
+  var CROSS_CAR_SPEED = 950;                // px/sec horizontal velocity (slowed slightly so feint reads)
+  var CROSS_CAR_HEIGHT_FRAC = 0.18;         // sprite height as frac of viewport
+  var CROSS_CAR_FRAME_MS = 110;             // R/B light flash cadence
+  // Feint mechanic: when the car's X position gets within
+  // SWERVE_TRIGGER_PX of Mike's lane, it deviates AWAY from Mike's Y
+  // for the first half of SWERVE_DUR_MS, then SWERVES BACK toward
+  // collision path for the second half. Total Y deviation peaks at
+  // SWERVE_AMPLITUDE_FRAC * viewH() at the midpoint.
+  var CROSS_CAR_SWERVE_TRIGGER_PX = 520;
+  var CROSS_CAR_SWERVE_DUR_MS = 700;
+  var CROSS_CAR_SWERVE_AMPLITUDE_FRAC = 0.07;
   // PHONE THIEF — when a "walk-reaching" pedestrian collides with Mike,
   // they snatch the selfie stick. Steals coins, reverses controls
   // briefly, and sprays a particle burst of coins flying outward.
@@ -1266,12 +1280,14 @@
     state.crossCars.push({
       x: startX,
       y: y,
-      w: size.w,   // source-w = visual vertical extent post-rotation
-      h: size.h,   // source-h = visual horizontal extent post-rotation
+      baseY: y,           // original Y line — swerve oscillates around this
+      w: size.w,          // source-w = visual vertical extent post-rotation
+      h: size.h,          // source-h = visual horizontal extent post-rotation
       vx: CROSS_CAR_SPEED * dir,
       dir: dir,
       spawnedAt: performance.now(),
       hit: false,
+      swerveStartedAt: 0, // set when the car triggers its feint near Mike
     });
   }
 
@@ -1602,9 +1618,49 @@
         spawnCrossCar();
       }
     }
-    // Move + cull cross cars
+    // Move + animate cross cars (with feint-swerve telegraph) + cull.
+    var mikeLaneX = laneX(state.player.targetLane);
+    var mikeLineY = playerY() - 40;  // approximate Mike's chest height
+    // MERCY: when Mike's down to his last life, every cross car drives
+    // ~30% slower so the player has more reaction time. Reads as the
+    // city giving Mike a break when he's on his last leg.
+    var crossSpeedMul = (state.lives <= 1) ? 0.70 : 1.0;
     for (i = 0; i < state.crossCars.length; i++) {
-      state.crossCars[i].x += state.crossCars[i].vx * dt;
+      var ccc = state.crossCars[i];
+      ccc.x += ccc.vx * dt * crossSpeedMul;
+      // Trigger feint-swerve once when car gets within trigger range
+      // of Mike's lane center (X distance check, regardless of side
+      // it came from).
+      var ccCenterX = ccc.x + ccc.h / 2;
+      var distToMikeX = Math.abs(ccCenterX - mikeLaneX);
+      if (ccc.swerveStartedAt === 0 && distToMikeX < CROSS_CAR_SWERVE_TRIGGER_PX) {
+        ccc.swerveStartedAt = nowMs;
+      }
+      // Apply swerve: phase 0->0.5 = AWAY from Mike's Y, 0.5->1.0 =
+      // BACK toward Mike's Y. sin(phase * π) gives a smooth
+      // 0->1->0 envelope; sign chosen so phase ~0.25 deviates AWAY
+      // from Mike, phase ~0.75 deviates TOWARD Mike (just past base).
+      // Simpler: full sin wave so it goes AWAY then BACK in one curve.
+      if (ccc.swerveStartedAt > 0) {
+        var elapsed = nowMs - ccc.swerveStartedAt;
+        if (elapsed < CROSS_CAR_SWERVE_DUR_MS) {
+          var phase = elapsed / CROSS_CAR_SWERVE_DUR_MS;  // 0..1
+          // Direction: positive offset = AWAY from Mike (if Mike below
+          // baseY, push car UP/away first; vice versa).
+          var awayDir = (mikeLineY > ccc.baseY) ? -1 : +1;
+          // sin(phase * π) peaks 1 at phase 0.5, then back to 0 at 1.
+          // Multiply by awayDir so the peak is the AWAY swerve. Then
+          // for phase > 0.5 it returns toward base. This gives the
+          // "feint and back" feel without an actual hit-zone deviation
+          // (Mike's collision still uses the car's actual Y).
+          var envelope = Math.sin(phase * Math.PI);
+          ccc.y = ccc.baseY + envelope * awayDir * (viewH() * CROSS_CAR_SWERVE_AMPLITUDE_FRAC);
+        } else {
+          // Swerve done — settle exactly back to baseY for the rest
+          // of the run across the screen.
+          ccc.y = ccc.baseY;
+        }
+      }
     }
     state.crossCars = state.crossCars.filter(function (c) {
       // Cull when fully off the opposite edge. Use c.h (post-rotation
@@ -1671,6 +1727,7 @@
     // Box-vs-box check. POST-ROTATION the visual hitbox is:
     //   horizontal extent on screen = cc.h (source TALL axis)
     //   vertical extent on screen   = cc.w (source WIDE axis)
+    // Mike can JUMP over them — same affordance as the parked cop car.
     for (i = 0; i < state.crossCars.length; i++) {
       var cc = state.crossCars[i];
       if (cc.hit) continue;
@@ -1685,6 +1742,13 @@
       var ccHitH = cc.w * 0.70;   // 70% of the visual vertical extent
       if (Math.abs(mikeCx - ccCx) < (ccHitW * 0.5 + pHitW * 0.5)
           && Math.abs(mikeCy - ccCy) < (ccHitH * 0.5 + pHitH * 0.5)) {
+        // JUMP TO AVOID — if Mike is mid-jump, mark the car as
+        // already-resolved so it doesn't ding on the next frame, but
+        // skip the damage. Same pattern as jumpOnly cop cars.
+        if (isAirborne(now)) {
+          cc.hit = true;
+          continue;
+        }
         cc.hit = true;
         if (now > state.invulnUntil) {
           state.lives--;

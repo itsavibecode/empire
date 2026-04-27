@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.32 — 2026-04-26
+
+Patch — cross-traffic cop car gets a feint-swerve telegraph + jump avoidance + much rarer spawns. Per playtest: was too frequent and too unforgiving, with no way to read the threat before it hit.
+
+- **Spawn rate halved.** `CROSS_CAR_SPAWN_MS_FAR`: 9s → **18s** (one every 18s at 1500m). `CROSS_CAR_SPAWN_MS_NEAR`: 3.5s → **8s** (one every 8s at peak intensity). `CROSS_CAR_RAMP_M`: 3000m → **4000m** (gentler ramp). Speed dialed back from 1100 → **950 px/sec** so the swerve has time to read.
+- **Mike can JUMP over them.** Same affordance as the parked cop car (`jumpOnly`). Collision check now calls `isAirborne(now)` and marks the car as resolved without damage if Mike's mid-jump. Encourages active dodging instead of just lane-shifting.
+- **Feint-swerve telegraph.** When the car's X gets within `CROSS_CAR_SWERVE_TRIGGER_PX` (520px) of Mike's lane center, it triggers a one-shot 700ms swerve: Y deviates AWAY from Mike's foot line for the first half (max amplitude `0.07 × viewH`), then swerves BACK to baseY for the second half. Uses `sin(phase × π)` envelope for a smooth out-then-back curve. Direction of swerve picked dynamically based on which side of `baseY` Mike is on. Player gets a clear "is it coming or not?" beat — sees the car appear to dodge, then has to react when it commits to the collision path.
+- Stored `baseY` per-car so the swerve oscillates around the original spawn line, not the mutated current Y.
+- **Last-life mercy:** when `state.lives <= 1`, all cross cars move at **0.70× speed** so the player gets ~30% more reaction time on the most-stressful run state. Reads as the city giving Mike a break on his last leg.
+
 ### Run v0.18.31 — 2026-04-26
 
 Two fixes + the long-queued PNG share feature.
