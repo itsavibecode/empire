@@ -15,20 +15,6 @@
       "avatar": "avatars/iceposeidon.jpg"
     },
     {
-      "slug": "shangel",
-      "name": "Shangel",
-      "url": "https://kick.com/shangel",
-      "initials": "SH",
-      "avatar": "/avatars/screenshot-2026-04-26-152009.png"
-    },
-    {
-      "slug": "kimmee",
-      "name": "Kimmee",
-      "url": "https://kick.com/kimmee",
-      "initials": "KM",
-      "avatar": "avatars/kimmee.jpg"
-    },
-    {
       "slug": "sashawest",
       "name": "Sasha West",
       "url": "https://kick.com/sashawest",
@@ -43,6 +29,13 @@
       "avatar": "avatars/xenathewitch.jpg"
     },
     {
+      "slug": "shangel",
+      "name": "Shangel",
+      "url": "https://kick.com/shangel",
+      "initials": "SH",
+      "avatar": "/avatars/screenshot-2026-04-26-152009.png"
+    },
+    {
       "slug": "woodbaby",
       "name": "WoodBaby",
       "url": "https://kick.com/woodbaby",
@@ -55,6 +48,13 @@
       "url": "https://kick.com/jjstream",
       "initials": "JJ",
       "avatar": "avatars/jjstream.jpg"
+    },
+    {
+      "slug": "kimmee",
+      "name": "Kimmee",
+      "url": "https://kick.com/kimmee",
+      "initials": "KM",
+      "avatar": "avatars/kimmee.jpg"
     },
     {
       "slug": "ashwilder",
