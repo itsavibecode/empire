@@ -888,7 +888,40 @@
     // Reset the shoulder bird to its idle perch so a fresh cut scene
     // doesn't inherit a half-flown state from a previous one.
     resetCutsceneBird();
+    // Mid-water Shoovy cutscene gets DRAMATIC lightning + thunder
+    // bursts since the storm is still raging around them. Schedule a
+    // sequence of 3 flashes spaced across the cutscene so the player
+    // feels the storm continue even with the dialogue overlay up.
+    if (defId === 'shoovy-meeting') {
+      scheduleCutsceneLightning([700, 2300, 3900]);
+    }
     transitionToPanel(0);
+  }
+
+  // Cutscene lightning helper. Fires CSS .lightning-flash on the
+  // overlay-cutscene element + plays a random thunder variant at each
+  // of the supplied delays (ms after now). Used during Shoovy's
+  // mid-water meeting to keep the storm visible/audible.
+  function scheduleCutsceneLightning(delays) {
+    var ov = document.getElementById('overlay-cutscene');
+    if (!ov) return;
+    delays.forEach(function (d) {
+      setTimeout(function () {
+        if (!cutscene.active) return; // user advanced past Shoovy already
+        // Re-trigger the CSS animation by toggling the class off->on
+        ov.classList.remove('lightning-flash');
+        // Force reflow so the next add re-fires the keyframes
+        void ov.offsetWidth;
+        ov.classList.add('lightning-flash');
+        var thunderKey = THUNDER_VARIANTS[Math.floor(Math.random() * THUNDER_VARIANTS.length)];
+        playSfx(thunderKey);
+        // Clean up the class after the animation finishes so subsequent
+        // ones can re-trigger cleanly.
+        setTimeout(function () {
+          if (ov) ov.classList.remove('lightning-flash');
+        }, 180);
+      }, d);
+    });
   }
 
   function transitionToPanel(idx) {

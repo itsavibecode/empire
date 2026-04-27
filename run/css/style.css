@@ -795,6 +795,27 @@ html, body {
    cover it completely. Mike's panels (chroma-keyed PNGs) let it show
    through — that's the requested "use the chile bg behind Mike's cut
    scene" treatment. */
+/* Shoovy mid-water cutscene gets dramatic lightning bursts. Toggling
+   the .lightning-flash class via JS briefly fills the overlay with
+   white so the player perceives a flash even though the cutscene
+   overlay occludes the canvas-side weather effects. */
+.overlay-cutscene.lightning-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 99;
+  pointer-events: none;
+  animation: cs-lightning 110ms ease-out;
+}
+@keyframes cs-lightning {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  30%  { opacity: 0.4; }
+  55%  { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
 .overlay-cutscene {
   /* Path is relative to THIS CSS file (run/css/style.css), not the
      page root — that's why the chile bg wasn't appearing in v0.18.14

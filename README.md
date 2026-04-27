@@ -17,6 +17,19 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.45 — 2026-04-27
+
+Polish — dramatic lightning + thunder during the Shoovy mid-water cutscene.
+
+The canvas-side weather effects from `tickWater` (rain particles, lightning flashes, screen tint) get occluded the moment the cutscene overlay appears — `.overlay-cutscene` sits at z-index 40 over the game canvas. So the player saw a sudden cut to "calm dialogue" mid-storm, breaking the tension.
+
+Fix: schedule a **3-burst lightning sequence** specifically for the `shoovy-meeting` cutscene, rendered ON the overlay element itself instead of the canvas behind it:
+
+- New `.overlay-cutscene.lightning-flash::before` CSS pseudo-element does a 110ms white-flash animation with a stuttering opacity envelope (peaks at 100%, dips to 40%, peaks again at 95%, fades to 0%) — same forked-lightning feel as the canvas-side effect.
+- New `scheduleCutsceneLightning([delays])` JS helper fires the CSS class + plays a random thunder variant (from the 3-clip pool) at each delay.
+- Triggered from `startCutscene('shoovy-meeting')` with delays `[700, 2300, 3900]` ms — three bursts spaced across the dialogue so the storm reads as an ongoing presence, not a backdrop.
+- `cutscene.active` is checked at fire time so if the player blasts through the cutscene with Enter, queued bursts skip themselves.
+
 ### Run v0.18.44 — 2026-04-27
 
 Big — **Shoovy mid-water encounter** + **dev URL params** for testing.
