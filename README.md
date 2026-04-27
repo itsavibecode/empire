@@ -17,6 +17,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.46 — 2026-04-27
+
+UX fix — dev URL params (`?cut=`, `?water=1`, `?dist=NNN`) now **auto-start the run** instead of dropping the user on the title screen. v0.18.44 wired the dev-params application inside `startRun()`, which only fires when the player clicks START — so the URL didn't actually skip to the requested state. Now `init()` checks if dev mode is unlocked AND the URL implies a state change (cut, water, or dist), and if so, fires `startRun()` automatically after the first frame paints.
+
+`?god=1` alone still respects the title screen since "god mode" is a play-mode toggle, not a scene jump — the player still picks when their god-mode run begins.
+
 ### Run v0.18.45 — 2026-04-27
 
 Polish — dramatic lightning + thunder during the Shoovy mid-water cutscene.

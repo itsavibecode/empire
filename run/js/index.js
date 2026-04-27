@@ -4244,7 +4244,23 @@
       // current high score). Best-effort; failures leave the "—"
       // placeholders in place.
       refreshTitleStats();
-      requestAnimationFrame(function (t) { lastTime = t; loop(t); });
+      // DEV PARAMS auto-start: when dev mode is unlocked AND the URL
+      // implies a game-state change (cut/water/dist), skip the title
+      // screen and jump straight into the run so the URL acts like a
+      // direct "go-to-scene" link. Otherwise let the title screen
+      // appear normally for normal play (god=1 alone doesn't auto-start
+      // — the player still picks when to start their god-mode run).
+      var shouldAutoStart = devParams.enabled
+        && (devParams.cut || devParams.water || devParams.dist > 0);
+      requestAnimationFrame(function (t) {
+        lastTime = t;
+        loop(t);
+        if (shouldAutoStart) {
+          console.log('[dev] auto-starting run from URL params');
+          // Defer one tick so loop() has settled and audio unlock is wired.
+          setTimeout(function () { startRun(); }, 30);
+        }
+      });
     });
   }
 
