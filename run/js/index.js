@@ -161,6 +161,13 @@
     for (var i = 1; i <= n; i++) out.push(prefix + (i < 10 ? '0' + i : i));
     return out;
   }
+  // Variant for sprite series whose frame number is NOT zero-padded
+  // (e.g. npc-runner-01-1.png ... npc-runner-01-6.png).
+  function _seqDash(prefix, n) {
+    var out = [];
+    for (var i = 1; i <= n; i++) out.push(prefix + i);
+    return out;
+  }
   var PICKUP_TYPES = [
     // HAM — short freeze + coin shower + chipmunk music. 7-frame spin.
     { kind: 'ham',  frames: _seq('ham-spin-', 7),    frameMs: 90,  weight: 3 },
@@ -213,22 +220,22 @@
     { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
     // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
     { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
-    // Static protesters — bigger ground-shadow ellipse than the
-    // pedestrians (visible grey-brown halo at the feet), needs a
-    // larger 12% bottom crop.
-    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
-    // Static chibi NPCs — small shadows, 5% crop.
-    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
-    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
-    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
-    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
-    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
-    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    // RUNNING NPCs — proper 6-frame forward-facing run cycles. These
+    // replaced the earlier static-protester + static-chibi entries
+    // which were single-frame poses that needed bobPx fakery to look
+    // alive. New sprites have actual animated leg movement, no ground
+    // shadows, and a variety of Chilean character types (drunkard,
+    // granny, sports fans, flag wavers, cowboys, punks).
+    // Picked 8 visually distinctive characters across the 7 source
+    // sheets — extracted via extract-npc-runners.py.
+    { id: 'npc-runner', frames: _seqDash('npc-runner-01-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-02-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-03-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-04-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-14-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-15-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-16-', 6),  frameMs: 110, bobPx: 0 },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-25-', 6),  frameMs: 110, bobPx: 0 },
     // COP CAR — jump-only. Animates through 4 light-bar variants at
     // 180ms for R-B-R-B flashing. bottomCropFrac 0.12 trims the
     // residual ground-shadow + motion-blur baked into the iso source.

@@ -17,6 +17,32 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.39 — 2026-04-27
+
+Polish — replaced static-pose NPCs with **proper 6-frame run cycles**, no shadows. Per playtest the cardboard-cutout protesters/chibis felt fake even with the bobPx fakery. New sprites have actual animated leg movement.
+
+**Asset pipeline:**
+
+- New `extract-npc-runners.py` slices 7 source sheets (`peds - (1).png` through `peds - (10).png` in `/run/concept/`, each 4 rows × 6 columns) into 168 individual sprites named `npc-runner-NN-F.png` (NN = character index 01..28, F = frame 1..6). Same `flood_remove_corner_color` + `keep_largest_blob` pipeline as the mattress + officer extractions — flood-fills white from sheet corners + per-cell to remove the surrounding box while preserving any white interior detail.
+- Result: 28 distinct Chilean character types each with a clean 6-frame forward-facing run animation. No ground shadows (the alpha is clean to the feet).
+
+**OBSTACLE_TYPES rework:**
+
+- Dropped `static-protester` (6 entries) and `static-chibi` (6 entries) which were single-frame poses faking motion via `bobPx: 12`.
+- Added 8 `npc-runner` types — character indexes 01, 02, 03, 04, 14, 15, 16, 25, picked for visual variety across the source sheets:
+  - 01: drunkard with bottle + straw hat
+  - 02: granny with chicken leg
+  - 03: CAT-shirt sports fan
+  - 04: Cristal-beer cap guy
+  - 14: angry punk
+  - 15: black cowboy hat
+  - 16: Pepsi-shirt guy
+  - 25: Chilean flag waver
+- Each cycles 6 frames at 110ms (~9 fps run cadence). `bobPx: 0` since the actual leg animation does the work.
+- New `_seqDash(prefix, n)` helper builds the unpadded `npc-runner-XX-1..6` array (existing `_seq` zero-pads). Existing OBSTACLE_TYPES auto-preload walks every type's frames so the new sprites register without an extra preload block.
+
+The original `walk-hoodie`, `walk-woman`, and `walk-reaching` (phone thief) entries are unchanged — they already animate properly.
+
 ### Run v0.18.38 — 2026-04-27
 
 Minor — **STONED CHASE**. When Mike grabs a weed pickup past 1500m, 2-4 cop officers now spawn at the bottom of the screen and walk upward toward him for the duration of the debuff. Reads as "the city is onto you for being high in public."
