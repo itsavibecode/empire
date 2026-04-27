@@ -16,6 +16,24 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### OBS /trending/ — 2026-04-26
+
+New page at `/obs/trending/` — a live cross-chat word cloud built as a separate browser source so it can be tested in isolation before deciding whether to roll into the main `/obs/` overlay rotation. Same KekwClips trick we proved out before, now wired up to multiple Kick chats simultaneously.
+
+**How it works:**
+
+1. Loads the streamer roster from `/streamers.json`, polls each one every 60s for live status (parallel proxy race, same trick as the main `/obs/` overlay).
+2. For each streamer that's live, resolves their numeric `chatroom_id` and opens a single shared Pusher WebSocket connection to `wss://ws-us2.pusher.com` (Kick's chat backend), subscribing to one `chatrooms.{id}.v2` channel per live streamer.
+3. Each incoming chat message is tokenized: lowercased, Kick `[emote:1234:NAME]` blocks stripped, then split on non-letter/digit boundaries. Words are checked against a stop-word list (~200 common English words + chat noise: "lol", "lmao", "kekw", etc.) and a hate-word filter that l33t-speak normalizes first (`fuck` and `f4ck` and `phuck` all collapse to the same token before the filter check).
+4. Two sliding windows (60s and 5min) count each word's occurrences AND the set of unique users who used it. Score = `uniqueUsers × log(count + 1)` — so 50 different people saying "what" beats 1 person spamming "what" 100 times.
+5. Top 60 words go into a wordcloud2.js canvas; top 12 go into a side leaderboard with `Nu · Mx` (unique users / total mentions).
+
+**Privacy:** No chat messages are displayed on screen. No backend, no logging, no persistence beyond a `localStorage` cache of `chatroom_id` → `slug` (which is publicly available info anyway). Word counts live in browser memory only and reset when the tab closes.
+
+**Layout:** 1920×1080 OBS-friendly with the same gold corner brackets + dark Cinzel/JetBrains Mono aesthetic as the main `/obs/` overlay. Live indicator shows `N live · M chats connected` in the top-right; window toggle (60s / 5min) sits below the title.
+
+Browser source URL once it's deployed: `https://ourempirex.com/obs/trending/`
+
 ### Run v0.18.17 — 2026-04-26
 
 Patch — three real fixes from playtest.
