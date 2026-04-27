@@ -16,6 +16,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.17 — 2026-04-26
+
+Patch — three real fixes from playtest.
+
+- **Chile cut scene background actually shows now.** The `url('img/bg/...')` in `.overlay-cutscene` was relative to the CSS file's location (`/run/css/`) — resolving to `/run/css/img/bg/...` which doesn't exist. Fixed to `url('../img/bg/bg-chile-runner-01.png')`. The chile street scene now appears behind Mike's chroma-keyed cut scene panels as intended.
+- **Cop car rear restored + ground shadow gone.** Two prior approaches failed: (1) v0.18.11's 18% right-crop ate the rear bumper along with the motion blur, and (2) the alpha-threshold approach in this round was useless because the shadow + blur pixels are alpha=255 (fully opaque, not translucent — they're rendered as part of the sprite). Settled on a balanced mechanical crop: **86% width × 91% height**. Most of the rear bumper visible, motion-blur reduced to a tiny tip, ground shadow trimmed off the bottom.
+- **LEADERBOARD button text now fits.** The 2-column game-over grid (added v0.18.16) made each button cell ~240px wide, but the base `.overlay button` styles (2.2rem font / .2em letter-spacing / 2.4rem padding — all sized for the standalone START button) made LEADERBOARD overflow. Scoped override on `.gameover-buttons button`: 1.4rem font, .12em letter-spacing, .9rem padding, `white-space: nowrap`. All 4 labels now fit cleanly in the grid.
+
 ### Run v0.18.16 — 2026-04-26
 
 Patch — game-over button layout + BookHockeys link click guard.

@@ -519,7 +519,10 @@ html, body {
    through — that's the requested "use the chile bg behind Mike's cut
    scene" treatment. */
 .overlay-cutscene {
-  background: #000 url('img/bg/bg-chile-runner-01.png') center/cover no-repeat;
+  /* Path is relative to THIS CSS file (run/css/style.css), not the
+     page root — that's why the chile bg wasn't appearing in v0.18.14
+     (was looking up `run/css/img/...` which doesn't exist). */
+  background: #000 url('../img/bg/bg-chile-runner-01.png') center/cover no-repeat;
   padding: 0;
   z-index: 40;
   /* No flex-centering — children are positioned absolutely */
@@ -630,8 +633,16 @@ html, body {
   width: 100%;
 }
 .gameover-buttons button {
+  /* Override the giant .overlay button defaults (2.2rem / .2em / 2.4rem
+     padding) so all 4 button labels fit cleanly in the 2-col grid.
+     LEADERBOARD is the longest at 11 chars and was overflowing. */
   min-width: 0;
   width: 100%;
+  font-size: 1.4rem;
+  letter-spacing: .12em;
+  padding: .55rem .9rem;
+  margin-top: 0;
+  white-space: nowrap;
 }
 @media (max-width: 480px) {
   .gameover-buttons {

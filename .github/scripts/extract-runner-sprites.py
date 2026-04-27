@@ -129,8 +129,11 @@ SOURCES = [
     {'file': 'animals-cats.png',           'prefix': 'cat',          'min_area': 1500},
     {'file': 'animals-dogs.png',           'prefix': 'dog',          'min_area': 1500, 'bg_mode': 'flood'},
     {'file': 'animals-goats.png',          'prefix': 'goat',         'min_area': 1500},
-    # Vehicles
-    {'file': 'cop_car_iso_transparent.png','prefix': 'cop-car',      'use_alpha': True, 'min_area': 3000},
+    # Vehicles. `alpha_threshold: 200` keys out the translucent
+    # ground-shadow and motion-blur pixels baked into the cop car
+    # source — preserves only the solid car body. (Without this, the
+    # sprite has a grey halo + diagonal speed-line streak.)
+    {'file': 'cop_car_iso_transparent.png','prefix': 'cop-car',      'use_alpha': True, 'min_area': 3000, 'alpha_threshold': 200},
     # Horse-riding sheets — green-screen background (rgb ~ 76,233,41).
     # Flood-fill mode handles the gradient edges cleanly.
     {'file': 'mike-rides-horse.png',                  'prefix': 'mike-horse',     'bg_mode': 'flood', 'bg_tolerance': 40, 'min_area': 5000},
@@ -157,13 +160,20 @@ def detect_bg_color(img):
     return Counter(corners).most_common(1)[0][0]
 
 
-def make_is_bg_alpha():
+def make_is_bg_alpha(threshold=50):
     """For sheets that ALREADY have proper alpha transparency baked in
     (user-pre-cleaned files like *_alpha.png). Avoids the RGB-tolerance
     approach which would eat dark interior pixels (eyebrows, facial hair,
-    black outlines on Mike) — just trusts the existing alpha channel."""
+    black outlines on Mike) — just trusts the existing alpha channel.
+
+    `threshold` controls how aggressive the alpha key is:
+      - 50  (default): keys out only fully/almost-fully transparent pixels.
+      - 200 (strict): keys out anything that's not nearly opaque, which
+        also cuts translucent things like ground shadows + motion blur
+        baked into a sprite. Use for sources where soft shadows ruin the
+        sprite outline (e.g. cop cars)."""
     def is_bg(r, g, b, a):
-        return a < 50
+        return a < threshold
     return is_bg
 
 
@@ -412,8 +422,11 @@ def process_file(spec):
     img = Image.open(src).convert('RGBA')
     if spec.get('use_alpha'):
         # Source already has proper alpha-keyed transparency. Trust it.
-        is_bg = make_is_bg_alpha()
-        print(f'    using ALPHA mode (existing transparency)')
+        # Per-source `alpha_threshold` lets sheets with baked-in soft
+        # shadows / motion blur (cop cars) tighten the threshold so
+        # those translucent pixels also get keyed out.
+        is_bg = make_is_bg_alpha(spec.get('alpha_threshold', 50))
+        print(f'    using ALPHA mode (threshold {spec.get("alpha_threshold", 50)})')
     elif spec.get('bg_mode') == 'flood':
         # Flood-fill from corners — preserves interior bg-color pixels
         # (white seagull bodies on white bg, etc.). We pre-bake the mask
