@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.4">
+<meta name="version" content="0.1.5">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -219,14 +219,15 @@
   .lb-row.top2 .word { color: var(--gold); }
   .lb-row.top3 .word { color: var(--ink); }
 
-  /* Per-word hover tooltip — appears to the LEFT of the leaderboard
-     row showing which streamer chat the word was last said in, plus
-     a per-source breakdown of mention counts. */
-  .lb-row {
-    position: relative;
-    cursor: help;
-  }
-  .lb-row .word-tooltip {
+  /* Per-word hover tooltips — TWO of them per row:
+     - .word-tooltip on the WORD column: which streamer chat said it last
+       + breakdown by chat source.
+     - .users-tooltip on the META column (the "2u · 5x" part): the actual
+       list of usernames who said it, with per-user count. */
+  .lb-row { position: relative; }
+  .lb-row .word { cursor: help; }
+  .lb-row .meta { cursor: help; }
+  .lb-tooltip {
     position: absolute;
     right: calc(100% + 12px);
     top: 50%;
@@ -249,8 +250,9 @@
     transition: opacity .15s ease;
     z-index: 50;
   }
-  .lb-row:hover .word-tooltip { opacity: 1; }
-  .lb-row .word-tooltip .wt-label {
+  .lb-row .word:hover ~ .word-tooltip { opacity: 1; }
+  .lb-row .meta:hover ~ .users-tooltip { opacity: 1; }
+  .lb-tooltip .wt-label {
     color: var(--ink-dim);
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
@@ -258,24 +260,31 @@
     text-transform: uppercase;
     margin-bottom: 2px;
   }
-  .lb-row .word-tooltip .wt-last {
+  .lb-tooltip .wt-last {
     color: var(--gold-hot);
     font-weight: 600;
     font-size: 14px;
     margin-bottom: 8px;
   }
-  .lb-row .word-tooltip .wt-bd-row {
+  .lb-tooltip .wt-bd-row {
     display: flex; justify-content: space-between;
     padding: 2px 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
   }
-  .lb-row .word-tooltip .wt-bd-row .name { color: var(--ink); }
-  .lb-row .word-tooltip .wt-bd-row .cnt { color: var(--gold); }
-  .lb-row .word-tooltip .wt-none {
+  .lb-tooltip .wt-bd-row .name { color: var(--ink); }
+  .lb-tooltip .wt-bd-row .cnt { color: var(--gold); }
+  .lb-tooltip .wt-none {
     color: var(--ink-dim);
     font-style: italic;
     font-size: 11px;
+  }
+  .lb-tooltip .wt-more {
+    color: var(--ink-dim);
+    font-size: 10px;
+    font-style: italic;
+    text-align: right;
+    margin-top: 4px;
   }
 
   /* LIVE SOURCES — small panel above the leaderboard listing every
@@ -585,7 +594,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.4';
+const TRENDING_VERSION = '0.1.5';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
@@ -748,12 +757,12 @@ function tokenize(text) {
 class WordWindow {
   constructor(windowSec) {
     this.windowMs = windowSec * 1000;
-    this.entries = new Map(); // word -> Array<{ts, uid, src}>
+    this.entries = new Map(); // word -> Array<{ts, uid, src, name}>
   }
-  add(word, userId, ts, src) {
+  add(word, userId, ts, src, name) {
     let arr = this.entries.get(word);
     if (!arr) { arr = []; this.entries.set(word, arr); }
-    arr.push({ ts, uid: userId, src });
+    arr.push({ ts, uid: userId, src, name });
   }
   prune(now) {
     const cutoff = now - this.windowMs;
@@ -765,15 +774,17 @@ class WordWindow {
       if (arr.length === 0) this.entries.delete(word);
     }
   }
-  // Returns sorted [{word, count, uniqueUsers, score, lastSrc, srcCounts}, ...]
+  // Returns sorted [{word, count, uniqueUsers, score, lastSrc, srcCounts, userList}, ...]
   // - lastSrc: slug of the streamer chat where this word was MOST RECENTLY said
   // - srcCounts: { slug -> count } breakdown for the hover tooltip
+  // - userList: [{name, count}] sorted by count desc — for the "which users said it" tooltip
   topN(n, minScore) {
     const out = [];
     for (const [word, arr] of this.entries) {
       const count = arr.length;
       const users = new Set();
       const srcCounts = {};
+      const userCounts = new Map(); // uid -> {name, count}
       let lastSrc = null;
       let lastTs = -1;
       for (const e of arr) {
@@ -782,10 +793,14 @@ class WordWindow {
           srcCounts[e.src] = (srcCounts[e.src] || 0) + 1;
           if (e.ts > lastTs) { lastTs = e.ts; lastSrc = e.src; }
         }
+        const uc = userCounts.get(e.uid);
+        if (uc) { uc.count++; if (e.name && !uc.name) uc.name = e.name; }
+        else userCounts.set(e.uid, { name: e.name || ('user-' + e.uid), count: 1 });
       }
       const score = users.size * Math.log(count + 1);
       if (score < minScore) continue;
-      out.push({ word, count, uniqueUsers: users.size, score, lastSrc, srcCounts });
+      const userList = Array.from(userCounts.values()).sort((a, b) => b.count - a.count);
+      out.push({ word, count, uniqueUsers: users.size, score, lastSrc, srcCounts, userList });
     }
     out.sort((a, b) => b.score - a.score);
     return out.slice(0, n);
@@ -826,14 +841,14 @@ function noteEventName(name, rawMsg) {
   console.log('[trending] new event type:', name, rawMsg);
 }
 
-function processMessage(content, userId, srcSlug) {
+function processMessage(content, userId, srcSlug, userName) {
   if (!content || !userId) return;
   const ts = Date.now();
   const words = tokenize(content);
   if (words.length === 0) return;
   for (const w of words) {
     for (const winSec of Object.keys(windows)) {
-      windows[winSec].add(w, userId, ts, srcSlug);
+      windows[winSec].add(w, userId, ts, srcSlug, userName);
     }
   }
   stats.totalMessages++;
@@ -924,11 +939,14 @@ class PusherClient {
       const content = payload.content || payload.message || payload.body;
       const sender = payload.sender || payload.user;
       const userId = sender && (sender.id || sender.slug || sender.username);
+      // Display name for the per-word user-list tooltip. Prefer the
+      // human-readable username, fall back to slug, then to numeric id.
+      const userName = sender && (sender.username || sender.slug || (sender.id != null ? String(sender.id) : null));
       // Reverse-lookup the slug from the channel name so we can attribute
       // each word to a streamer chat. Channel format is `chatrooms.{id}.v2`.
       const srcSlug = channel ? channelToSlug[channel] : null;
       stats.chatEventsMatched++;
-      processMessage(content, userId, srcSlug);
+      processMessage(content, userId, srcSlug, userName);
     }
   }
   _send(obj) {
@@ -1172,13 +1190,13 @@ function renderLeaderboard(top12) {
   }
   lbList.innerHTML = top12.map((t, i) => {
     const cls = i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '';
-    // Build per-source breakdown sorted desc by count for the tooltip
+    // SOURCE TOOLTIP: per-streamer breakdown, sorted desc, capped at 6
     const breakdown = Object.entries(t.srcCounts || {})
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6); // cap at 6 sources to keep tooltip compact
+      .slice(0, 6);
     const lastDisp = t.lastSrc ? (slugToDisplay[t.lastSrc] || t.lastSrc) : null;
-    const tooltipHtml = lastDisp ? `
-      <div class="word-tooltip">
+    const sourceTip = lastDisp ? `
+      <div class="lb-tooltip word-tooltip">
         <div class="wt-label">Last said in</div>
         <div class="wt-last">${escapeHtml(lastDisp)}</div>
         <div class="wt-label">By chat</div>
@@ -1188,12 +1206,31 @@ function renderLeaderboard(top12) {
               `<div class="wt-bd-row"><span class="name">${escapeHtml(slugToDisplay[slug] || slug)}</span><span class="cnt">${cnt}x</span></div>`
             ).join('')}
       </div>` : '';
+
+    // USERS TOOLTIP: actual usernames + per-user mention count, capped
+    // at 10 to keep the tooltip readable. Total user count is shown
+    // alongside so it's clear when more are hidden.
+    const SHOW = 10;
+    const visible = (t.userList || []).slice(0, SHOW);
+    const hidden = Math.max(0, t.uniqueUsers - visible.length);
+    const usersTip = `
+      <div class="lb-tooltip users-tooltip">
+        <div class="wt-label">Said by ${t.uniqueUsers} user${t.uniqueUsers === 1 ? '' : 's'}</div>
+        ${visible.length === 0
+          ? '<div class="wt-none">no user data</div>'
+          : visible.map(u =>
+              `<div class="wt-bd-row"><span class="name">${escapeHtml(u.name)}</span><span class="cnt">${u.count}x</span></div>`
+            ).join('')}
+        ${hidden > 0 ? `<div class="wt-more">+${hidden} more…</div>` : ''}
+      </div>`;
+
     return `
     <div class="lb-row${cls}">
       <span class="rank">${i + 1}.</span>
       <span class="word">${escapeHtml(t.word)}</span>
       <span class="meta">${t.uniqueUsers}u · ${t.count}x</span>
-      ${tooltipHtml}
+      ${sourceTip}
+      ${usersTip}
     </div>`;
   }).join('');
 }

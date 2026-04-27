@@ -17,6 +17,15 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.5 — 2026-04-26
+
+Patch — second per-row tooltip on the `Nu · Mx` meta cell. Now there are TWO tooltips per leaderboard row:
+
+- **Hover the WORD** → "Last said in <Streamer> · breakdown by chat" (unchanged from v0.1.4)
+- **Hover the `Nu · Mx` meta** → list of the actual usernames who said the word, sorted by per-user mention count, capped at 10 visible with "+N more…" if there are extras.
+
+Required threading sender display name through the chat handler → `processMessage` → `WordWindow.add` so each entry stores `{ts, uid, src, name}`. `topN()` now also returns `userList: [{name, count}]` per word. Username is taken from `payload.sender.username` first (most readable), then `slug`, then numeric `id` as last resort. The tooltip renders `username 5x` rows, same visual style as the source-breakdown tooltip but anchored to the meta cell instead.
+
 ### Trending v0.1.4 — 2026-04-26
 
 Patch — per-word source attribution + visible live-poll cadence.
