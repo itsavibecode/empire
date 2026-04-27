@@ -1616,12 +1616,12 @@ section{padding:6rem 1.5rem}
 
 
 // JUST ADDED badge decay — sync-streamers.py renders the badge for
-// streamers added within 3 days at sync time, stamped with the
-// added_at date. This loop checks the date on every page load and
-// hides the badge if it's now older than 3 days, so the badge
-// retires correctly even when sync hasn't re-run since.
+// streamers added within JUST_ADDED_TTL_DAYS at sync time, stamped
+// with the added_at date. This loop checks the date on every page
+// load and hides the badge if it's now older than the TTL, so the
+// badge retires correctly even when sync hasn't re-run since.
 (function(){
-  const TTL_DAYS = 3;
+  const TTL_DAYS = 5;
   const now = new Date();
   document.querySelectorAll('.streamer-just-added[data-added]').forEach(function(el){
     const raw = el.getAttribute('data-added');

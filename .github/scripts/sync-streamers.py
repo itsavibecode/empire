@@ -33,12 +33,17 @@ STATIC_KW_SUFFIX = ("The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, B
                     "All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9")
 
 
+JUST_ADDED_TTL_DAYS = 5
+
+
 def is_just_added(s, today=None):
-    """True if this streamer's `added_at` is within the last 3 days
-    (inclusive). `added_at` is an ISO date string ("YYYY-MM-DD") set
-    by the Decap CMS when the entry was created. Streamers without an
-    `added_at` field never show the badge — back-compat with rows
-    added before this feature."""
+    """True if this streamer's `added_at` is within the last
+    JUST_ADDED_TTL_DAYS (inclusive). `added_at` is an ISO date string
+    ("YYYY-MM-DD") auto-filled by ensure_added_at_dates() when a
+    streamer is missing one (typically the day they were added to
+    streamers.json via the CMS). Streamers without an `added_at`
+    field at sync time get one auto-set to today, so any brand-new
+    entry shows the badge for the next 5 days."""
     raw = s.get('added_at')
     if not raw:
         return False
@@ -53,7 +58,7 @@ def is_just_added(s, today=None):
         return False
     if today is None:
         today = date.today()
-    return (today - d) <= timedelta(days=3) and d <= today
+    return (today - d) <= timedelta(days=JUST_ADDED_TTL_DAYS) and d <= today
 
 
 def card_html(s, today=None):
@@ -88,6 +93,26 @@ def card_html(s, today=None):
     )
 
 
+def ensure_added_at_dates(streamers, today=None):
+    """Auto-fill `added_at` with today's ISO date for any streamer
+    missing one. Returns True if any rows were modified (so caller
+    knows to write streamers.json back).
+
+    This replaces the old "ask the CMS editor to pick a date" flow —
+    the editor just adds a new streamer in Decap and saves; the next
+    sync run stamps `added_at` for them automatically. They get the
+    JUST ADDED badge for 5 days starting from that sync."""
+    if today is None:
+        today = date.today()
+    today_iso = today.isoformat()
+    changed = False
+    for s in streamers:
+        if not s.get('added_at'):
+            s['added_at'] = today_iso
+            changed = True
+    return changed
+
+
 def main():
     with open(SJSON, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -97,6 +122,16 @@ def main():
 
     if not streamers:
         sys.exit('streamers.json is empty')
+
+    # AUTO-FILL added_at for any streamer missing one. If we mutated the
+    # list, write streamers.json back — the workflow's commit step now
+    # adds streamers.json so the change ships in the same chore commit.
+    if ensure_added_at_dates(streamers):
+        wrapped = {'streamers': streamers} if isinstance(data, dict) else streamers
+        with open(SJSON, 'w', encoding='utf-8', newline='') as f:
+            json.dump(wrapped, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+        print('Auto-filled added_at for new streamers; wrote streamers.json back')
 
     # --- index.html ---
     with open(INDEX, 'rb') as f:
