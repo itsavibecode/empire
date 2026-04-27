@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.56 — 2026-04-27 — Jail-flow continuity + weed-cops + Ice's "I'll call you"
+
+**1. NEW: "Ice bails on Mike" cutscene chains BEFORE the jail dialogue when Ice was tagging along at the moment of arrest.** Single-panel Ice line: *"uhhh, so yeah, I'll call you."* Fires between the BUSTED flash and the cell-screen if `state.iceSidekickJoined` was true at jail entry. New `state.jail.phase === 'ice-leaving'` interstitial keeps the world frozen while it plays. The cutscene's `onComplete` drops the Ice sidekick relationship + clears the `ice-returns` cutscene flag (so Ice can re-meet Mike at the 3800m beat) + transitions to the jail cell + starts the jail audio loops. Provides story justification for why Ice isn't with Mike when he walks out post-bail (he wasn't in jail).
+
+**2. JAIL-BAIL-XENA also drops Ice now (no cutscene this path — Ice was already gone by definition).** Mirrors the same Ice-cleanup logic in `jailBailXena()`: `iceSidekickJoined = false`, `iceTrailing = false`, `delete state.cutscenesTriggered['ice-returns']`. Note the bail-Xena branch is the LATER path (after the cell appears), but if Ice had been with Mike, the ice-bails-on-mike cutscene already fired during the BUSTED→cell transition; by the time the player picks BAIL XENA, Ice is already gone. The cleanup here is defensive.
+
+**3. NEW: weed pickup → more cops.** When the weed debuff is active (`now < state.effects.weedDebuffUntil`), every regular obstacle spawn tick has a **30% chance** to also spawn a bonus cop car in a different lane via the new `spawnExtraCopCar()` helper. Reads as "police presence ramps up because Mike is visibly impaired." Cop cars are jump-only so this is a "press SPACE more" stress, not a hopeless wall.
+
+**4. Verified: Xena hidden during water + returns post-water.** No code change needed — `drawXena()` and `tryXenaSnipe()` already early-return when `state.water.phase !== 'none'`, and `state.xenaFollowing` persists through the water phase so she resumes when Mike's back on land.
+
+**5. Verified: `mike-tells-off` cutscene won't fire if Ice isn't following.** The cutscene's `requires: () => state.iceSidekickJoined` already gates it correctly. If a player loses Ice via jail-bail-Xena (or via the new Ice-bails-on-mike cutscene), `tells-off` is silently skipped at the 2000m trigger.
+
+**Side-fix:** the post-cutscene mob-angry ambient restart in `advanceCutscene` now also gates on `!inJail`, so the ice-bails-on-mike cutscene's close doesn't accidentally start mob-angry over the jail audio.
+
 ### Run v0.18.55 — 2026-04-27 — Cache-bust query strings on JS + CSS
 
 The "v0.18.54 still has all my bugs" report turned out to be a browser-cache problem, not a code problem. The HTML at `/run/` was fetching fresh on hard-refresh (showing `Run v0.18.54`) but `js/index.js` was being served from the browser's cache without a cache-bust query, so users got the new HTML against the OLD JS — which made every JS-side fix (pause hard-stop, Xena height 0.20, chile-police class toggle) appear unfixed.

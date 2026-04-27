@@ -799,6 +799,39 @@
         ga('adin_post_water_reward', { coins: 10 });
       },
     },
+    // ICE BAILS ON MIKE (v0.18.56). Fires AFTER the BUSTED flash but
+    // BEFORE the jail dialogue, only when Ice was actively following
+    // Mike at the moment of arrest. Ice quickly distances himself
+    // ("uhhh, so yeah, I'll call you.") and onComplete drops the
+    // sidekick relationship — provides story justification for why
+    // Ice is gone when Mike walks out post-bail.
+    'ice-bails-on-mike': {
+      manualOnly: true,
+      panels: [
+        {
+          speaker: 'ICE POSEIDON',
+          bgPrefix: 'cutscene-', bgExt: '.png',
+          line: "uhhh, so yeah, I'll call you.",
+        },
+      ],
+      onComplete: function () {
+        // Drop Ice. Same shape as jailBailXena's drop so the post-
+        // jail world doesn't have stale Ice flags hanging around.
+        state.iceSidekickJoined = false;
+        state.iceTrailing = false;
+        if (state.cutscenesTriggered) {
+          delete state.cutscenesTriggered['ice-returns'];
+        }
+        // Now transition to the standard jail-cell phase (was on
+        // hold while this cutscene played).
+        state.jail.phase = 'cell';
+        state.jail.startedAt = performance.now();
+        showJailOverlay();
+        startLoop('jailed');
+        startLoop('policejail');
+        ga('ice_bailed_on_mike_in_jail', { at_distance: Math.floor(state.distance) });
+      },
+    },
     // BAIL-XENA cutscene (v0.18.52 phase C). Fires after the player
     // chose "BAIL XENA INSTEAD" in the jail dialogue and the screen
     // distortion + xena-bailed-out.mp3 sting played. Single panel,
@@ -1256,9 +1289,11 @@
         ov.classList.remove('is-jail-bg');
       }
       // Resume the mob-yelling ambient loop now that dialogue is over,
-      // unless the onComplete started the water phase (in which case
-      // mob ambient should stay off — water handles its own audio).
-      if (state.phase === 'playing' && state.water.phase === 'none') {
+      // unless the onComplete started the water phase OR Mike is
+      // mid-jail (water + jail handle their own audio routing).
+      if (state.phase === 'playing'
+          && state.water.phase === 'none'
+          && (!state.jail || state.jail.phase === 'none')) {
         startLoop('mob-angry');
       }
     } else {
@@ -1849,6 +1884,32 @@
     });
   }
 
+  // v0.18.56 — When Mike is stoned (weed debuff active), bonus cop
+  // car spawns. Reads as "police presence ramps up because he's
+  // visibly impaired." Picked in a non-avoidLane so the player
+  // always has at least one safe option to dodge into. Only fires
+  // while weed is active, scaled by the spawn-tick chance set at
+  // the call site.
+  function spawnExtraCopCar(avoidLane) {
+    var type = null;
+    for (var i = 0; i < OBSTACLE_TYPES.length; i++) {
+      if (OBSTACLE_TYPES[i].id === 'cop-car') { type = OBSTACLE_TYPES[i]; break; }
+    }
+    if (!type) return;
+    var size = scaledSize(type.frames[0], OBSTACLE_TARGET_HEIGHT_FRAC);
+    var lane = (avoidLane + 1 + Math.floor(Math.random() * (LANES - 1))) % LANES;
+    state.obstacles.push({
+      lane: lane,
+      y: viewH() + size.h,
+      type: type,
+      spawnedAt: performance.now(),
+      bobPhase: Math.random() * Math.PI * 2,
+      w: size.w,
+      h: size.h,
+      hit: false,
+    });
+  }
+
   // ============================================================
   // HURRICANE / WATER SEGMENT
   // ============================================================
@@ -2322,16 +2383,27 @@
   }
 
   // Tick called from update() / render() — handles the BUSTED → cell
-  // transition once the flash duration is up.
+  // transition once the flash duration is up. Optionally chains
+  // through the ice-bails-on-mike cutscene if Ice was tagging along
+  // when Mike got busted (v0.18.56).
   function tickJail(now) {
     if (state.jail.phase === 'busted') {
       if (now - state.jail.startedAt >= JAIL_BUSTED_FLASH_MS) {
-        state.jail.phase = 'cell';
-        state.jail.startedAt = now;
-        // Show the dialogue overlay + start jail loops.
-        showJailOverlay();
-        startLoop('jailed');
-        startLoop('policejail');
+        // If Ice was following Mike when the bust happened, fire the
+        // "uhhh, so yeah, I'll call you." cutscene first. Its onComplete
+        // drops Ice + transitions to the cell phase + starts jail loops.
+        // If Ice wasn't around, skip directly to the cell.
+        if (state.iceSidekickJoined) {
+          state.jail.phase = 'ice-leaving';
+          state.jail.startedAt = now;
+          startCutscene('ice-bails-on-mike');
+        } else {
+          state.jail.phase = 'cell';
+          state.jail.startedAt = now;
+          showJailOverlay();
+          startLoop('jailed');
+          startLoop('policejail');
+        }
       }
     }
   }
@@ -2402,6 +2474,17 @@
     state.coins = 0;
     // Drop to 1 life (no-op if already at 1, never increases lives).
     if (state.lives > 1) state.lives = 1;
+    // v0.18.56 — Ice wasn't in jail with Mike, so he can't follow him
+    // out. Drop the sidekick relationship entirely. Re-clear the
+    // ice-returns cutscene flag so the player can re-meet Ice via
+    // that beat once (or wait for it to re-trigger after distance
+    // crosses 3800m again). first-meet flag stays set since they've
+    // already met.
+    state.iceSidekickJoined = false;
+    state.iceTrailing = false;
+    if (state.cutscenesTriggered) {
+      delete state.cutscenesTriggered['ice-returns'];
+    }
     // Same resume mechanics as self-bail:
     state.copTouches = 0;
     state.distance = Math.max(0, state.distance - JAIL_RESUME_ROLLBACK_M);
@@ -2835,6 +2918,15 @@
       // ~25% at danger 2.5×.
       if (state.water.completed && Math.random() < (dangerMul - 1.0) * 0.16) {
         spawnExtraPhoneThief(obstLane);
+      }
+      // v0.18.56 — Mike is STONED → police presence ramps up. ~30%
+      // chance per spawn tick to drop a bonus cop car in a different
+      // lane while the weed debuff is active. Forces the player to
+      // make jump decisions more often during the slow-down. Cop
+      // cars are jump-only so this is a "press SPACE more" stress,
+      // not a hopeless wall.
+      if (nowMs < state.effects.weedDebuffUntil && Math.random() < 0.30) {
+        spawnExtraCopCar(obstLane);
       }
     }
 
