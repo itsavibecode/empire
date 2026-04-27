@@ -16,6 +16,17 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.18 — 2026-04-26
+
+Patch — pickup stacking + cut scene cadence + Ice cutscene chroma-key.
+
+- **Ham + weed (+ horse) durations now stack.** Previously, picking up a second ham (or weed, or horse) while the first was still active would *reset* the timer to a fresh duration — which felt wrong both narratively (eating two hams should reward you more than eating one) and mechanically (greedy weed-grabs felt like they were getting a discount). Now: if the effect is already running, the new pickup *extends* the existing window by the full duration. Visual feedback shows `HAM +` / `STONED +` instead of `HAM!` / `STONED` on stack so the player can tell. Ham specifically also skips the freeze + chipmunk-music re-trigger when stacking, so back-to-back hams flow smoothly instead of locking the screen twice.
+- **Cut scene distances pushed out further.** The first one (`first-meet`) was firing at 250 m, which felt jarring — barely past the title screen. Bumped to:
+  - **First Meet:** 250 → **600 m** (lets the player learn the controls + survive a few obstacles before being interrupted)
+  - **Mike Tells Off:** 1000 → **2000 m** (~1400 m of Ice-as-sidekick gameplay between meeting and falling-out)
+  - **Ice Returns:** 2000 → **3800 m** (~1800 m of solo running before the parasite reappears)
+- **Ice cutscene panels now chroma-key over the chile background** — same treatment Mike's panels got in v0.18.13. The original Ice art used a solid blue background that was too close in color to Ice's blue shirt to algorithmically separate (we tried and gave up in v0.18.12). New art was generated with a neon-green chroma-key background instead, which extracts cleanly. New `extract-ice-cutscene.py` script in `.github/scripts/` does a single-pass euclidean chroma-key (target rgb 7,223,33, tolerance 90, 30-px feather). The three keyed PNGs replace the old `cutscene-{closed,mid,open}.jpg` files. The `bg-chile-runner-01.png` chile street scene now shows through behind Ice's panels too — consistent treatment across all cutscenes.
+
 ### OBS /trending/ — 2026-04-26
 
 New page at `/obs/trending/` — a live cross-chat word cloud built as a separate browser source so it can be tested in isolation before deciding whether to roll into the main `/obs/` overlay rotation. Same KekwClips trick we proved out before, now wired up to multiple Kick chats simultaneously.

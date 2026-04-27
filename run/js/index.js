@@ -399,12 +399,14 @@
 
   var CUTSCENE_DEFS = {
     'first-meet': {
-      triggerDistanceM: 250,
+      // Bumped 250 → 600. Gives the player meaningful runtime to learn
+      // controls + survive a few obstacles before the dialogue interrupts.
+      triggerDistanceM: 600,
       requires: function () { return !state.iceSidekickJoined; },
       panels: [
         {
           speaker: 'ICE POSEIDON',
-          bgPrefix: 'cutscene-', bgExt: '.jpg',
+          bgPrefix: 'cutscene-', bgExt: '.png',
           line: "Mike Smalls? Aren't you the guy who always just wants to fuck?",
           choices: [
             '"What did you just say horse boy?"',
@@ -416,7 +418,9 @@
       onComplete: function () { state.iceSidekickJoined = true; },
     },
     'mike-tells-off': {
-      triggerDistanceM: 1000,
+      // Bumped 1000 → 2000. ~1400m of Ice-as-sidekick gameplay between
+      // the meeting and the falling-out, so the relationship arc breathes.
+      triggerDistanceM: 2000,
       requires: function () { return state.iceSidekickJoined; },
       panels: [
         {
@@ -428,12 +432,14 @@
       onComplete: function () { state.iceSidekickJoined = false; },
     },
     'ice-returns': {
-      triggerDistanceM: 2000,
+      // Bumped 2000 → 3800. ~1800m of solo running before Ice reappears,
+      // matching the "long stretch alone, then the parasite returns" beat.
+      triggerDistanceM: 3800,
       requires: function () { return !state.iceSidekickJoined; },
       panels: [
         {
           speaker: 'ICE POSEIDON',
-          bgPrefix: 'cutscene-', bgExt: '.jpg',
+          bgPrefix: 'cutscene-', bgExt: '.png',
           line: "Yo Mike, lemme grab that dick!",
         },
         {
@@ -972,28 +978,48 @@
     var now = performance.now();
     ga(kind + '_collected', { at_distance: Math.floor(state.distance) });
     if (kind === 'ham') {
-      state.effects.hamFreezeUntil = now + HAM_FREEZE_MS;
-      state.effects.hamBonusUntil = now + HAM_FREEZE_MS + HAM_BONUS_MS;
-      showPickupText('HAM!', '#FFD566', HAM_FREEZE_MS);
+      // STACKING: if a ham bonus is already running, EXTEND it by another
+      // HAM_BONUS_MS instead of resetting (and skip the freeze + chipmunk
+      // re-trigger so back-to-back hams feel rewarding instead of jarring).
+      var hamStacking = state.effects.hamBonusUntil > now;
+      if (hamStacking) {
+        state.effects.hamBonusUntil += HAM_BONUS_MS;
+      } else {
+        state.effects.hamFreezeUntil = now + HAM_FREEZE_MS;
+        state.effects.hamBonusUntil = now + HAM_FREEZE_MS + HAM_BONUS_MS;
+        // Music goes 4x chipmunk-speed during the bonus window
+        var mInst = currentMusicKey ? audioInstances[currentMusicKey] : null;
+        if (mInst) mInst.playbackRate = 4;
+      }
+      showPickupText(hamStacking ? 'HAM +' : 'HAM!', '#FFD566', HAM_FREEZE_MS);
       playSfx('ham-pickup');
-      // Music goes 4x chipmunk-speed during the bonus window
-      var mInst = currentMusicKey ? audioInstances[currentMusicKey] : null;
-      if (mInst) mInst.playbackRate = 4;
     } else if (kind === 'h400') {
       state.lives = Math.min(state.lives + 1, LIVES_MAX);
       // Red — matches the 400 sprite color and signals "life gained"
       showPickupText('+1 LIFE!', '#ff5a6b', 900);
       playSfx('ham-pickup'); // reuse the celebratory 1up jingle
     } else if (kind === 'weed') {
-      state.effects.weedDebuffUntil = now + WEED_DEBUFF_MS;
+      // STACKING: if already stoned, EXTEND the debuff window instead of
+      // resetting it, so the player feels punished for greedy weed grabs.
+      var weedStacking = state.effects.weedDebuffUntil > now;
+      if (weedStacking) {
+        state.effects.weedDebuffUntil += WEED_DEBUFF_MS;
+      } else {
+        state.effects.weedDebuffUntil = now + WEED_DEBUFF_MS;
+        // Music slows to 0.6x to amplify the debuff feel
+        var mInst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
+        if (mInst2) mInst2.playbackRate = 0.6;
+      }
       // Green — weed-themed; debuff vibe via shaky text
-      showPickupText('STONED', '#90EE90', 900);
-      // Music slows to 0.6x to amplify the debuff feel
-      var mInst2 = currentMusicKey ? audioInstances[currentMusicKey] : null;
-      if (mInst2) mInst2.playbackRate = 0.6;
+      showPickupText(weedStacking ? 'STONED +' : 'STONED', '#90EE90', 900);
       playSfx('damage');
     } else if (kind === 'horse') {
-      state.effects.horseBoostUntil = now + HORSE_BOOST_MS;
+      // STACKING: extend horse boost the same way ham/weed stack.
+      if (state.effects.horseBoostUntil > now) {
+        state.effects.horseBoostUntil += HORSE_BOOST_MS;
+      } else {
+        state.effects.horseBoostUntil = now + HORSE_BOOST_MS;
+      }
       showPickupText('GIDDY UP!', '#8B4513', 900);
       playSfx('ham-pickup'); // reuse celebratory jingle until horse-neigh.mp3 lands
     }
