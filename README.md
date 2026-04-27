@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.22 — 2026-04-26
+
+Patch — budgie position tuning per playtest.
+
+- **Cutscene bird is now panel-aware.** The two cutscene angles place Mike's shoulder at very different heights and the v0.18.20 single-position fix landed the bird on his stomach during the "Listen, you pissing me off" panel. New `applyCutsceneBirdAnchor(panel)` function runs on every panel transition and switches the bird's `left`/`top`/`width` based on `bgPrefix`:
+  - **Ice panels** (`cutscene-`) — Mike facing AWAY, only upper back/durag visible: `left: 18%, top: 38%, width: 9%` (unchanged from v0.18.20).
+  - **Mike panels** (`cutscene-mike-`) — Mike facing US, full upper body visible: `left: 24%, top: 22%, width: 11%` (much higher, slightly bigger).
+  Also clears any in-flight `transform` on panel change so a half-flown bird from one panel doesn't carry a stale offset into the next.
+- **Title-screen bird bumped much larger + raised.** Was `(x:14%, y:68%)` at 6% size which read as a tiny dot floating below Mike's torso. Now `(x:16%, y:50%)` at 11% size — sits near the chain/collar level at a scale that actually reads as a bird perched on a person's shoulder.
+
 ### Run v0.18.21 — 2026-04-26
 
 Patch — title-screen shoulder budgie. The same yellow-green parakeet now perches on Mike's shoulder on the title screen too, with the same 5-phase loop (perch → takeoff → fly → hover → return). Different render path though: the title is drawn to the canvas (not DOM) so the bird is rendered via `ctx.drawImage` inside `drawTitleScreen`, with position calculated in the same coordinate space as the title image (cover-fit aware — anchor + flight target are in *image* fractions, not canvas fractions, so they track Mike's shoulder regardless of viewport aspect).

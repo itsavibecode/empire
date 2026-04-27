@@ -623,6 +623,34 @@
     if (txtEl) txtEl.textContent = '';
     if (chEl) { chEl.classList.add('hidden'); chEl.innerHTML = ''; }
     if (bgEl) { bgEl.dataset.mouth = 'closed'; bgEl.src = 'img/' + panel.bgPrefix + 'closed' + panel.bgExt; }
+    // Re-anchor the shoulder bird per panel — the two cutscene angles
+    // place Mike's shoulder at very different heights:
+    //   - Ice panels  ('cutscene-')      Mike is on the LEFT facing AWAY,
+    //     only his upper-back/durag visible. Shoulder ~ 38% down.
+    //   - Mike panels ('cutscene-mike-') Mike is on the LEFT facing US,
+    //     full upper body visible. Shoulder ~ 22% down (much higher).
+    applyCutsceneBirdAnchor(panel);
+  }
+
+  function applyCutsceneBirdAnchor(panel) {
+    var el = document.getElementById('cutscene-bird');
+    if (!el) return;
+    // Reset transform so the new anchor isn't combined with an in-flight
+    // offset from a previous panel
+    el.classList.remove('flying');
+    el.style.transform = '';
+    var anchor;
+    if (panel.bgPrefix === 'cutscene-mike-') {
+      // Mike facing camera — shoulder higher in the frame, slightly
+      // larger bird since we see his actual shoulder broadside.
+      anchor = { left: '24%', top: '22%', width: '11%' };
+    } else {
+      // Ice panels (Mike from behind) — bird sits on his upper back.
+      anchor = { left: '18%', top: '38%', width: '9%' };
+    }
+    el.style.left  = anchor.left;
+    el.style.top   = anchor.top;
+    el.style.width = anchor.width;
   }
 
   function tickCutscene(now) {
@@ -1636,10 +1664,15 @@
   var TITLE_BIRD_FLIGHT_MS = 1800;
   var TITLE_BIRD_HOVER_MS = 600;
   var TITLE_BIRD_RETURN_MS = 1500;
-  // Image-relative anchor for Mike's shoulder on titlescreen.jpg
-  var TITLE_BIRD_BASE_X_FRAC = 0.14;
-  var TITLE_BIRD_BASE_Y_FRAC = 0.68;
-  var TITLE_BIRD_SIZE_FRAC = 0.06;  // bird height as fraction of image height
+  // Image-relative anchor for Mike's shoulder on titlescreen.jpg.
+  // Tuned per playtest feedback (v0.18.22):
+  //   - Y raised from 68% -> 50% so the bird sits near the chain/collar
+  //     instead of floating below the visible torso.
+  //   - Size bumped from 6% -> 11% so the bird actually reads at the
+  //     scale it should next to a person (was tiny + easy to miss).
+  var TITLE_BIRD_BASE_X_FRAC = 0.16;
+  var TITLE_BIRD_BASE_Y_FRAC = 0.50;
+  var TITLE_BIRD_SIZE_FRAC = 0.11;  // bird height as fraction of image height
   // Flight-target offsets, in fractions of the image height (so the
   // path scales with the rendered title image, not the canvas).
   var TITLE_BIRD_FLY_DX_FRAC = 0.30;   // fly to the right
