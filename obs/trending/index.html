@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.3">
+<meta name="version" content="0.1.4">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -219,6 +219,65 @@
   .lb-row.top2 .word { color: var(--gold); }
   .lb-row.top3 .word { color: var(--ink); }
 
+  /* Per-word hover tooltip — appears to the LEFT of the leaderboard
+     row showing which streamer chat the word was last said in, plus
+     a per-source breakdown of mention counts. */
+  .lb-row {
+    position: relative;
+    cursor: help;
+  }
+  .lb-row .word-tooltip {
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 240px;
+    padding: 12px 14px;
+    background: rgba(20, 16, 12, 0.97);
+    border: 1px solid var(--gold-dark);
+    border-radius: 6px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12px;
+    letter-spacing: .02em;
+    text-transform: none;
+    color: var(--ink);
+    text-align: left;
+    line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    z-index: 50;
+  }
+  .lb-row:hover .word-tooltip { opacity: 1; }
+  .lb-row .word-tooltip .wt-label {
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .lb-row .word-tooltip .wt-last {
+    color: var(--gold-hot);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .lb-row .word-tooltip .wt-bd-row {
+    display: flex; justify-content: space-between;
+    padding: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .lb-row .word-tooltip .wt-bd-row .name { color: var(--ink); }
+  .lb-row .word-tooltip .wt-bd-row .cnt { color: var(--gold); }
+  .lb-row .word-tooltip .wt-none {
+    color: var(--ink-dim);
+    font-style: italic;
+    font-size: 11px;
+  }
+
   /* LIVE SOURCES — small panel above the leaderboard listing every
      streamer chat we're currently subscribed to. Lets the operator see
      at a glance whose words are feeding the cloud right now. */
@@ -235,6 +294,16 @@
     margin-bottom: 8px;
     text-align: center;
     opacity: .85;
+  }
+  .sources h2 .sources-cadence {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .15em;
+    color: var(--ink-dim);
+    text-transform: none;
+    margin-top: 2px;
+    opacity: .8;
   }
   .sources-list {
     display: flex; flex-direction: column; gap: 4px;
@@ -464,7 +533,7 @@
 
     <aside class="leaderboard">
       <div class="sources">
-        <h2>Live Sources</h2>
+        <h2>Live Sources <span class="sources-cadence" id="sourcesCadence"></span></h2>
         <div class="sources-list" id="sourcesList">
           <div class="sources-empty">No streamers live</div>
         </div>
@@ -516,7 +585,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.3';
+const TRENDING_VERSION = '0.1.4';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
@@ -679,12 +748,12 @@ function tokenize(text) {
 class WordWindow {
   constructor(windowSec) {
     this.windowMs = windowSec * 1000;
-    this.entries = new Map(); // word -> Array<{ts, uid}>
+    this.entries = new Map(); // word -> Array<{ts, uid, src}>
   }
-  add(word, userId, ts) {
+  add(word, userId, ts, src) {
     let arr = this.entries.get(word);
     if (!arr) { arr = []; this.entries.set(word, arr); }
-    arr.push({ ts, uid: userId });
+    arr.push({ ts, uid: userId, src });
   }
   prune(now) {
     const cutoff = now - this.windowMs;
@@ -696,15 +765,27 @@ class WordWindow {
       if (arr.length === 0) this.entries.delete(word);
     }
   }
-  // Returns sorted [{word, count, uniqueUsers, score}, ...]
+  // Returns sorted [{word, count, uniqueUsers, score, lastSrc, srcCounts}, ...]
+  // - lastSrc: slug of the streamer chat where this word was MOST RECENTLY said
+  // - srcCounts: { slug -> count } breakdown for the hover tooltip
   topN(n, minScore) {
     const out = [];
     for (const [word, arr] of this.entries) {
       const count = arr.length;
-      const users = new Set(arr.map(e => e.uid));
+      const users = new Set();
+      const srcCounts = {};
+      let lastSrc = null;
+      let lastTs = -1;
+      for (const e of arr) {
+        users.add(e.uid);
+        if (e.src) {
+          srcCounts[e.src] = (srcCounts[e.src] || 0) + 1;
+          if (e.ts > lastTs) { lastTs = e.ts; lastSrc = e.src; }
+        }
+      }
       const score = users.size * Math.log(count + 1);
       if (score < minScore) continue;
-      out.push({ word, count, uniqueUsers: users.size, score });
+      out.push({ word, count, uniqueUsers: users.size, score, lastSrc, srcCounts });
     }
     out.sort((a, b) => b.score - a.score);
     return out.slice(0, n);
@@ -745,14 +826,14 @@ function noteEventName(name, rawMsg) {
   console.log('[trending] new event type:', name, rawMsg);
 }
 
-function processMessage(content, userId) {
+function processMessage(content, userId, srcSlug) {
   if (!content || !userId) return;
   const ts = Date.now();
   const words = tokenize(content);
   if (words.length === 0) return;
   for (const w of words) {
     for (const winSec of Object.keys(windows)) {
-      windows[winSec].add(w, userId, ts);
+      windows[winSec].add(w, userId, ts, srcSlug);
     }
   }
   stats.totalMessages++;
@@ -843,8 +924,11 @@ class PusherClient {
       const content = payload.content || payload.message || payload.body;
       const sender = payload.sender || payload.user;
       const userId = sender && (sender.id || sender.slug || sender.username);
+      // Reverse-lookup the slug from the channel name so we can attribute
+      // each word to a streamer chat. Channel format is `chatrooms.{id}.v2`.
+      const srcSlug = channel ? channelToSlug[channel] : null;
       stats.chatEventsMatched++;
-      processMessage(content, userId);
+      processMessage(content, userId, srcSlug);
     }
   }
   _send(obj) {
@@ -918,6 +1002,10 @@ let roster = []; // [{slug}]
 const slugToDisplay = {};
 const subscribedSlugs = new Set();
 const slugToChatroom = {};
+// Reverse lookup: full Pusher channel name -> slug. Maintained
+// alongside slugToChatroom so each incoming chat event can be
+// attributed back to a streamer ("which chat said this word last").
+const channelToSlug = {};
 
 async function fetchLiveStatus(slug) {
   for (const build of CONFIG.PROXIES) {
@@ -948,8 +1036,15 @@ async function fetchLiveStatus(slug) {
   return { isLive: false, chatroomId: chatroomCache[slug] || null };
 }
 
+// Track when the most recent live-status sweep ran, so the UI can
+// surface "next check in Xs" / "checked Ns ago" without guessing.
+let lastRosterPollAt = 0;
+let nextRosterPollAt = 0;
+
 async function pollRosterAndSubscribe() {
   if (roster.length === 0) return;
+  lastRosterPollAt = Date.now();
+  nextRosterPollAt = lastRosterPollAt + CONFIG.ROSTER_POLL_MS;
   // Fetch live status for everyone in parallel (with concurrency cap)
   const results = await Promise.all(roster.map(slug => fetchLiveStatus(slug).then(r => ({ slug, ...r }))));
   for (const r of results) {
@@ -958,6 +1053,7 @@ async function pollRosterAndSubscribe() {
       if (!subscribedSlugs.has(r.slug)) {
         subscribedSlugs.add(r.slug);
         slugToChatroom[r.slug] = r.chatroomId;
+        channelToSlug[channel] = r.slug;
         pusher.subscribe(channel);
       }
     } else if (subscribedSlugs.has(r.slug)) {
@@ -965,6 +1061,7 @@ async function pollRosterAndSubscribe() {
       const channel = `chatrooms.${slugToChatroom[r.slug]}.v2`;
       pusher.unsubscribe(channel);
       subscribedSlugs.delete(r.slug);
+      delete channelToSlug[channel];
     }
   }
   updateConnStatus();
@@ -1073,13 +1170,32 @@ function renderLeaderboard(top12) {
     lbList.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;text-align:center;padding:20px;line-height:1.5;">${escapeHtml(reason)}</div>`;
     return;
   }
-  lbList.innerHTML = top12.map((t, i) => `
-    <div class="lb-row${i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : ''}">
+  lbList.innerHTML = top12.map((t, i) => {
+    const cls = i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '';
+    // Build per-source breakdown sorted desc by count for the tooltip
+    const breakdown = Object.entries(t.srcCounts || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6); // cap at 6 sources to keep tooltip compact
+    const lastDisp = t.lastSrc ? (slugToDisplay[t.lastSrc] || t.lastSrc) : null;
+    const tooltipHtml = lastDisp ? `
+      <div class="word-tooltip">
+        <div class="wt-label">Last said in</div>
+        <div class="wt-last">${escapeHtml(lastDisp)}</div>
+        <div class="wt-label">By chat</div>
+        ${breakdown.length === 0
+          ? '<div class="wt-none">no source data</div>'
+          : breakdown.map(([slug, cnt]) =>
+              `<div class="wt-bd-row"><span class="name">${escapeHtml(slugToDisplay[slug] || slug)}</span><span class="cnt">${cnt}x</span></div>`
+            ).join('')}
+      </div>` : '';
+    return `
+    <div class="lb-row${cls}">
       <span class="rank">${i + 1}.</span>
       <span class="word">${escapeHtml(t.word)}</span>
       <span class="meta">${t.uniqueUsers}u · ${t.count}x</span>
-    </div>
-  `).join('');
+      ${tooltipHtml}
+    </div>`;
+  }).join('');
 }
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
@@ -1090,7 +1206,14 @@ function updateConnStatus() {
   if (!el) return;
   const live = subscribedSlugs.size;
   const confirmed = stats.channelsConnected.size;
-  el.innerHTML = `<span class="live-dot"></span>${live} live · ${confirmed} chat${confirmed === 1 ? '' : 's'} connected`;
+  // "next live-check in Xs" so the operator knows when the page will
+  // next re-poll Kick to see who came online or dropped off.
+  let pollHint = '';
+  if (nextRosterPollAt) {
+    const remSec = Math.max(0, Math.ceil((nextRosterPollAt - Date.now()) / 1000));
+    pollHint = ` · next check ${remSec}s`;
+  }
+  el.innerHTML = `<span class="live-dot"></span>${live} live · ${confirmed} chat${confirmed === 1 ? '' : 's'} connected${pollHint}`;
 }
 
 function updateMsgStats() {
@@ -1114,6 +1237,19 @@ function updateMsgStats() {
 // slugToDisplay, with the kick-green dot indicating live status.
 function renderSources() {
   const el = document.getElementById('sourcesList');
+  // Also update the cadence indicator under the heading so the operator
+  // sees how often we're re-checking who's live.
+  const cad = document.getElementById('sourcesCadence');
+  if (cad) {
+    const everySec = Math.round(CONFIG.ROSTER_POLL_MS / 1000);
+    let line = `re-checks every ${everySec}s`;
+    if (lastRosterPollAt) {
+      const ago = Math.max(0, Math.round((Date.now() - lastRosterPollAt) / 1000));
+      const next = Math.max(0, Math.round((nextRosterPollAt - Date.now()) / 1000));
+      line = `checked ${ago}s ago · next in ${next}s`;
+    }
+    cad.textContent = line;
+  }
   if (!el) return;
   const slugs = Array.from(subscribedSlugs).sort((a, b) => {
     const da = (slugToDisplay[a] || a).toLowerCase();

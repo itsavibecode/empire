@@ -17,6 +17,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.4 — 2026-04-26
+
+Patch — per-word source attribution + visible live-poll cadence.
+
+- **Hover any word in TOP 12 → tooltip pops to its left** showing two things: (1) which streamer's chat the word was MOST RECENTLY said in, and (2) a per-source breakdown of mention counts across all currently-live chats (top 6 sources, sorted desc by count). `WordWindow` now stores `{ts, uid, src}` triples per occurrence instead of just `{ts, uid}`, and `topN()` computes `lastSrc` + `srcCounts` for each top word. Channel name (e.g. `chatrooms.123456.v2`) is reverse-mapped back to a slug via a new `channelToSlug` map maintained alongside `slugToChatroom` in the subscribe/unsubscribe path.
+- **Live-status poll cadence surfaced in the UI.** Two places now show how often the page re-checks Kick to discover who's live: (1) the bottom-left footer status now reads `N live · M chats connected · next check Xs`, and (2) under the LIVE SOURCES heading on the right sidebar a small line says `checked Ns ago · next in Ms`. The cadence itself (`ROSTER_POLL_MS = 90s`) is unchanged, just made visible. Helps the operator know when a streamer who just came online will appear in the source list (worst case ~90s after they go live, plus however long Kick's `livestream` API takes to flip).
+
 ### Trending v0.1.3 — 2026-04-26
 
 Patch — hover tooltip on the bottom-right pipeline metrics. The footer line `N events · M chat · K msgs · L unique users` is the most diagnostic info on the page (it tells you exactly which stage of the chat-ingestion pipeline is healthy or stuck), but the labels are terse. Hovering the line now pops a styled tooltip with a definition for each metric + a footnote explaining how to read them as a "if the stat to the right stops climbing, that's where the break is" cascade. A small `?` icon appears next to the line so the affordance is discoverable. Cursor flips to `cursor: help` on hover.
