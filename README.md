@@ -17,6 +17,32 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.51 — 2026-04-27
+
+Visual + UX polish pass — eleven fixes from a single playthrough review session.
+
+**1. Cop cars no longer guillotined.** `bottomCropFrac=0.12` was added back when cop-car sprites had a baked-in iso ground-shadow; the chroma-keyed sprites are clean now and the 12% crop was eating the front bumper curve, the rear wheel arch, and the wheels themselves — visually reading as "no front, no rear." Removed entirely. Same fix on the pedestrian obstacles where `bottomCropFrac=0.06` was slicing shoes; sprites are clean, no crop needed.
+
+**2. "Scrammed" → "scammed" typo** in the post-water Adin Ross panel.
+
+**3. Headless cops removed from the rotation.** Source sheet's frames 06 + 11-15 captured 1.5 sprites each (grid-misalignment), producing torsos with no heads or sliced bodies. Trimmed `COP_OFFICER_VARIANTS` to use the intact frames only. The faintly-ghosted 07-10 stay in pool — heads + bodies are intact, just minor outline shadow below.
+
+**4. Flipped phone-thief sprites re-extracted clean.** Frames 9-12 (the `walk-reaching-flipped` obstacle) had visible white square backgrounds because the original corner-seeded flood-fill never started — sprite touched all four corners. Switched to edge-seeded flood-fill with multi-target bg matching (light-grey checkerboard + pure white speckle pockets). Connectivity-aware so the woman's white polka-dot skirt on row 2 stays intact.
+
+**5. Pause now freezes ALL animations.** Previously gameplay paused but sprite walk-cycles kept ticking in place, which read as "everything's frozen except the goofy walking pedestrians." Two-part fix: render() now receives a frozen `now` value while paused (so `(now - spawnedAt)` math doesn't advance frame indices), and `shiftEffectTimers` was extended to shift every collection's `spawnedAt` (obstacles, pickups, fauna, chase officers, Shoovy boat, cutscene typewriter) forward on resume so animations continue mid-cycle instead of jumping.
+
+**6. Rain visible OVER the Shoovy cutscene.** The cutscene panel is a DOM overlay covering the canvas; the canvas-rendered rain was hidden behind it. Added a CSS-animated rain layer (`.overlay-cutscene.is-stormy::after`) — two stacked diagonal repeating-linear-gradients scrolling diagonally to simulate streaks, with a slight blue-grey storm tint matching the canvas-side `rgba(28,50,70,0.18)`. Pointer-events:none so dialogue buttons still work. Toggled on for `shoovy-meeting`, off elsewhere.
+
+**7. NPC runners actually run past Mike.** They were already scrolling with the world but at world-speed exactly, which read as "stationary cardboard cutout sliding with the ground." Added a +25% per-tick speed bump for any obstacle whose type id is `npc-runner` so they look like they're sprinting past.
+
+**8. Animals occasionally cross the road.** ~12% of fauna spawns now pick "crossing" — they enter from off-screen left or right with a horizontal vx (260–380 px/sec) and slide across the canvas while still scrolling up at world speed. Sidewalk loiterers (the other 88%) are unchanged. Still no collision — fauna remain pure ambient.
+
+**9. Pause-panel "Pickups & Friends" Ice Poseidon icon is now head-only pixel art.** New `ice-head.png` extracted via component-isolation from `ice-15.png` (find the topmost 30% of the character bbox, run connected-components in that band, keep the largest blob — discards the selfie-stick top which sits separately at head height). The full-body sprite was reading as a tiny indistinct figure at icon size; head-only reads instantly.
+
+**10. NEW-record celebration tied to the leaderboard.** New big "NEW RECORD!" overlay fires once per run when `state.distance` crosses the leaderboard's current #1 score. Cached at run start via `RunnerLeaderboard.fetchTop(1)`. Gold-glow headline, subline showing the new distance + previous best, confetti sparkles flickering around it, scale-in/hold-with-pulse/fade-out envelope (3.2s total), 10-chirp coin SFX fanfare. **Skipped if the leaderboard hasn't loaded (network error, null cache) OR if it's empty (top===0)** — per design, an empty board means there's no record to break yet. Also skipped in `?god=1` dev runs so dev playtests don't fanfare on every dev jump.
+
+**11. Pause-resume animation continuity.** All `spawnedAt` shifts in `shiftEffectTimers` now also cover `state.coinRewardFlash` and the new `state.newRecordFlash` so pausing mid-celebration doesn't expire the overlay on resume.
+
 ### Run v0.18.50 — 2026-04-27
 
 Three connected changes — turning the storm into a one-time event and making the city after it noticeably nastier.

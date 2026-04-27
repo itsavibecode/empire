@@ -58,13 +58,17 @@
   // facing directions — avoids the "army of clones" look when 4
   // officers all spawn at once. Each spawned chase officer randomly
   // picks one entry from this pool and stays on it for its lifetime.
+  // Curated list — frames 06 + 11-15 of the source sheet have head-cropped
+  // or sliced cop bodies (extraction artifact: cells captured 1.5 sprites
+  // each from a misaligned grid). Excluded entirely until that sheet gets
+  // re-extracted. 07-10 still have a faint ghost-outline shadow below
+  // the cop but the head + body are intact, so they stay in the pool.
   var COP_OFFICER_VARIANTS = [
-    ['cop-officer-06', 'cop-officer-07'],   // row 2 char A — profile walk
-    ['cop-officer-08', 'cop-officer-09'],   // row 2 char B — profile walk
+    ['cop-officer-07', 'cop-officer-08'],   // row 2 char A — profile walk
+    ['cop-officer-09', 'cop-officer-10'],   // row 2 char B — profile walk
     ['cop-officer-02', 'cop-officer-04'],   // row 1 — different chars/poses
     ['cop-officer-01', 'cop-officer-05'],   // row 1 — narrower frames (front?)
-    ['cop-officer-11', 'cop-officer-13'],   // row 3 — smaller body (chibi)
-    ['cop-officer-12', 'cop-officer-15'],   // row 3 — more chibi variety
+    ['cop-officer-03', 'cop-officer-04'],   // row 1 — extra alt
   ];
 
   // HURRICANE / WATER SEGMENT — periodically the road ENDS at a cliff
@@ -233,16 +237,17 @@
   // art. Same trick the Ice side-kick uses (srcCropFrac there).
   // Default is 0 (no crop); per-type overrides applied below.
   var OBSTACLE_TYPES = [
-    // Walking pedestrians — small drop-shadow on each frame, crop
-    // ~6% off the bottom so the shadow disappears.
-    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
-    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
+    // Walking pedestrians — sprites are clean (no ground shadow), so
+    // bottomCropFrac was lowered from 0.06 to 0 in v0.18.51 (the crop
+    // was slicing the shoes off).
+    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
+    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22 },
     // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
-    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
+    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true },
     // PHONE THIEF (flipped) — same mechanic, mirrored sprite reaching
     // from the OPPOSITE side. Spawn pool now has phone-snatchers
     // attacking from BOTH directions.
-    { id: 'walk-reaching-flipped', frames: ['npc-pedestrian-flipped-09','npc-pedestrian-flipped-10','npc-pedestrian-flipped-11','npc-pedestrian-flipped-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
+    { id: 'walk-reaching-flipped', frames: ['npc-pedestrian-flipped-09','npc-pedestrian-flipped-10','npc-pedestrian-flipped-11','npc-pedestrian-flipped-12'], frameMs: 130, bobPx: 14, phoneThief: true },
     // RUNNING NPCs — proper 6-frame forward-facing run cycles. These
     // replaced the earlier static-protester + static-chibi entries
     // which were single-frame poses that needed bobPx fakery to look
@@ -260,9 +265,11 @@
     { id: 'npc-runner', frames: _seqDash('npc-runner-16-', 6),  frameMs: 110, bobPx: 0 },
     { id: 'npc-runner', frames: _seqDash('npc-runner-25-', 6),  frameMs: 110, bobPx: 0 },
     // COP CAR — jump-only. Animates through 4 light-bar variants at
-    // 180ms for R-B-R-B flashing. bottomCropFrac 0.12 trims the
-    // residual ground-shadow + motion-blur baked into the iso source.
-    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-03','cop-car-04'], frameMs: 180, bobPx: 0, jumpOnly: true, bottomCropFrac: 0.12 },
+    // 180ms for R-B-R-B flashing. Previously had bottomCropFrac 0.12
+    // to hide an iso ground-shadow, but the chroma-keyed sprites are
+    // clean — that 12% crop was eating the front/rear bumper curves
+    // and the wheels, leaving the car looking horizontally guillotined.
+    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-03','cop-car-04'], frameMs: 180, bobPx: 0, jumpOnly: true },
   ];
   // Preload every sprite referenced by any obstacle type
   OBSTACLE_TYPES.forEach(function (t) {
@@ -717,7 +724,7 @@
         {
           speaker: 'ADIN ROSS',
           bgPrefix: 'cutscene-adin-', bgExt: '.png',
-          line: "Hahah get scrammed! Okay fine here is 10 Cx coins.",
+          line: "Hahah get scammed! Okay fine here is 10 Cx coins.",
         },
       ],
       onComplete: function () {
@@ -923,6 +930,15 @@
     // feels the storm continue even with the dialogue overlay up.
     if (defId === 'shoovy-meeting') {
       scheduleCutsceneLightning([700, 2300, 3900]);
+      // Storm rain overlay — adds an animated CSS rain layer ABOVE
+      // the cutscene panel so the storm visually continues during
+      // dialogue (the canvas-side rain is hidden behind the panel).
+      if (ov) ov.classList.add('is-stormy');
+    } else {
+      // Defensive: if a previous cutscene left is-stormy on (it
+      // shouldn't but the class-add is idempotent), strip it on any
+      // non-Shoovy cutscene.
+      if (ov) ov.classList.remove('is-stormy');
     }
     transitionToPanel(0);
   }
@@ -1140,7 +1156,12 @@
       cutscene.active = false;
       cutscene.defId = null;
       var ov = document.getElementById('overlay-cutscene');
-      if (ov) ov.classList.add('hidden');
+      if (ov) {
+        ov.classList.add('hidden');
+        // Always strip is-stormy on cutscene end so the next non-Shoovy
+        // panel doesn't inherit the rain overlay.
+        ov.classList.remove('is-stormy');
+      }
       // Resume the mob-yelling ambient loop now that dialogue is over,
       // unless the onComplete started the water phase (in which case
       // mob ambient should stay off — water handles its own audio).
@@ -1269,6 +1290,38 @@
     if (state.coinRewardFlash && state.coinRewardFlash.startedAt > 0) {
       state.coinRewardFlash.startedAt += delta;
     }
+    // New-record celebration overlay (v0.18.51)
+    if (state.newRecordFlash && state.newRecordFlash.startedAt > 0) {
+      state.newRecordFlash.startedAt += delta;
+    }
+    // ============================================================
+    // v0.18.51: shift every sprite-animation spawnedAt forward too,
+    // so the (now - spawnedAt) frame-picker doesn't jump on resume.
+    // Without these, pausing froze gameplay but sprites kept playing
+    // their walk cycles in place — visually weird and broke "pause
+    // means everything pauses" intuition.
+    // ============================================================
+    function shiftSpawnedAt(arr) {
+      if (!arr) return;
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i] && arr[i].spawnedAt > 0) arr[i].spawnedAt += delta;
+      }
+    }
+    shiftSpawnedAt(state.obstacles);
+    shiftSpawnedAt(state.pickups);
+    shiftSpawnedAt(state.fauna);
+    shiftSpawnedAt(state.chaseOfficers);
+    shiftSpawnedAt(state.coinsArr);
+    // Shoovy boat (single object, not an array)
+    if (state.water && state.water.shoovyBoat && state.water.shoovyBoat.spawnedAt > 0) {
+      state.water.shoovyBoat.spawnedAt += delta;
+    }
+    // Cutscene typewriter — without this, pausing during the intro
+    // text would let the unpaused-elapsed math advance past the
+    // typewriter's end on resume, jump-printing the rest of the line.
+    if (typeof cutscene !== 'undefined' && cutscene.active && cutscene.startedAt > 0) {
+      cutscene.startedAt += delta;
+    }
   }
 
   // ============================================================
@@ -1363,6 +1416,12 @@
     // Coin-reward flash overlay — fires on big coin grants like the
     // post-water Adin gift. {amount, startedAt, durationMs} or null.
     coinRewardFlash: null,
+    // New-record celebration overlay (v0.18.51) — fires once per run
+    // when state.distance crosses leaderboardTopScore. Skipped if the
+    // leaderboard is empty (top===0) or hasn't loaded yet (null).
+    leaderboardTopScore: null,
+    newRecordTriggered: false,
+    newRecordFlash: null,
   };
 
   // ============================================================
@@ -1933,13 +1992,26 @@
     // creatures don't render half-clipped at the viewport edge.
     var sidewalkW = w * 0.07;
     var inset = Math.min(sidewalkW * 0.2, size.w * 0.3);
-    var side = Math.random() < 0.5 ? 'L' : 'R';
-    var x;
-    if (side === 'L') {
-      // x is the LEFT edge of the sprite within left sidewalk
-      x = inset + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+    // v0.18.51: occasionally one will scurry ACROSS the road instead
+    // of trundling up a sidewalk. Pure ambient — fauna are still
+    // harmless, no collision check anywhere. ~12% of spawns cross.
+    var crossing = Math.random() < 0.12;
+    var x, vx;
+    if (crossing) {
+      // Pick a side to enter from; vx points toward the other side.
+      // Speed is fast-ish so it doesn't loiter mid-road for ages.
+      var fromLeft = Math.random() < 0.5;
+      x = fromLeft ? -size.w - 8 : w + 8;
+      vx = (fromLeft ? 1 : -1) * (260 + Math.random() * 120);  // px/sec
     } else {
-      x = (w - sidewalkW) + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+      var side = Math.random() < 0.5 ? 'L' : 'R';
+      if (side === 'L') {
+        // x is the LEFT edge of the sprite within left sidewalk
+        x = inset + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+      } else {
+        x = (w - sidewalkW) + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+      }
+      vx = 0;
     }
     state.fauna.push({
       x: x,
@@ -1950,6 +2022,8 @@
       bobPhase: Math.random() * Math.PI * 2,
       bobAmp: t.bobAmp,
       spawnedAt: performance.now(),
+      vx: vx,                  // 0 = sidewalk loiterer, !=0 = cross-road dasher
+      crossing: crossing,
     });
   }
 
@@ -2070,6 +2144,30 @@
     for (var i = 0; i < 5; i++) {
       setTimeout(function () { playSfx('coin-pickup'); }, i * 80);
     }
+  }
+
+  // v0.18.51: NEW-RECORD CELEBRATION. Fires once per run when
+  // state.distance crosses the leaderboard's current #1 score (cached
+  // at run start in startRun). Skipped if the leaderboard hadn't
+  // loaded (null) or was empty (0). Big "NEW RECORD!" overlay scales
+  // in, holds, fades out — same envelope as triggerCoinRewardFlash.
+  function triggerNewRecordFlash() {
+    state.newRecordTriggered = true;
+    state.newRecordFlash = {
+      startedAt: performance.now(),
+      durationMs: 3200,
+    };
+    // Triumphant audio: play the coin-pickup SFX a bunch in a fanfare
+    // burst. We don't have a dedicated cheer/fanfare SFX yet, so reuse
+    // what's loaded — sounds like a coin shower hit which reads as a
+    // celebratory cue regardless.
+    for (var i = 0; i < 10; i++) {
+      setTimeout(function () { playSfx('coin-pickup'); }, i * 60);
+    }
+    ga('new_record_celebrated', {
+      at_distance: Math.floor(state.distance),
+      previous_top: state.leaderboardTopScore,
+    });
   }
 
   function showPickupText(label, color, durationMs) {
@@ -2216,6 +2314,19 @@
     state.distance += pxThisFrame * 0.1; // 0.1 = px-to-meters fudge
     state.distancePx += pxThisFrame;     // raw px counter for procedural BG
     state.elapsedMs += dt * 1000;        // wall-clock playing time (excludes paused)
+    // NEW-RECORD CELEBRATION trigger. Fires the first frame distance
+    // crosses the cached leaderboard top. Guarded on:
+    //  - cache loaded (null = still fetching)
+    //  - cache > 0 (skip empty leaderboard per design)
+    //  - not already triggered this run
+    //  - not in god mode (dev runs shouldn't fanfare)
+    if (!state.newRecordTriggered
+        && !state.godMode
+        && state.leaderboardTopScore != null
+        && state.leaderboardTopScore > 0
+        && state.distance > state.leaderboardTopScore) {
+      triggerNewRecordFlash();
+    }
 
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
@@ -2253,7 +2364,14 @@
     // Move obstacles + coins + pickups UP toward Mike.
     var i;
     for (i = 0; i < state.obstacles.length; i++) {
-      state.obstacles[i].y -= effSpeed * dt;
+      var obs = state.obstacles[i];
+      // NPC runners get an EXTRA scroll bump on top of the world
+      // speed so they read as "running past Mike" instead of just
+      // sliding with the ground. Without this they tracked the
+      // background tile exactly = looked like a stationary cardboard
+      // cutout. ~25% extra speed reads as a clear sprint.
+      var extra = (obs.type && obs.type.id === 'npc-runner') ? effSpeed * 0.25 : 0;
+      obs.y -= (effSpeed + extra) * dt;
     }
     for (i = 0; i < state.coinsArr.length; i++) {
       state.coinsArr[i].y -= effSpeed * dt;
@@ -2355,12 +2473,24 @@
         + Math.random() * (FAUNA_SPAWN_MAX_MS - FAUNA_SPAWN_MIN_MS);
       spawnFauna();
     }
-    // Move + cull fauna (scroll up with effSpeed, like obstacles)
+    // Move + cull fauna. Sidewalk loiterers scroll up with effSpeed
+    // like obstacles; cross-road dashers also slide horizontally via
+    // their per-fauna vx (set in spawnFauna for the ~12% of spawns
+    // that pick "crossing"). They despawn when they slide past the
+    // viewport horizontally OR scroll off the top.
+    var viewWForCull = viewW();
     for (i = 0; i < state.fauna.length; i++) {
       state.fauna[i].y -= effSpeed * dt;
+      if (state.fauna[i].vx) state.fauna[i].x += state.fauna[i].vx * dt;
     }
     state.fauna = state.fauna.filter(function (f) {
-      return f.y > -f.h - 40;
+      if (f.y <= -f.h - 40) return false;
+      // Crossers: cull once fully off the side they were headed to.
+      if (f.crossing) {
+        if (f.vx > 0 && f.x > viewWForCull + 20) return false;
+        if (f.vx < 0 && f.x < -f.w - 20) return false;
+      }
+      return true;
     });
 
     // Stoned-chase officers — scroll up at slightly LESS than world
@@ -2934,6 +3064,79 @@
         ctx.shadowOffsetY = 4;
         ctx.shadowBlur = 0;
         ctx.fillText('+' + crf.amount + ' Cx', 14, 0);
+        ctx.restore();
+      }
+    }
+
+    // NEW-RECORD CELEBRATION (v0.18.51) — drawn on top of everything.
+    // Big "NEW RECORD!" text with a sub-line showing the distance,
+    // gold/orange gradient + soft pulsing glow + confetti sparkles.
+    // Same scale-in/hold/fade-out envelope as the coin-reward flash.
+    if (state.newRecordFlash) {
+      var nrf = state.newRecordFlash;
+      var nrElapsed = now - nrf.startedAt;
+      if (nrElapsed >= nrf.durationMs) {
+        state.newRecordFlash = null;
+      } else {
+        var nrt = nrElapsed / nrf.durationMs;
+        var nrScale, nrAlpha;
+        if (nrt < 0.20) {
+          var nrk = nrt / 0.20;
+          nrScale = 0.4 + 0.8 * nrk;       // 0.4 → 1.2 quick punch in
+          nrAlpha = nrk;
+        } else if (nrt < 0.75) {
+          // Hold + slight rhythmic pulse
+          var holdK = (nrt - 0.20) / 0.55;
+          nrScale = 1.2 - holdK * 0.2 + Math.sin(nrElapsed / 110) * 0.04;
+          nrAlpha = 1;
+        } else {
+          var nrk2 = (nrt - 0.75) / 0.25;
+          nrScale = 1.0;
+          nrAlpha = 1 - nrk2;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, nrAlpha));
+        // Confetti sparkles — quick fixed pattern of dots flickering
+        // around the headline. Drawn before the text so text reads on top.
+        var confettiCount = 22;
+        for (var ci = 0; ci < confettiCount; ci++) {
+          // Stable per-i pseudo-random so confetti positions don't twitch
+          var seed = ci * 9301 + 49297;
+          var rx = ((seed % 1000) / 1000) * w;
+          var ry = (((seed * 7) % 1000) / 1000) * h;
+          var rphase = ((ci * 173) % 360) * Math.PI / 180;
+          var sparkA = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(nrElapsed / 120 + rphase));
+          ctx.globalAlpha = nrAlpha * sparkA;
+          var hue = (ci * 47) % 360;
+          ctx.fillStyle = 'hsl(' + hue + ', 90%, 65%)';
+          var sparkR = 4 + (ci % 5);
+          ctx.fillRect(rx - sparkR / 2, ry - sparkR / 2, sparkR, sparkR);
+        }
+        ctx.globalAlpha = nrAlpha;
+        // Headline + subline — centered, scaled
+        ctx.translate(w / 2, h / 2);
+        ctx.scale(nrScale, nrScale);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Soft gold glow halo behind the text
+        ctx.shadowColor = 'rgba(255, 200, 50, 0.85)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = '#FFE176';
+        ctx.font = 'bold ' + Math.floor(h * 0.16) + 'px "VT323", monospace';
+        ctx.fillText('NEW RECORD!', 0, -h * 0.04);
+        // Subline shows the new distance + the previous top
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold ' + Math.floor(h * 0.08) + 'px "VT323", monospace';
+        var distLabel = Math.floor(state.distance) + ' m';
+        ctx.fillText(distLabel, 0, h * 0.06);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.font = Math.floor(h * 0.04) + 'px "VT323", monospace';
+        ctx.fillText('previous best ' + state.leaderboardTopScore + ' m',
+                     0, h * 0.115);
         ctx.restore();
       }
     }
@@ -3843,6 +4046,33 @@
     state.water.shoovyTriggered = false;
     state.water.completed = false;
     state.gameOverDeathKey = null;
+    // ====================================================
+    // NEW-RECORD CELEBRATION (v0.18.51)
+    // Cache the leaderboard's current top score at run start.
+    // While running, if state.distance crosses it ONCE, we fire the
+    // newRecordFlash overlay. Skipped entirely if the leaderboard
+    // hasn't loaded yet (null) or is empty (top===0).
+    // ====================================================
+    state.leaderboardTopScore = null;
+    state.newRecordTriggered = false;
+    state.newRecordFlash = null;
+    if (window.RunnerLeaderboard && window.RunnerLeaderboard.fetchTop) {
+      window.RunnerLeaderboard.fetchTop(1).then(function (rows) {
+        if (rows && rows.length > 0 && typeof rows[0].score === 'number') {
+          state.leaderboardTopScore = rows[0].score;
+          console.log('[run] leaderboard top score cached for new-record check:', state.leaderboardTopScore);
+        } else {
+          // Empty leaderboard — explicit 0 sentinel so the trigger
+          // skips (won't fire on score=0 board, per design ask).
+          state.leaderboardTopScore = 0;
+          console.log('[run] leaderboard empty; new-record celebration disabled this run');
+        }
+      }).catch(function (e) {
+        // Network or rules error — leave null, never trigger
+        console.warn('[run] leaderboard top-score fetch failed:', e);
+        state.leaderboardTopScore = null;
+      });
+    }
     state.spawnTimer = 0;
     state.invulnUntil = 0;
     state.effects.hamFreezeUntil = 0;
@@ -4191,11 +4421,26 @@
   // ============================================================
   // Game loop.
   // ============================================================
+  // While paused, freeze the `now` value passed to render so every
+  // sprite's (now - spawnedAt) frame-picker math stays put. On resume
+  // shiftEffectTimers shifts every spawnedAt forward by the pause
+  // duration, so when render starts seeing real `now` again the math
+  // resolves to the same frame index — no animation jump-cut.
+  var pauseFrozenRenderNow = 0;
+
   function loop(now) {
     var dt = Math.min(0.05, (now - lastTime) / 1000); // clamp dt to avoid huge jumps after tab switch
     lastTime = now;
     if (state.phase === 'playing' && !state.paused) update(dt);
-    if (state.phase !== 'loading') render(now);
+    var renderNow;
+    if (state.paused) {
+      if (!pauseFrozenRenderNow) pauseFrozenRenderNow = now;
+      renderNow = pauseFrozenRenderNow;
+    } else {
+      pauseFrozenRenderNow = 0;
+      renderNow = now;
+    }
+    if (state.phase !== 'loading') render(renderNow);
     requestAnimationFrame(loop);
   }
 
