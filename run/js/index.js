@@ -430,6 +430,24 @@
     'thunder-clap':        { src: 'audio/thunder-clap.mp3',        channel: 'sfx' },
     'thunder-dry':         { src: 'audio/dry_thunder.mp3',         channel: 'sfx' },
     'thunder-loud':        { src: 'audio/loud_thunder.mp3',        channel: 'sfx' },
+    // v0.18.52 — JAIL feature audio.
+    //   sirencops: one-shot during BUSTED-flash freeze before the jail bg
+    //   jailed:    looping music for the jail-cell scene
+    //   policejail: ambient station chatter looping under jailed.mp3 at
+    //               lower volume (handled via per-channel mixing — both
+    //               share the 'sfx' channel since the music slider should
+    //               only affect jailed.mp3)
+    //   bailed-out: one-shot when self-bailing OR bailing Xena out of jail
+    //   xena-bailed-out: distortion-effect sting played right before the
+    //               Xena bail-out dialogue cutscene
+    //   xena-coin-pickup: one-shot when Xena's anti-sidekick steals a
+    //               Cx coin or weed pickup that would have been Mike's
+    'sirencops':           { src: 'audio/sirencops.mp3',           channel: 'sfx' },
+    'jailed':              { src: 'audio/jailed.mp3',              channel: 'music', loop: true },
+    'policejail':          { src: 'audio/policejail.mp3',          channel: 'sfx', loop: true },
+    'bailed-out':          { src: 'audio/bailed-out.mp3',          channel: 'sfx' },
+    'xena-bailed-out':     { src: 'audio/xena-bailed-out.mp3',     channel: 'sfx' },
+    'xena-coin-pickup':    { src: 'audio/xena-coin-pickup.mp3',    channel: 'sfx' },
   };
   // Pool of thunder variants — picked randomly per flash so the same
   // crack doesn't repeat back-to-back during the segment.
