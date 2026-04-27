@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.29 — 2026-04-26
+
+Fix — title-screen stats were showing "—" for everything. Two root causes:
+
+- **Module-script timing race.** `leaderboard.js` loads as `<script type="module">` (deferred). `index.js` (regular script) often finishes its `loadAll()` promise before the module finishes parsing, so `window.RunnerLeaderboard` was undefined when `refreshTitleStats()` first ran. Added a polling retry (up to 20 attempts at 150ms each, ~3s total) so the stats appear as soon as the module is ready instead of silently giving up. Also distinguishes `0` from `—` in the rendered output so a successful fetch returning empty is visible.
+- **Firebase rules likely block writes to the new `/stats/attempts` path.** The project was set up with `/scores` whitelisted but `/stats` falls under the default-deny. Added a fallback in `fetchTitleStats`: if the `/stats/attempts` read fails OR returns 0 while there ARE submitted scores, count `/scores` entries as the attempts floor. Also split the previous `Promise.all` into two independent reads so a permissions error on one doesn't kill the other.
+- Added detailed `console.log` output so you can see exactly where the chain breaks if stats still don't show.
+
+To enable the proper attempts counter (instead of falling back to score count), add this to the Firebase Realtime Database rules:
+
+```json
+"stats": { ".read": true, ".write": true }
+```
+
 ### Run v0.18.28 — 2026-04-26
 
 Patch — Ice trails Mike after the "lemme grab that dick" cutscene + leaderboard 2-column top-10.

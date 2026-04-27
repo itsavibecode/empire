@@ -137,34 +137,67 @@ async function fetchTop(limit = 100) {
 // in index.js. Uses runTransaction so two players starting simultaneously
 // don't lose a count to a race condition. Best-effort — fail silently if
 // Firebase is unreachable so a flaky network doesn't block the game.
+//
+// NOTE: writes to /stats/attempts may be blocked by Firebase Security
+// Rules if the project was set up with default-deny on unspecified
+// paths. If you see "PERMISSION_DENIED" in the console, add this to
+// your RTDB rules:
+//   "stats": { ".read": true, ".write": true }
 async function incrementAttemptCount() {
   try {
-    await runTransaction(ref(db, 'stats/attempts'), (current) => {
+    const result = await runTransaction(ref(db, 'stats/attempts'), (current) => {
       return (current || 0) + 1;
     });
+    console.log('[leaderboard] attempt counter ->', result.snapshot.val());
   } catch (e) {
     // swallow — title-screen stats degrade gracefully
-    console.warn('[leaderboard] attempt counter increment failed:', e);
+    console.warn('[leaderboard] attempt counter increment failed (likely Firebase rules block /stats):', e);
   }
 }
 
-// Fetch combined title-screen stats: total attempts + top entry. One
-// call so the title overlay can populate both numbers in a single
-// promise. Falls back to nulls on any Firebase error.
+// Fetch combined title-screen stats: total attempts + top entry. Two
+// independent reads so a permissions error on one doesn't kill the
+// other. Falls back to counting submitted scores as the attempt floor
+// if /stats/attempts is unavailable.
 async function fetchTitleStats() {
+  let attempts = null;
+  let top = null;
+  // 1) Top score — 1 row from /scores ordered desc. This path has
+  // always been readable so it should work even if /stats is blocked.
   try {
-    const [attemptsSnap, topRows] = await Promise.all([
-      get(ref(db, 'stats/attempts')),
-      fetchTop(1),
-    ]);
-    return {
-      attempts: attemptsSnap.exists() ? attemptsSnap.val() : 0,
-      top: topRows.length ? topRows[0] : null,
-    };
+    const topRows = await fetchTop(1);
+    top = topRows.length ? topRows[0] : null;
+    console.log('[leaderboard] top score:', top);
   } catch (e) {
-    console.warn('[leaderboard] title-stats fetch failed:', e);
-    return { attempts: 0, top: null };
+    console.warn('[leaderboard] top-score fetch failed:', e);
   }
+  // 2) Attempts counter from /stats/attempts. May be blocked by
+  // Firebase rules if the project hasn't whitelisted /stats.
+  try {
+    const attemptsSnap = await get(ref(db, 'stats/attempts'));
+    attempts = attemptsSnap.exists() ? attemptsSnap.val() : 0;
+    console.log('[leaderboard] /stats/attempts:', attempts);
+  } catch (e) {
+    console.warn('[leaderboard] /stats/attempts fetch failed (likely Firebase rules):', e);
+  }
+  // 3) FALLBACK: if attempts read failed OR returned 0 but we have
+  // submitted scores, use the score count as a floor. Better to show
+  // "1+ runs" than "—" when we know there's been at least one. Pulls
+  // up to 1000 scores for the count.
+  if (attempts === null || (attempts === 0 && top !== null)) {
+    try {
+      const allRowsQ = query(ref(db, 'scores'), orderByChild('createdAt'), limitToLast(1000));
+      const allSnap = await get(allRowsQ);
+      let count = 0;
+      if (allSnap.exists()) allSnap.forEach(() => { count++; });
+      // Prefix with "≥" to signal it's a floor, not an exact count
+      attempts = count;
+      console.log('[leaderboard] fallback /scores count:', count);
+    } catch (e) {
+      console.warn('[leaderboard] fallback score-count fetch failed:', e);
+    }
+  }
+  return { attempts: attempts || 0, top };
 }
 
 // ============================================================

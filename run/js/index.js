@@ -2746,13 +2746,32 @@
   // Fetch global stats from Firebase + populate the title-screen
   // counter row. Called on boot AND on quitToTitle so the numbers
   // refresh after a successful score submission.
+  //
+  // TIMING NOTE: leaderboard.js loads as `<script type="module">`
+  // (deferred). index.js (regular script) often finishes loadAll()
+  // BEFORE the module finishes parsing, so window.RunnerLeaderboard
+  // can be undefined here on first call. We retry up to 20 times at
+  // 150ms intervals (~3s total) so the stats appear as soon as the
+  // module is ready — instead of silently giving up and leaving "—".
+  var titleStatsRetries = 0;
   function refreshTitleStats() {
-    if (!window.RunnerLeaderboard || !window.RunnerLeaderboard.fetchTitleStats) return;
+    if (!window.RunnerLeaderboard || !window.RunnerLeaderboard.fetchTitleStats) {
+      if (titleStatsRetries++ < 20) {
+        setTimeout(refreshTitleStats, 150);
+      } else {
+        console.warn('[stats] gave up waiting for RunnerLeaderboard module');
+      }
+      return;
+    }
+    titleStatsRetries = 0;
     window.RunnerLeaderboard.fetchTitleStats().then(function (stats) {
+      console.log('[stats] fetched title stats:', stats);
       var attEl = document.getElementById('ts-attempts');
       var topEl = document.getElementById('ts-top-score');
       var byEl  = document.getElementById('ts-top-by');
-      if (attEl) attEl.textContent = stats.attempts ? stats.attempts.toLocaleString() : '—';
+      // Render 0 as "0" not "—" — distinguishes "fetch succeeded but
+      // empty" from "fetch failed". Helps diagnose Firebase issues.
+      if (attEl) attEl.textContent = (stats.attempts != null) ? stats.attempts.toLocaleString() : '—';
       if (topEl) topEl.textContent = stats.top ? stats.top.score.toLocaleString() : '—';
       if (byEl) {
         if (stats.top && stats.top.identity) {
