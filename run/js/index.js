@@ -42,6 +42,12 @@
   var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  // PHONE THIEF — when a "walk-reaching" pedestrian collides with Mike,
+  // they snatch the selfie stick. Steals coins, reverses controls
+  // briefly, and sprays a particle burst of coins flying outward.
+  var PHONE_THIEF_COINS_LOST = 10;       // coins drained from the stash
+  var PHONE_THIEF_REVERSED_MS = 3000;    // 3s of inverted left/right input
+  var PHONE_THIEF_PARTICLE_COUNT = 10;   // one coin sprite per stolen coin
   var JUMP_DURATION = 0.7;         // total seconds for a full jump arc
   var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
   // Ice side-kick — once joined (post-cutscene), Ice runs alongside
@@ -116,8 +122,12 @@
     { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
     // Walking woman in red (4-frame walk)
     { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22 },
-    // Reaching dude (4-frame "phone-thief" reach pose, faster cadence)
-    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14 },
+    // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
+    // On contact: doesn't take a life, instead steals 10 Cx coins,
+    // reverses controls for 3s, sprays coin particles outward, and
+    // shows a red "-10 COINS" overlay. The 4-frame reach animation
+    // sells the snatch motion. Faster cadence than the other walkers.
+    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true },
     // Static protesters (each holds a parody picket sign)
     { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 0 },
     { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 0 },
@@ -668,6 +678,7 @@
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
       weedDebuffUntil: 0, // slow + red tint until this timestamp
       horseBoostUntil: 0, // 1.7x scroll + horse-riding sprite until this timestamp
+      controlsReversedUntil: 0, // phone-thief-induced left/right inversion
       // Center-screen text overlay (Mario-1UP style for ham + brief
       // burst for 400 / weed pickups)
       textLabel: '',
@@ -675,6 +686,9 @@
       textShownAt: 0,
       textShownUntil: 0,
     },
+    // Coin particles spawned by the phone-thief snatch animation.
+    // Each: {x, y, vx, vy, spawnedAt, life, frameOffset}
+    coinParticles: [],
   };
 
   // ============================================================
@@ -764,6 +778,12 @@
   // ============================================================
   function shiftLane(direction) {
     if (state.phase !== 'playing') return;
+    // Phone-thief reversed-controls effect: invert left/right while
+    // the timer is still running. Player intent stays the same but the
+    // dodge they meant to make goes the opposite way.
+    if (performance.now() < state.effects.controlsReversedUntil) {
+      direction = -direction;
+    }
     var newLane = state.player.targetLane + direction;
     if (newLane < 0 || newLane >= LANES) return;
     state.player.targetLane = newLane;
@@ -1025,6 +1045,60 @@
     }
   }
 
+  // PHONE THIEF — fired from collision when an NPC marked phoneThief
+  // contacts Mike. Drains coins, spawns a coin-particle burst, sets
+  // the reversed-controls timer, plays the snatch SFX. `mikeCenterY`
+  // is the world-space Y where the particles should originate.
+  function triggerPhoneThief(now, mikeCenterY) {
+    // Drain coins (clamp at 0). Recompute multiplier so a ×3 player
+    // who gets snatched down to 4 coins drops back to ×1 — same
+    // thresholds as the normal coin-pickup path.
+    var lost = Math.min(state.coins, PHONE_THIEF_COINS_LOST);
+    state.coins = Math.max(0, state.coins - PHONE_THIEF_COINS_LOST);
+    if (state.coins >= 16) state.multiplier = 3;
+    else if (state.coins >= 6) state.multiplier = 2;
+    else state.multiplier = 1;
+
+    // 3-second left/right inversion. STACKING: if already reversed,
+    // extend rather than reset (consistent with ham/weed/horse).
+    if (state.effects.controlsReversedUntil > now) {
+      state.effects.controlsReversedUntil += PHONE_THIEF_REVERSED_MS;
+    } else {
+      state.effects.controlsReversedUntil = now + PHONE_THIEF_REVERSED_MS;
+    }
+
+    // Centered red text overlay. Show how many coins were actually
+    // lost (could be < 10 if the player had < 10 banked).
+    showPickupText('SNATCHED -' + lost + ' Cx', '#ff5a6b', 1200);
+
+    // Coin particle burst — radial spray from Mike's chest. One
+    // particle per coin lost so the visual reads as "all those coins
+    // just flew out of you." Each gets a random outward velocity +
+    // gravity. Coin sprite frame randomized for visual variety.
+    var mikeX = laneX(state.player.targetLane);
+    var coinSize = scaledSize('cx-coin-01', COIN_TARGET_HEIGHT_FRAC);
+    var particleCount = Math.max(1, lost);
+    var vh = viewH();
+    for (var i = 0; i < particleCount; i++) {
+      // Random angle in upper hemisphere (-π to 0) so they fly UP+OUT
+      var angle = -Math.PI * (0.15 + 0.7 * Math.random());
+      var speed = vh * (0.9 + Math.random() * 0.6); // px/sec
+      state.coinParticles.push({
+        x: mikeX + (Math.random() - 0.5) * coinSize.w,
+        y: mikeCenterY + (Math.random() - 0.5) * coinSize.h,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        spawnedAt: now,
+        life: 1100 + Math.random() * 400, // ms
+        w: coinSize.w * 0.85,
+        h: coinSize.h * 0.85,
+        frameOffset: Math.floor(Math.random() * 8) * 80, // randomize spin start
+      });
+    }
+
+    playSfx('punch-phone-snatch');
+  }
+
   function tickEffects(now) {
     // Restore music playback rate when bonus/debuff expires
     if (state.effects.hamBonusUntil > 0 && now > state.effects.hamBonusUntil) {
@@ -1099,6 +1173,21 @@
       return p.y > -p.h - 50 && !p.picked;
     });
 
+    // Phone-thief coin particles — physics tick. These live in screen
+    // coordinates (not world-scroll) so they don't get pulled along
+    // with the road; they fly through screen space and fade as their
+    // life elapses.
+    var GRAVITY = viewH() * 2.4; // px/sec^2
+    for (i = 0; i < state.coinParticles.length; i++) {
+      var pp = state.coinParticles[i];
+      pp.x += pp.vx * dt;
+      pp.y += pp.vy * dt;
+      pp.vy += GRAVITY * dt;
+    }
+    state.coinParticles = state.coinParticles.filter(function (pp) {
+      return (nowMs - pp.spawnedAt) < pp.life;
+    });
+
     // Spawn timer.
     state.spawnTimer += dt;
     var t = Math.max(0, state.distance) / 600; // ramp factor
@@ -1149,6 +1238,19 @@
         }
         o.hit = true;
         if (now > state.invulnUntil) {
+          // PHONE THIEF — special-cased: doesn't take a life, instead
+          // steals coins, reverses controls, and triggers the snatch
+          // particle burst. Still triggers invuln so Mike doesn't get
+          // snatched 3x in a row by overlapping NPCs.
+          if (o.type && o.type.phoneThief) {
+            triggerPhoneThief(now, py - playerSize.h * 0.4);
+            state.invulnUntil = now + INVULN_TIME * 1000;
+            ga('phone_thief_hit', {
+              at_distance: Math.floor(state.distance),
+              coins_lost: PHONE_THIEF_COINS_LOST,
+            });
+            continue;
+          }
           state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
           ga('obstacle_hit', {
@@ -1243,6 +1345,11 @@
         var horseRem = ((state.effects.horseBoostUntil - nowMs) / 1000).toFixed(1);
         html += '<span class="eff eff-horse">🐎 ' + horseRem + 's</span>';
       }
+      if (nowMs < state.effects.controlsReversedUntil) {
+        var revRem = ((state.effects.controlsReversedUntil - nowMs) / 1000).toFixed(1);
+        // Reversed-arrow emoji signals "your input is flipped right now"
+        html += '<span class="eff eff-reversed">🔄 ' + revRem + 's</span>';
+      }
       effEl.innerHTML = html;
     }
   }
@@ -1312,8 +1419,33 @@
     // Ice side-kick (after Mike so they share the same Y plane)
     drawIce(now);
 
+    // Phone-thief coin particles — drawn AFTER the player so the burst
+    // visually originates from in front of Mike's chest. Each coin
+    // spins (frame cycles using its own offset) and fades out as its
+    // life elapses.
+    drawCoinParticles(now);
+
     // Effect overlays
     drawEffects(now);
+  }
+
+  // Render the in-flight coin particles spawned by triggerPhoneThief.
+  function drawCoinParticles(now) {
+    if (state.coinParticles.length === 0) return;
+    for (var i = 0; i < state.coinParticles.length; i++) {
+      var pp = state.coinParticles[i];
+      var elapsed = now - pp.spawnedAt;
+      var t = Math.min(1, elapsed / pp.life);
+      // Hold full alpha for first 60% of life, then fade out.
+      var alpha = t < 0.6 ? 1 : (1 - (t - 0.6) / 0.4);
+      // Spin: cycle through cx-coin-01..08 using the time-shifted offset
+      var spinIdx = Math.floor((elapsed + pp.frameOffset) / 80) % 8 + 1;
+      var key = 'cx-coin-' + (spinIdx < 10 ? '0' + spinIdx : spinIdx);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, alpha);
+      drawAt(key, pp.x, pp.y, pp.w, pp.h);
+      ctx.restore();
+    }
   }
 
   function drawEffects(now) {
@@ -1365,6 +1497,16 @@
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = 'rgba(220,40,40,.85)';
       ctx.fillRect(0, 0, w * wRem, 6);
+    }
+    // PHONE-THIEF reversed-controls — pink-magenta tint + countdown bar
+    // so the player gets a clear visual cue that their input is flipped.
+    if (now < state.effects.controlsReversedUntil) {
+      var rRem = (state.effects.controlsReversedUntil - now) / PHONE_THIEF_REVERSED_MS;
+      var pinkPulse = 0.5 + 0.5 * Math.sin(now / 180);
+      ctx.fillStyle = 'rgba(255,90,170,' + (0.07 + pinkPulse * 0.07) + ')';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(255,90,170,.85)';
+      ctx.fillRect(0, 0, w * rRem, 6);
     }
   }
 
@@ -1746,12 +1888,14 @@
     state.obstacles = [];
     state.coinsArr = [];
     state.pickups = [];
+    state.coinParticles = [];
     state.spawnTimer = 0;
     state.invulnUntil = 0;
     state.effects.hamFreezeUntil = 0;
     state.effects.hamBonusUntil = 0;
     state.effects.weedDebuffUntil = 0;
     state.effects.horseBoostUntil = 0;
+    state.effects.controlsReversedUntil = 0;
     state.effects.textShownUntil = 0;
     state.effects.textLabel = '';
     // Cut scene resets: each new run starts with Ice gone and all

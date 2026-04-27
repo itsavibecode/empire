@@ -17,6 +17,28 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.19 — 2026-04-26
+
+Minor — phone-thief mechanic. The "reaching dude" pedestrian (`npc-pedestrian-09..12`, the 4-frame reach pose) is now a *phone thief* — when he collides with Mike he doesn't take a life, he snatches the selfie stick. Cost = 10 Cx coins + 3 seconds of inverted left/right input. Stuns the player without ending the run.
+
+**On contact:**
+
+- **Drains 10 coins** from the stash (clamped at 0). Multiplier is recomputed on the spot — a player at ×3 who gets snatched down below 16 drops back to ×2 or ×1 immediately.
+- **3-second left/right inversion** via a new `state.effects.controlsReversedUntil` timer checked inside `shiftLane()`. Stacking — getting snatched again while reversed extends the timer instead of resetting it (consistent with ham/weed/horse).
+- **Coin particle burst** — one `cx-coin-XX` sprite per coin lost, sprayed radially upward from Mike's chest with random outward velocity + gravity. Each spins through the 8 coin frames with a randomized phase offset and fades out over ~1.1-1.5s. Cleared on game restart.
+- **Red `SNATCHED -10 Cx` overlay text** (reuses the pickup-text overlay system, shorter duration).
+- **`punch-phone-snatch.mp3` SFX** plays on the snatch.
+- Standard 1.2s i-frames so overlapping NPCs can't snatch you 3× in a frame.
+
+**Visual feedback for the input flip:**
+
+- New HUD effect badge `🔄 Xs` with a pink pulse animation showing the remaining inversion time.
+- Pink-magenta screen tint + countdown bar at the top of the canvas — same pattern the WEED debuff uses but in a different color so it's distinct.
+
+**Why "input chaos" was the right cost choice over alternatives:**
+
+Tested mentally against the alternatives — losing a life felt too brutal for an obstacle that already exists in heavy rotation; losing only the multiplier was too cheap (player was barely affected); pure input lockout was boring (just felt like a pause). Input inversion forces the player to actively counter-think during a panic state, which both punishes the snatch and creates emergent moments where the inversion makes them dodge INTO another obstacle — chained chaos that ends a run organically. The 3s window is short enough that recovery is reasonable.
+
 ### Trending v0.1.7 — 2026-04-26
 
 Patch — bot filter. Kick chat is full of bots (BotRix, StreamElements, Nightbot, Fossabot, Sery_Bot, Wizebot, Moobot, Streamlabs, etc.) that post command responses, raid alerts, follow notifications, and rule reminders — all of which would otherwise inflate word counts and crowd the cloud with bot vocabulary instead of real chatter. Now their messages get dropped *entirely* before tokenization so they don't count toward `totalMessages` or `unique users` either.

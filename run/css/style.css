@@ -85,6 +85,20 @@ html, body {
   color: #C49A6C;
   border-color: rgba(196, 154, 108, .7);
 }
+.eff-reversed {
+  color: #ff5aaa;
+  border-color: rgba(255, 90, 170, .7);
+  -webkit-animation: eff-pulse-rev 0.8s ease-in-out infinite;
+          animation: eff-pulse-rev 0.8s ease-in-out infinite;
+}
+@keyframes eff-pulse-rev {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 170, .55); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 90, 170, 0); }
+}
+@-webkit-keyframes eff-pulse-rev {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 170, .55); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 90, 170, 0); }
+}
 @keyframes eff-pulse-ham {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 102, .55); }
   50%      { box-shadow: 0 0 0 6px rgba(255, 213, 102, 0); }
