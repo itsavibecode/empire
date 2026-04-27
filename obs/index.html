@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.3">
+<meta name="version" content="0.2.4">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -162,20 +162,26 @@
     width: 100%; height: 100%;
     display: grid;
     grid-template-columns: 1fr;
-    /* rows: header · subtitle bar · content · footer */
-    grid-template-rows: 132px 52px 1fr 88px;
-    /* Padding sits just inside the corner-bracket safe zone now that
-       brackets shrunk to 130×130 at 18px offset. Reduced horizontal
-       padding 88 → 60 so tile grid extends closer to the corner edges
-       (was visibly under-filling the right side). */
-    padding: 56px 60px 56px;
-    gap: 16px;
+    /* rows: header · subtitle bar · content · footer
+       v0.2.4 — tightened vertical budget to give the video grid more
+       room. Was 132px / 52px / 1fr / 88px with 56px top padding +
+       16px gaps. Now 118px / 44px / 1fr / 88px with 40px top padding
+       + 12px gaps. Net ~52px more height for the video tiles below
+       without crowding the header content (header internals fit in
+       ~114px including margins). */
+    grid-template-rows: 118px 44px 1fr 88px;
+    padding: 40px 60px 56px;
+    gap: 12px;
   }
 
   /* ---------- HEADER ---------- */
   header {
     text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    display: flex; flex-direction: column; align-items: center;
+    /* Internal gap between eyebrow / EMPIREX / sub. Was 8 — tightened
+       to 4 so the three-line stack reads as one unit instead of
+       three loose siblings. */
+    gap: 4px;
   }
 
   .eyebrow {
@@ -786,7 +792,7 @@
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
   <span class="uptime-divider"></span>
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.3</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.4</span>
 </div>
 
 <div class="stage">
