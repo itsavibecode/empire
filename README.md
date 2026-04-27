@@ -17,6 +17,10 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.3 — 2026-04-26
+
+Patch — hover tooltip on the bottom-right pipeline metrics. The footer line `N events · M chat · K msgs · L unique users` is the most diagnostic info on the page (it tells you exactly which stage of the chat-ingestion pipeline is healthy or stuck), but the labels are terse. Hovering the line now pops a styled tooltip with a definition for each metric + a footnote explaining how to read them as a "if the stat to the right stops climbing, that's where the break is" cascade. A small `?` icon appears next to the line so the affordance is discoverable. Cursor flips to `cursor: help` on hover.
+
 ### Trending v0.1.2 — 2026-04-26
 
 Patch — visible source list + clearer "users" label.

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.2">
+<meta name="version" content="0.1.3">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -320,7 +320,91 @@
     text-transform: uppercase;
   }
   footer .left { text-align: left; }
-  footer .right { text-align: right; }
+  footer .right {
+    text-align: right;
+    position: relative;
+    cursor: help;
+  }
+  footer .right .help-icon {
+    display: inline-block;
+    width: 14px; height: 14px;
+    line-height: 14px;
+    text-align: center;
+    border: 1px solid var(--gold-dark);
+    border-radius: 50%;
+    color: var(--gold);
+    font-size: 9px;
+    font-weight: 700;
+    margin-right: 8px;
+    letter-spacing: 0;
+    vertical-align: middle;
+    opacity: .8;
+  }
+  footer .right:hover .help-icon { opacity: 1; }
+  /* Tooltip — appears above the right footer when you hover the
+     "events / chat / msgs / unique users" line. Explains what each
+     metric means + how to read the pipeline if numbers look wrong. */
+  .stats-tooltip {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: 0;
+    width: 380px;
+    padding: 14px 16px;
+    background: rgba(20, 16, 12, 0.97);
+    border: 1px solid var(--gold-dark);
+    border-radius: 6px;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12px;
+    letter-spacing: .02em;
+    text-transform: none;
+    color: var(--ink);
+    text-align: left;
+    line-height: 1.55;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+    z-index: 999;
+  }
+  footer .right:hover .stats-tooltip {
+    opacity: 1;
+  }
+  .stats-tooltip h4 {
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(212, 169, 74, 0.25);
+  }
+  .stats-tooltip dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+  }
+  .stats-tooltip dt {
+    color: var(--gold-hot);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding-top: 2px;
+  }
+  .stats-tooltip dd {
+    color: var(--ink);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .stats-tooltip .footnote {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(212, 169, 74, 0.15);
+    color: var(--ink-dim);
+    font-size: 11px;
+    font-style: italic;
+  }
   footer .center { color: var(--gold); letter-spacing: .35em; }
   footer .version-pill {
     color: var(--ink-dim);
@@ -393,7 +477,26 @@
   <footer>
     <div class="left" id="connStatus"><span class="live-dot"></span>Connecting…</div>
     <div class="center">OUREMPIREX.COM/OBS/TRENDING <span class="version-pill" id="versionPill"></span></div>
-    <div class="right" id="msgStats">— · —</div>
+    <div class="right">
+      <span class="help-icon" aria-hidden="true">?</span>
+      <span id="msgStats">— · —</span>
+      <!-- Hover-tooltip explaining each metric in the pipeline. Helps
+           the operator read the numbers + diagnose if something's stuck. -->
+      <div class="stats-tooltip" role="tooltip">
+        <h4>Pipeline Metrics</h4>
+        <dl>
+          <dt>Events</dt>
+          <dd>Every frame received from the Pusher WebSocket since page load — includes pings, subscription confirmations, errors, AND chat messages. Climbing = WS is alive. Stuck at 0 = WS won't connect.</dd>
+          <dt>Chat</dt>
+          <dd>Subset of events that matched as chat messages (not pings or system frames). Climbing alongside Events = chat-event matcher is working.</dd>
+          <dt>Msgs</dt>
+          <dd>Chat messages we successfully parsed and counted into the sliding windows. Climbing alongside Chat = end-to-end pipeline working.</dd>
+          <dt>Users</dt>
+          <dd>Distinct chatters across ALL live streamer chats since page load. The people typing in chat — not the streamers, not the viewers. All-time count, not windowed.</dd>
+        </dl>
+        <div class="footnote">If a number to the right of another stops climbing, that's where the pipeline breaks. Debug overlay auto-shows when something's wrong; force it with <code>?debug=1</code>.</div>
+      </div>
+    </div>
   </footer>
 
   <!-- Debug overlay populated dynamically. Auto-shown when WS events
@@ -413,7 +516,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.2';
+const TRENDING_VERSION = '0.1.3';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
