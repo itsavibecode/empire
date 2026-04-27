@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
+<meta name="version" content="0.1.1">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -270,6 +271,14 @@
   footer .left { text-align: left; }
   footer .right { text-align: right; }
   footer .center { color: var(--gold); letter-spacing: .35em; }
+  footer .version-pill {
+    color: var(--ink-dim);
+    letter-spacing: .15em;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-left: 12px;
+    opacity: .7;
+  }
   footer .live-dot {
     display: inline-block;
     width: 8px; height: 8px;
@@ -326,7 +335,7 @@
 
   <footer>
     <div class="left" id="connStatus"><span class="live-dot"></span>Connecting…</div>
-    <div class="center">OUREMPIREX.COM/OBS/TRENDING</div>
+    <div class="center">OUREMPIREX.COM/OBS/TRENDING <span class="version-pill" id="versionPill"></span></div>
     <div class="right" id="msgStats">— · —</div>
   </footer>
 
@@ -345,11 +354,21 @@
    CROSS-CHAT WORD CLOUD ENGINE
    =========================================================================== */
 
+// Visible version — bumped any time this file ships a meaningful change.
+// Mirrors the Run/Slots scope from /run/ and /game/.
+const TRENDING_VERSION = '0.1.1';
+
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
-  // Pusher creds — Kick's public web client uses these (not secrets,
-  // anyone inspecting kick.com sees the same key/cluster).
-  PUSHER_KEY: 'eb1d5f283081a78b932c',
+  // Pusher creds — Kick rotates these. We try the current key first
+  // and fall back to the historical one on `pusher:error code 4001`
+  // ("App key not in this cluster"). Same approach kekwclips uses.
+  // These are public — anyone inspecting kick.com's web client sees
+  // the same values.
+  PUSHER_KEYS: [
+    '32cbd69e4b950bf97679',  // current as of 2025
+    'eb1d5f283081a78b932c',  // historical fallback
+  ],
   PUSHER_CLUSTER: 'us2',
 
   // CORS proxy chain (same as main /obs/) for fetching chatroom_ids
@@ -591,10 +610,15 @@ class PusherClient {
     this.subscribed = new Set(); // channels we want to be subscribed to
     this.confirmed = new Set();  // channels Pusher has confirmed
     this.backoff = 1000;
+    this.keyIdx = 0;             // cycles 0 -> 1 -> 0 ... on key rejection
     this.connect();
   }
+  currentKey() {
+    return CONFIG.PUSHER_KEYS[this.keyIdx % CONFIG.PUSHER_KEYS.length];
+  }
   connect() {
-    const url = `wss://ws-${CONFIG.PUSHER_CLUSTER}.pusher.com/app/${CONFIG.PUSHER_KEY}?protocol=7&client=js&version=8.4.0&flash=false`;
+    const url = `wss://ws-${CONFIG.PUSHER_CLUSTER}.pusher.com/app/${this.currentKey()}?protocol=7&client=js&version=8.4.0&flash=false`;
+    console.log('[trending] Pusher connecting', { keyIdx: this.keyIdx, key: this.currentKey() });
     this.ws = new WebSocket(url);
     this.ws.onopen = () => {
       this.backoff = 1000; // reset
@@ -608,6 +632,14 @@ class PusherClient {
     this.confirmed.clear();
     setTimeout(() => this.connect(), this.backoff);
     this.backoff = Math.min(this.backoff * 2, 30_000);
+  }
+  _rotateKey() {
+    // Advance to the next key and force-close so the reconnect path
+    // picks up the new index. Bound the rotation — if both keys fail
+    // we'll keep cycling but with full backoff between attempts.
+    this.keyIdx = (this.keyIdx + 1) % CONFIG.PUSHER_KEYS.length;
+    console.warn('[trending] rotating Pusher key -> idx', this.keyIdx);
+    try { this.ws && this.ws.close(); } catch (e) {}
   }
   _onMessage(ev) {
     let msg;
@@ -625,11 +657,19 @@ class PusherClient {
       this.confirmed.add(channel);
       stats.channelsConnected.add(channel);
     } else if (event === 'pusher:subscription_error' || event === 'pusher:error') {
-      // Pusher is REJECTING our subscribe. This is the most useful
-      // signal — log loudly so we can see the reason (auth required,
-      // channel not found, rate limit, etc.).
-      console.warn('[trending] subscription error:', channel, msg);
+      // Pusher is REJECTING something. Code 4001 = "App key not in
+      // this cluster" — Kick rotates keys, so try the next one in
+      // CONFIG.PUSHER_KEYS. Other codes we just log + display.
+      console.warn('[trending] pusher error:', channel, msg);
       stats.lastSubscriptionError = JSON.stringify(msg).slice(0, 200);
+      let parsedData = data;
+      if (typeof data === 'string') { try { parsedData = JSON.parse(data); } catch {} }
+      const code = parsedData && parsedData.code;
+      if (code === 4001 || code === 4006) {
+        // 4001 = key not in cluster, 4006 = unknown app — both mean
+        // try a different key.
+        this._rotateKey();
+      }
     } else if (event.indexOf('ChatMessage') !== -1) {
       // Substring match — Kick has used both `App\Events\ChatMessageEvent`
       // and `App\Events\ChatMessageSentEvent` historically. Anything with
@@ -779,6 +819,14 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
+
+// Populate visible version pill (mirrors how /run/ + /game/ surface
+// their semver in the bottom-of-screen HUD).
+(function () {
+  const v = document.getElementById('versionPill');
+  if (v) v.textContent = 'v' + TRENDING_VERSION;
+  document.title = 'EmpireX Trending v' + TRENDING_VERSION;
+})();
 
 function renderCloud(top) {
   if (top.length === 0) {

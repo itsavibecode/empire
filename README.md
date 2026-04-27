@@ -11,10 +11,21 @@ Each subproject under this repo has its **own independent SemVer**. Going forwar
 - **Site v0.X.Y** — main marketing/event site (`index.html`, `obs/`, etc.)
 - **Slots v0.X.Y** — the slot mini-game at `/game/`
 - **Run v0.X.Y** — the runner game ("On Baby!") at `/run/`
+- **Trending v0.X.Y** — the cross-chat word cloud at `/obs/trending/`
 
 The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
+
+### Trending v0.1.1 — 2026-04-26
+
+Patch — Pusher key cycling + visible semver. Initial v0.1.0 release used a single Kick Pusher key (`eb1d5f283081a78b932c`) which Pusher rejected with code 4001 ("App key not in this cluster"). Kick rotates keys; the current one as of 2025 is `32cbd69e4b950bf97679`. The in-page debug overlay added in the previous patch surfaced the exact rejection message, which made the diagnosis trivial.
+
+- **PUSHER_KEYS array** instead of single key. Try the new key first, fall back to the historical one on rejection. Same approach kekwclips uses (cross-referenced from `itsavibecode/kekw/index.html`).
+- **`_rotateKey()`** in PusherClient advances the key index + force-closes the WS so the reconnect path picks up the new key. Triggered automatically by Pusher error code 4001 (key/cluster mismatch) or 4006 (unknown app).
+- **Visible version pill** in the footer next to the URL caption — mirrors the convention used by Run + Slots so it's instantly obvious which build is loaded. Also bumped the document title and added a `<meta name="version">` tag for parity.
+
+This is also a new subproject scope — going forward `Trending v0.X.Y` is its own independent SemVer track alongside Site / Slots / Run.
 
 ### Run v0.18.18 — 2026-04-26
 
