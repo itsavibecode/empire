@@ -143,14 +143,29 @@ async function fetchTop(limit = 100) {
 // paths. If you see "PERMISSION_DENIED" in the console, add this to
 // your RTDB rules:
 //   "stats": { ".read": true, ".write": true }
+// YYYY-MM-DD in UTC so the "today" counter rollover happens at the
+// same wall-clock instant for every player worldwide.
+function todayKey() {
+  const d = new Date();
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 async function incrementAttemptCount() {
+  // Two parallel transactions: global all-time counter + today's
+  // counter (keyed by UTC date). Both use runTransaction so concurrent
+  // players don't trample each other.
+  const tk = todayKey();
   try {
-    const result = await runTransaction(ref(db, 'stats/attempts'), (current) => {
-      return (current || 0) + 1;
-    });
-    console.log('[leaderboard] attempt counter ->', result.snapshot.val());
+    const [globalResult, todayResult] = await Promise.all([
+      runTransaction(ref(db, 'stats/attempts'), (current) => (current || 0) + 1),
+      runTransaction(ref(db, 'stats/attemptsByDay/' + tk), (current) => (current || 0) + 1),
+    ]);
+    console.log('[leaderboard] attempt counter ->',
+      globalResult.snapshot.val(), '(today:', todayResult.snapshot.val(), ')');
   } catch (e) {
-    // swallow — title-screen stats degrade gracefully
     console.warn('[leaderboard] attempt counter increment failed (likely Firebase rules block /stats):', e);
   }
 }
@@ -161,6 +176,7 @@ async function incrementAttemptCount() {
 // if /stats/attempts is unavailable.
 async function fetchTitleStats() {
   let attempts = null;
+  let attemptsToday = null;
   let top = null;
   // 1) Top score — 1 row from /scores ordered desc. This path has
   // always been readable so it should work even if /stats is blocked.
@@ -171,12 +187,17 @@ async function fetchTitleStats() {
   } catch (e) {
     console.warn('[leaderboard] top-score fetch failed:', e);
   }
-  // 2) Attempts counter from /stats/attempts. May be blocked by
+  // 2) Attempts counters — global + today's. May be blocked by
   // Firebase rules if the project hasn't whitelisted /stats.
+  const tk = todayKey();
   try {
-    const attemptsSnap = await get(ref(db, 'stats/attempts'));
-    attempts = attemptsSnap.exists() ? attemptsSnap.val() : 0;
-    console.log('[leaderboard] /stats/attempts:', attempts);
+    const [allSnap, todaySnap] = await Promise.all([
+      get(ref(db, 'stats/attempts')),
+      get(ref(db, 'stats/attemptsByDay/' + tk)),
+    ]);
+    attempts = allSnap.exists() ? allSnap.val() : 0;
+    attemptsToday = todaySnap.exists() ? todaySnap.val() : 0;
+    console.log('[leaderboard] /stats/attempts:', attempts, '(today:', attemptsToday, ')');
   } catch (e) {
     console.warn('[leaderboard] /stats/attempts fetch failed (likely Firebase rules):', e);
   }
@@ -197,7 +218,7 @@ async function fetchTitleStats() {
       console.warn('[leaderboard] fallback score-count fetch failed:', e);
     }
   }
-  return { attempts: attempts || 0, top };
+  return { attempts: attempts || 0, attemptsToday: attemptsToday || 0, top };
 }
 
 // ============================================================

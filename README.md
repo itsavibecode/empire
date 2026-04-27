@@ -17,6 +17,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.30 — 2026-04-26
+
+Heavy patch — 7 things from playtest stream:
+
+- **NPC + cop-car shadow cleanup.** Added a per-obstacle-type `bottomCropFrac` field that trims the bottom N% of each sprite at render time (same trick Ice already uses). Static protesters get 12% (their grey-brown shadow ellipse was the most visible), pedestrian walkers + chibis get 5-6%, cop cars get 12% to also kill the residual motion blur. New `drawAtCropped()` helper does the source-rect math.
+- **NEW cross-traffic cop car obstacle.** Spawns from off-screen left or right at distances ≥ 1500m, drives across the road perpendicular to Mike's lane direction at ~1100 px/sec. Uses the new overhead-view sprite (extracted via `extract-cop-overhead.py` from `cop_car_transparent.png`, sliced into 16 frames with the same connected-component blob filter as the budgie). Sprite rotated 90° based on travel direction; light bar cycles R/B/R/B at fast cadence (110ms). Spawn rate ramps from one car every ~9s at 1500m → one every ~3.5s at 4500m+ for the difficulty curve. Box-vs-box collision; on hit costs a life (same as a regular cop car). Reads as cross-traffic Mike has to time his lane around.
+- **Ice trail offset flipped.** Previous v0.18.28 put trailing Ice BELOW Mike on screen (after his "lemme grab that dick" cutscene); per playtest the perspective reads better with him ABOVE, so the offset sign flipped from +12vh to -12vh. Render order in `drawWorld` also adjusted: when trailing, Ice draws BEFORE Mike so Mike correctly occludes him as the foreground figure.
+- **Ice run-cycle flicker fixed.** Ice was visibly jumping in height every animation tick because `h = img.height * pxPerSrc` used the CURRENT frame's height (ice-14 + ice-16 differ slightly in source dimensions). Now the height is locked to the reference frame's dimensions during the run cycle; only neck-stretch frames (ice-23..29) keep the per-frame height so the stretch animation still actually stretches.
+- **Audio hint shortened** "No sound? Tap ⚙ to unmute" → "Tap ⚙ to unmute" — the prefix was wider than the actual call-to-action.
+- **Today's runs counter** added under "Total Runs" on the title screen. New `/stats/attemptsByDay/{YYYY-MM-DD}` Firebase node, incremented in parallel with the global counter via `runTransaction` (UTC date so the rollover happens at the same instant for all players). `fetchTitleStats` returns `attemptsToday` alongside total, rendered as "+X today" subtitle on the Total Runs block.
+- **16 new `cop-overhead-XX.png` sprites** ready for any future use of the top-down cop car (cross-traffic obstacle is the first; could also use for parked cars in the background later).
+
 ### Run v0.18.29 — 2026-04-26
 
 Fix — title-screen stats were showing "—" for everything. Two root causes:

@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.29">
+  <meta name="version" content="0.18.30">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -63,7 +63,7 @@
        page once (browsers block audio until then). Helps the player
        realize they can fix silence by tapping the gear / unmuting. -->
   <div class="audio-hint" id="audio-hint">
-    No sound? Tap <span aria-hidden="true">⚙</span> to unmute
+    Tap <span aria-hidden="true">⚙</span> to unmute
   </div>
 
   <!-- Pause button — left of the gear icon, top-right corner. P or ESC
@@ -142,6 +142,7 @@
       <div class="ts-block">
         <div class="ts-label">Total Runs</div>
         <div class="ts-value" id="ts-attempts">—</div>
+        <div class="ts-meta" id="ts-attempts-today"></div>
       </div>
       <div class="ts-block">
         <div class="ts-label">High Score</div>
@@ -230,7 +231,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.29</div>
+  <div class="game-version">Run v0.18.30</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

@@ -42,6 +42,17 @@
   var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  // CROSS TRAFFIC — overhead-view cop cars that drive across the screen
+  // perpendicular to Mike's lane. Difficulty scaler: spawns start at
+  // CROSS_CAR_START_DISTANCE_M and accelerate from CROSS_CAR_SPAWN_MS_FAR
+  // down to CROSS_CAR_SPAWN_MS_NEAR over the next 3000m of distance.
+  var CROSS_CAR_START_DISTANCE_M = 1500;   // earliest distance a cross car can spawn
+  var CROSS_CAR_SPAWN_MS_FAR = 9000;       // ~9 sec between spawns at start
+  var CROSS_CAR_SPAWN_MS_NEAR = 3500;      // ~3.5 sec at peak intensity (4500m+)
+  var CROSS_CAR_RAMP_M = 3000;             // distance over which spawn rate ramps
+  var CROSS_CAR_SPEED = 1100;              // px/sec horizontal velocity
+  var CROSS_CAR_HEIGHT_FRAC = 0.18;        // sprite height as frac of viewport
+  var CROSS_CAR_FRAME_MS = 110;            // R/B light flash cadence (faster than parked cop car)
   // PHONE THIEF — when a "walk-reaching" pedestrian collides with Mike,
   // they snatch the selfie stick. Steals coins, reverses controls
   // briefly, and sprays a particle burst of coins flying outward.
@@ -121,44 +132,37 @@
   //   `jumpOnly: true` marks an obstacle that cannot be dodged by lane
   //   shift — the player must JUMP over it. Used for vehicles (cop car)
   //   that block an entire lane and would be visually weird to side-step.
+  // bottomCropFrac trims the bottom N% of each sprite at render time
+  // to hide the ground-shadow ellipse baked into most NPC + vehicle
+  // art. Same trick the Ice side-kick uses (srcCropFrac there).
+  // Default is 0 (no crop); per-type overrides applied below.
   var OBSTACLE_TYPES = [
-    // Walking pedestrian A (hoodie dude, 4-frame walk cycle)
-    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
-    // Walking woman in red (4-frame walk)
-    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22 },
+    // Walking pedestrians — small drop-shadow on each frame, crop
+    // ~6% off the bottom so the shadow disappears.
+    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
+    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
     // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
-    // On contact: doesn't take a life, instead steals 10 Cx coins,
-    // reverses controls for 3s, sprays coin particles outward, and
-    // shows a red "-10 COINS" overlay. The 4-frame reach animation
-    // sells the snatch motion. Faster cadence than the other walkers.
-    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true },
-    // Static protesters (each holds a parody picket sign). bobPx: 12
-    // gives a subtle up/down step animation so they don't read as
-    // statues — feels like they're shifting weight on the picket line.
-    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 12 },
-    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 12 },
-    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 12 },
-    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 12 },
-    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 12 },
-    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 12 },
-    // Static chibi NPCs (street pedestrians from the grid sheet).
-    // bobPx: 10 — slight step bob so they look like they're walking
-    // toward the camera even though we only have one frame each.
-    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 10 },
-    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 10 },
-    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 10 },
-    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 10 },
-    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 10 },
-    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 10 },
-    // COP CAR — jump-only. Lane shift won't help; you must jump over it.
-    // Animates through 4 light-bar variants at 180ms/frame for the
-    // alternating red/blue flashing-lights effect. Sampled the source
-    // sheet directly (extract-runner-sprites probe): odd-numbered
-    // frames are RED-dominant, even are BLUE-dominant. Previous v0.18.23
-    // cycle was [01,02,05,09] = RED, BLUE, RED, RED — visibly mostly
-    // red with one blue flash. Fixed cycle [01,02,03,04] gives proper
-    // R-B-R-B alternation.
-    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-03','cop-car-04'], frameMs: 180, bobPx: 0, jumpOnly: true },
+    { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
+    // Static protesters — bigger ground-shadow ellipse than the
+    // pedestrians (visible grey-brown halo at the feet), needs a
+    // larger 12% bottom crop.
+    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 12, bottomCropFrac: 0.12 },
+    // Static chibi NPCs — small shadows, 5% crop.
+    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 10, bottomCropFrac: 0.05 },
+    // COP CAR — jump-only. Animates through 4 light-bar variants at
+    // 180ms for R-B-R-B flashing. bottomCropFrac 0.12 trims the
+    // residual ground-shadow + motion-blur baked into the iso source.
+    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-03','cop-car-04'], frameMs: 180, bobPx: 0, jumpOnly: true, bottomCropFrac: 0.12 },
   ];
   // Preload every sprite referenced by any obstacle type
   OBSTACLE_TYPES.forEach(function (t) {
@@ -216,6 +220,13 @@
   // alternating-light animation.
   ['01', '02', '03', '04'].forEach(function (n) {
     SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
+  });
+  // Overhead-view cop car sprites — used by the new cross-traffic
+  // obstacle that drives across the screen perpendicular to Mike's
+  // run direction. Preload frames 01-04 for the same R/B alternating
+  // light cycle.
+  ['01', '02', '03', '04'].forEach(function (n) {
+    SPRITE_PATHS['cop-overhead-' + n] = 'img/sprites/cop-overhead-' + n + '.png';
   });
   // Mike death sprites — 12 different game-over poses. Preloaded so a
   // random one can render instantly when the gameover overlay shows
@@ -956,6 +967,12 @@
     // Coin particles spawned by the phone-thief snatch animation.
     // Each: {x, y, vx, vy, spawnedAt, life, frameOffset}
     coinParticles: [],
+    // Cross-traffic cop cars — drive horizontally across the road
+    // perpendicular to Mike's direction. Each:
+    //   {x, y, w, h, vx, dir (-1=left, +1=right), spawnedAt, hit}
+    crossCars: [],
+    crossCarSpawnTimer: 0,
+    crossCarNextSpawnMs: 0,
     // Random death-pose sprite picked at endRun. Rendered on the road
     // (drawPlayer) AND in the gameover overlay panel so they match.
     gameOverDeathKey: null,
@@ -1225,6 +1242,31 @@
       hit: false,
     });
     return lane; // so coin spawner can avoid the same lane
+  }
+
+  // Cross-traffic cop car — spawns from off-screen left or right and
+  // drives across the road perpendicular to Mike's direction. Uses the
+  // overhead-view sprite (cop-overhead-XX). Spawns at a random Y near
+  // Mike's foot line so dodging requires lane management.
+  function spawnCrossCar() {
+    var size = scaledSize('cop-overhead-01', CROSS_CAR_HEIGHT_FRAC);
+    var dir = Math.random() < 0.5 ? -1 : +1;
+    // Spawn just off the appropriate edge of the screen
+    var startX = dir > 0 ? -size.w : viewW() + size.w;
+    // Y range: near Mike's foot line +/- 4% viewH so it overlaps Mike's
+    // hitbox when crossing his lane. Random within that band so cars
+    // don't all cross at the exact same Y.
+    var y = playerY() - size.h * 0.85 + (Math.random() * 0.04 - 0.02) * viewH();
+    state.crossCars.push({
+      x: startX,
+      y: y,
+      w: size.w,
+      h: size.h,
+      vx: CROSS_CAR_SPEED * dir,
+      dir: dir,
+      spawnedAt: performance.now(),
+      hit: false,
+    });
   }
 
   function getObstacleSprite(o, now) {
@@ -1537,6 +1579,32 @@
       }
     }
 
+    // Cross-traffic cop car spawning + movement. Spawns kick in at
+    // CROSS_CAR_START_DISTANCE_M and accelerate (shorter intervals)
+    // as distance grows.
+    if (state.distance >= CROSS_CAR_START_DISTANCE_M) {
+      state.crossCarSpawnTimer += dt * 1000; // ms
+      if (state.crossCarSpawnTimer >= state.crossCarNextSpawnMs) {
+        state.crossCarSpawnTimer = 0;
+        // Compute next interval based on current distance: lerp from
+        // FAR (early) -> NEAR (peak) over CROSS_CAR_RAMP_M meters.
+        var ramp = Math.min(1, (state.distance - CROSS_CAR_START_DISTANCE_M) / CROSS_CAR_RAMP_M);
+        state.crossCarNextSpawnMs = CROSS_CAR_SPAWN_MS_FAR
+          + (CROSS_CAR_SPAWN_MS_NEAR - CROSS_CAR_SPAWN_MS_FAR) * ramp;
+        // Add slight random jitter so spawns aren't perfectly metronomic
+        state.crossCarNextSpawnMs *= (0.85 + Math.random() * 0.3);
+        spawnCrossCar();
+      }
+    }
+    // Move + cull cross cars
+    for (i = 0; i < state.crossCars.length; i++) {
+      state.crossCars[i].x += state.crossCars[i].vx * dt;
+    }
+    state.crossCars = state.crossCars.filter(function (c) {
+      // Cull when fully off the opposite edge (account for sprite width)
+      return (c.dir > 0 ? c.x < viewW() + c.w + 50 : c.x > -c.w - 50);
+    });
+
     // Collisions.
     var px = laneX(state.player.targetLane); // approx — fine for v0.1
     var py = playerY();
@@ -1591,6 +1659,38 @@
         }
       }
     }
+    // CROSS-TRAFFIC collision — overhead cop cars crossing the road.
+    // Box-vs-box check using the car's actual rect + Mike's lane-X.
+    for (i = 0; i < state.crossCars.length; i++) {
+      var cc = state.crossCars[i];
+      if (cc.hit) continue;
+      // Mike's hitbox center
+      var mikeCx = laneX(state.player.targetLane);
+      var mikeCy = py - playerSize.h * 0.4;
+      // Car's hitbox center (slightly inset from the sprite for forgiveness)
+      var ccCx = cc.x + cc.w / 2;
+      var ccCy = cc.y + cc.h / 2;
+      var ccHitW = cc.w * 0.75;
+      var ccHitH = cc.h * 0.65;
+      if (Math.abs(mikeCx - ccCx) < (ccHitW * 0.5 + pHitW * 0.5)
+          && Math.abs(mikeCy - ccCy) < (ccHitH * 0.5 + pHitH * 0.5)) {
+        cc.hit = true;
+        if (now > state.invulnUntil) {
+          state.lives--;
+          state.invulnUntil = now + INVULN_TIME * 1000;
+          ga('cross_car_hit', {
+            at_distance: Math.floor(state.distance),
+            lives_left: state.lives,
+          });
+          if (state.lives > 0) {
+            playSfx('damage');
+          } else {
+            endRun();
+          }
+        }
+      }
+    }
+
     for (i = 0; i < state.coinsArr.length; i++) {
       var co = state.coinsArr[i];
       if (co.picked) continue;
@@ -1726,22 +1826,45 @@
     for (var k = 0; k < allDrawables.length; k++) {
       var item = allDrawables[k];
       var d = item.d;
-      var spriteKey, drift = 0;
+      var spriteKey, drift = 0, cropFrac = 0;
       if (item.kind === 'obs') {
         spriteKey = getObstacleSprite(d, now);
         drift = getObstacleDrift(d, now);
+        // Per-type bottom-crop hides the ground-shadow ellipse baked
+        // into NPC + cop-car sprites. Same trick Ice uses (srcCropFrac).
+        if (d.type && d.type.bottomCropFrac) cropFrac = d.type.bottomCropFrac;
       } else if (item.kind === 'coin') {
         spriteKey = pickCoinSprite(now);
       } else {
         spriteKey = getPickupSprite(d, now);
       }
-      drawAt(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h);
+      if (cropFrac > 0) {
+        drawAtCropped(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h, cropFrac);
+      } else {
+        drawAt(spriteKey, laneX(d.lane) + drift, d.y, d.w, d.h);
+      }
     }
 
-    // Player (last, on top)
-    drawPlayer(now);
-    // Ice side-kick (after Mike so they share the same Y plane)
-    drawIce(now);
+    // Cross-traffic cop cars — drawn AFTER obstacles but BEFORE Mike
+    // so they can occlude lane-spawned NPCs (depth) but Mike still
+    // appears in front when they overlap. Mirror sprite horizontally
+    // when driving left-to-right so the headlights face direction of
+    // travel (sprites natively face DOWN i.e. toward the camera in
+    // overhead view; we rotate visually by flipping when going right).
+    drawCrossCars(now);
+
+    // Render order matters for the Ice/Mike depth pass:
+    // - Side-kick Ice runs BESIDE Mike at the same Y → can draw after
+    //   Mike since they share the same depth plane.
+    // - Trailing Ice is FURTHER UP the road (behind Mike in perspective)
+    //   → must draw BEFORE Mike so Mike correctly occludes him.
+    if (state.iceTrailing) {
+      drawIce(now);
+      drawPlayer(now);
+    } else {
+      drawPlayer(now);
+      drawIce(now);
+    }
 
     // Phone-thief coin particles — drawn AFTER the player so the burst
     // visually originates from in front of Mike's chest. Each coin
@@ -1751,6 +1874,35 @@
 
     // Effect overlays
     drawEffects(now);
+  }
+
+  // Render the cross-traffic cop cars. Sprite is overhead-view so
+  // it natively shows the car pointing DOWN (toward the camera).
+  // Rotate via canvas transform so the car visually points the
+  // direction of travel: -90deg for leftward (dir=-1), +90deg for
+  // rightward (dir=+1). Light bar cycles R/B at fast cadence.
+  function drawCrossCars(now) {
+    if (state.crossCars.length === 0) return;
+    var lightFrames = ['cop-overhead-01', 'cop-overhead-02', 'cop-overhead-03', 'cop-overhead-04'];
+    for (var i = 0; i < state.crossCars.length; i++) {
+      var cc = state.crossCars[i];
+      var key = lightFrames[Math.floor(now / CROSS_CAR_FRAME_MS) % lightFrames.length];
+      var img = sprites[key];
+      if (!img) continue;
+      var cx = cc.x + cc.w / 2;
+      var cy = cc.y + cc.h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      // Native sprite faces down. dir=+1 (going right) -> rotate -90
+      // (counter-clockwise) so the car points right. dir=-1 (going
+      // left) -> rotate +90 so it points left.
+      ctx.rotate(cc.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+      // After rotation, the rendered "width" is the source height and
+      // vice versa — but since we sized at CROSS_CAR_HEIGHT_FRAC of
+      // the source TALL dimension, swap w/h on draw.
+      ctx.drawImage(img, -cc.h / 2, -cc.w / 2, cc.h, cc.w);
+      ctx.restore();
+    }
   }
 
   // Render the in-flight coin particles spawned by triggerPhoneThief.
@@ -2172,6 +2324,23 @@
     ctx.drawImage(img, x - w/2, y, w, h);
   }
 
+  // Draw a sprite while pulling the source rect short on the bottom by
+  // cropFrac (0..1). Used to hide the ground-shadow ellipse baked into
+  // NPC + cop-car art without re-extracting every sprite. Render
+  // height also shrinks proportionally so the crop doesn't visually
+  // STRETCH the remaining content.
+  function drawAtCropped(spriteKey, x, y, w, h, cropFrac) {
+    var img = sprites[spriteKey];
+    if (!img) {
+      ctx.fillStyle = '#ff00ff';
+      ctx.fillRect(x - w/2, y, w, h);
+      return;
+    }
+    var srcH = img.height * (1 - cropFrac);
+    var dstH = h * (1 - cropFrac);
+    ctx.drawImage(img, 0, 0, img.width, srcH, x - w/2, y, w, dstH);
+  }
+
   // ============================================================
   // ICE side-kick — runs alongside Mike, auto-grabs nearby coins.
   // Ice prefers to stand on the side of Mike with the most road room
@@ -2224,7 +2393,14 @@
     if (!img || !baseImg) return;
     var pxPerSrc = (viewH() * ICE_HEIGHT_FRAC) / baseImg.height;
     var w = img.width * pxPerSrc;
-    var h = img.height * pxPerSrc;
+    // Height policy:
+    //   - During neck-stretch: per-frame (img.height varies, that's the
+    //     POINT — taller stretch frames render proportionally taller).
+    //   - During run cycle: LOCK to baseImg.height so the small
+    //     per-frame height differences in ice-14 / ice-16 don't cause
+    //     a visible vertical flicker every animation tick.
+    var stretching = now < state.ice.neckStretchUntil;
+    var h = (stretching ? img.height : baseImg.height) * pxPerSrc;
     // Y-bob: small sine-wave vertical oscillation while NOT mid-stretch
     var bob = 0;
     if (now >= state.ice.neckStretchUntil) {
@@ -2240,10 +2416,12 @@
     var x, y, srcCropFrac;
     if (state.iceTrailing) {
       x = laneX(state.player.targetLane);
-      // Trail offset: ~12% of viewport height behind Mike's foot line.
-      // Far enough that he reads as "behind" but close enough to feel
-      // like an active threat catching up.
-      var trailOffsetY = viewH() * 0.12;
+      // Trail offset: ~12% of viewport height ABOVE Mike's foot line
+      // (negative = up). Per playtest the original positive offset
+      // landed Ice in the wrong spot; flipping the sign reads correctly
+      // — Ice appears further up the road (in the perspective sense)
+      // chasing Mike from behind.
+      var trailOffsetY = -viewH() * 0.12;
       // Slight scale-down for "further from camera" perspective.
       var trailScale = 0.85;
       w *= trailScale;
@@ -2408,6 +2586,9 @@
     state.coinsArr = [];
     state.pickups = [];
     state.coinParticles = [];
+    state.crossCars = [];
+    state.crossCarSpawnTimer = 0;
+    state.crossCarNextSpawnMs = CROSS_CAR_SPAWN_MS_FAR;
     state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;
@@ -2767,11 +2948,17 @@
     window.RunnerLeaderboard.fetchTitleStats().then(function (stats) {
       console.log('[stats] fetched title stats:', stats);
       var attEl = document.getElementById('ts-attempts');
+      var todayEl = document.getElementById('ts-attempts-today');
       var topEl = document.getElementById('ts-top-score');
       var byEl  = document.getElementById('ts-top-by');
       // Render 0 as "0" not "—" — distinguishes "fetch succeeded but
       // empty" from "fetch failed". Helps diagnose Firebase issues.
       if (attEl) attEl.textContent = (stats.attempts != null) ? stats.attempts.toLocaleString() : '—';
+      if (todayEl) {
+        todayEl.textContent = (stats.attemptsToday != null)
+          ? '+' + stats.attemptsToday.toLocaleString() + ' today'
+          : '';
+      }
       if (topEl) topEl.textContent = stats.top ? stats.top.score.toLocaleString() : '—';
       if (byEl) {
         if (stats.top && stats.top.identity) {
