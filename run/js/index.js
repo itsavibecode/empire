@@ -1773,14 +1773,16 @@
     syncChromeForPhase();
   }
 
-  // Show/hide chrome (pause button) based on game phase. Pause is
-  // meaningless on title + game-over screens so we hide the button
-  // there to keep the corner clean.
+  // Show/hide chrome based on game phase. Pause button only relevant
+  // during play. Body gets a `phase-playing` class so CSS can disable
+  // the BookHockeys link's pointer-events during play (stray clicks
+  // during gameplay shouldn't navigate the user away).
   function syncChromeForPhase() {
     var pauseBtn = document.getElementById('btn-pause');
     if (pauseBtn) {
       pauseBtn.classList.toggle('hidden', state.phase !== 'playing');
     }
+    document.body.classList.toggle('phase-playing', state.phase === 'playing');
   }
 
   function endRun() {

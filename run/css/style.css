@@ -617,14 +617,28 @@ html, body {
   .cutscene-name { font-size: 1rem; }
 }
 
-/* ---- Game-over button row ---- */
+/* ---- Game-over button row ----
+   4 buttons (Submit Score / Leaderboard / Run Again / Quit to Title)
+   in a 2×2 grid. Tighter than the old vertical stack and easier to
+   scan since buttons fall into "primary action" rows. */
 .gameover-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: .6rem;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem .55rem;
+  justify-items: stretch;
+  max-width: 480px;
+  width: 100%;
 }
-.gameover-buttons button { min-width: 220px; }
+.gameover-buttons button {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .gameover-buttons {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+  }
+}
 
 /* ---- Pause overlay's quit button ---- */
 #btn-pause-quit {
@@ -807,9 +821,14 @@ html, body {
 
 /* ---- BookHockeys cross-link (above URL caption) ----
    Grayscale + 35% opacity at rest. On hover the grayscale lifts (full
-   color reveals) and the opacity jumps to 65%. The whole element is
-   centered via translateX so its width = the logo's natural width,
-   leaving the rest of the bottom strip clickable for game input. */
+   color reveals) and the opacity jumps to 65%. Visible on title +
+   game-over screens, but pointer-events disabled while phase=playing
+   so a stray click during gameplay can't accidentally navigate the
+   user away to bookhockeys.com. */
+body.phase-playing .game-bookhockeys {
+  pointer-events: none;
+  opacity: .15; /* fade further during play to signal it's inactive */
+}
 .game-bookhockeys {
   position: fixed;
   bottom: 4rem;

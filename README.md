@@ -16,6 +16,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.16 — 2026-04-26
+
+Patch — game-over button layout + BookHockeys link click guard.
+
+- **Game-over buttons in 2-column grid.** 4 buttons (SUBMIT SCORE / LEADERBOARD / RUN AGAIN / QUIT TO TITLE) were stacking vertically — tall + slow to scan. Now arranged 2×2 in a CSS grid with max-width 480px, so they fall into "primary action" rows. Mobile (max-width 480px) still falls back to single-column.
+- **BookHockeys link disabled during gameplay.** Was clickable at all times — a stray click during the game could navigate the user away to bookhockeys.com mid-run. Now CSS guards `body.phase-playing .game-bookhockeys { pointer-events: none; opacity: .15 }` so the logo fades + becomes click-through during play. Title + game-over screens still let the link work normally. The body's `phase-playing` class is toggled by `syncChromeForPhase()` already called from boot, startRun, endRun, and quitToTitle.
+
 ### OBS overlay (corner alignment) — 2026-04-26
 
 - **Corner brackets pulled outward + shrunk** from 180×180 at 32px offset → **130×130 at 18px offset**. The old brackets framed an inner box much smaller than where the tile grid actually sits, so content visibly under-filled the gold frame. New brackets sit closer to the viewport edges and embrace the actual content area.
