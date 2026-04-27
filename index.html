@@ -703,6 +703,34 @@ section{padding:6rem 1.5rem}
   border-radius:10px;
   border:1px solid rgba(245,241,235,0.06);
   transition:all 0.3s ease;
+  position:relative;       /* anchor for the .streamer-just-added badge */
+}
+/* JUST ADDED ribbon — appears on streamer cards where the streamer
+   was confirmed within the last 3 days. Set via streamers.json
+   `added_at` field; rendered into the card by sync-streamers.py and
+   decayed at page-load by the JS at the bottom of this file. Tucked
+   into the top-right corner so it doesn't block the avatar. */
+.streamer-just-added{
+  position:absolute;
+  top:6px;
+  right:6px;
+  background:linear-gradient(135deg, #D4A843 0%, #F2C764 100%);
+  color:#1a0e02;
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  font-size:0.55rem;
+  letter-spacing:0.15em;
+  padding:3px 7px;
+  border-radius:3px;
+  text-transform:uppercase;
+  box-shadow:0 2px 8px rgba(212,168,67,0.4);
+  pointer-events:none;
+  z-index:2;
+  animation:just-added-pulse 2.4s ease-in-out infinite;
+}
+@keyframes just-added-pulse{
+  0%, 100% { box-shadow:0 2px 8px rgba(212,168,67,0.4); }
+  50%      { box-shadow:0 2px 14px rgba(242,199,100,0.7); }
 }
 .streamer-card:hover{
   transform:translateY(-4px);
@@ -1586,6 +1614,26 @@ section{padding:6rem 1.5rem}
 })();
 
 
+
+// JUST ADDED badge decay — sync-streamers.py renders the badge for
+// streamers added within 3 days at sync time, stamped with the
+// added_at date. This loop checks the date on every page load and
+// hides the badge if it's now older than 3 days, so the badge
+// retires correctly even when sync hasn't re-run since.
+(function(){
+  const TTL_DAYS = 3;
+  const now = new Date();
+  document.querySelectorAll('.streamer-just-added[data-added]').forEach(function(el){
+    const raw = el.getAttribute('data-added');
+    if (!raw) return;
+    const added = new Date(raw.length === 10 ? raw + 'T00:00:00Z' : raw);
+    if (isNaN(added)) { el.remove(); return; }
+    const ageDays = (now - added) / (1000 * 60 * 60 * 24);
+    if (ageDays > TTL_DAYS || ageDays < 0) {
+      el.remove();
+    }
+  });
+})();
 
 // Check Kick live status for all streamers
 (function(){

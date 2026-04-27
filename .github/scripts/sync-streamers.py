@@ -11,6 +11,7 @@ import re
 import json
 import os
 import sys
+from datetime import date, datetime, timedelta
 
 REPO = os.environ.get('REPO_PATH', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 INDEX = os.path.join(REPO, 'index.html')
@@ -32,11 +33,48 @@ STATIC_KW_SUFFIX = ("The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, B
                     "All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9")
 
 
-def card_html(s):
-    """Generate one streamer card. Caller is responsible for </a> separators."""
+def is_just_added(s, today=None):
+    """True if this streamer's `added_at` is within the last 3 days
+    (inclusive). `added_at` is an ISO date string ("YYYY-MM-DD") set
+    by the Decap CMS when the entry was created. Streamers without an
+    `added_at` field never show the badge — back-compat with rows
+    added before this feature."""
+    raw = s.get('added_at')
+    if not raw:
+        return False
+    try:
+        # Tolerate both pure dates ("2026-04-27") and ISO datetimes
+        # ("2026-04-27T14:00:00.000Z") that Decap can emit.
+        if 'T' in raw:
+            d = datetime.fromisoformat(raw.replace('Z', '+00:00')).date()
+        else:
+            d = date.fromisoformat(raw)
+    except ValueError:
+        return False
+    if today is None:
+        today = date.today()
+    return (today - d) <= timedelta(days=3) and d <= today
+
+
+def card_html(s, today=None):
+    """Generate one streamer card. Caller is responsible for </a> separators.
+
+    Renders a JUST ADDED corner ribbon when the streamer's `added_at`
+    is within the last 3 days. Badge is positioned absolute over the
+    top-right corner of the card via CSS (.streamer-just-added)."""
+    badge = ''
+    if is_just_added(s, today):
+        # Stamp the badge with the date so a JS check at page load can
+        # hide it when (today - added_at) crosses 3 days, even if
+        # sync-streamers.py hasn't re-run since. Avoids needing a
+        # daily cron — sync removes stale badges only when something
+        # else changes, JS decays them in the meantime.
+        badge = (f'        <div class="streamer-just-added" '
+                 f'data-added="{s["added_at"]}">JUST ADDED</div>\n')
     return (
         f'<a class="streamer-card" href="{s["url"]}" target="_blank">\n'
-        f'        <div class="streamer-avatar" id="av-{s["slug"]}">\n'
+        + badge
+        + f'        <div class="streamer-avatar" id="av-{s["slug"]}">\n'
         f'          <span class="streamer-initials">{s["initials"]}</span>\n'
         f'          <img class="streamer-img" src="{s["avatar"]}" alt="{s["name"]}" loading="lazy">\n'
         f'        </div>\n'

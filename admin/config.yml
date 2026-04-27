@@ -99,6 +99,14 @@ collections:
                 media_folder: '/avatars'
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
+              - name: added_at
+                label: 'Date added (for JUST ADDED badge)'
+                widget: datetime
+                date_format: 'YYYY-MM-DD'
+                time_format: false
+                picker_utc: false
+                required: false
+                hint: 'Optional. Pick today''s date when adding a brand-new streamer — they''ll get a gold "JUST ADDED" badge on their card for 3 days. Leave blank for streamers that have been on the list a while; the badge will not appear.'
 
   - name: properties
     label: The Properties
