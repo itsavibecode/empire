@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.2">
+<meta name="version" content="0.2.3">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -588,7 +588,10 @@
     position: fixed;
     left: 22px;
     bottom: 18px;
-    z-index: 5;
+    /* Bumped 5 → 12 alongside .multikick-btn so the lower edge of the
+       screen (where `.stage`'s footer lives) doesn't paint over the
+       indicator. */
+    z-index: 12;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -633,6 +636,61 @@
     50%      { opacity: 1; }
   }
 
+  /* ---------- MANUAL REFRESH BUTTON (above the uptime counter)
+     Clicking forces a fresh poll() of the kick.com API without
+     reloading the page — useful if the embedded grid is stuck and
+     the operator wants to nudge live-status detection without
+     losing OBS scene state. Sits just above the uptime row in the
+     lower-left so the lower-left status block reads top-down as
+     [↻ refresh] / [● uptime + version]. */
+  .refresh-btn {
+    position: fixed;
+    left: 22px;
+    bottom: 44px;
+    z-index: 12;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 4px 6px;
+    border: 1px solid var(--rule);
+    background: linear-gradient(135deg, rgba(15,12,19,.85), rgba(9,7,11,.92));
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    pointer-events: auto;
+    text-shadow: 0 0 6px rgba(0,0,0,.9);
+    transition: opacity .2s, border-color .2s, color .2s;
+    opacity: .6;
+  }
+  .refresh-btn:hover {
+    opacity: 1;
+    border-color: var(--gold-dark);
+    color: var(--gold);
+  }
+  .refresh-btn .refresh-icon {
+    width: 11px; height: 11px;
+    display: inline-block;
+    line-height: 11px;
+    text-align: center;
+    font-size: 13px;
+    transform-origin: center;
+  }
+  .refresh-btn.is-spinning .refresh-icon {
+    animation: refresh-spin 700ms linear infinite;
+    color: var(--gold);
+  }
+  .refresh-btn.is-spinning {
+    border-color: var(--gold-dark);
+    opacity: 1;
+  }
+  @keyframes refresh-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
   /* ---------- MULTIKICK ESCAPE-HATCH BUTTON (bottom-center)
      One-click fallback if the embedded grid is acting up. Dynamically
      rebuilt from currently-known live slugs so the URL is always
@@ -643,7 +701,15 @@
     left: 50%;
     bottom: 14px;
     transform: translateX(-50%);
-    z-index: 5;
+    /* z-index bumped to 12 — was 5, same as `.stage`. Since `.stage`
+       comes AFTER the button in the DOM, equal z-index meant `.stage`
+       (which contains the footer in the bottom 88px) painted ON TOP
+       of the button and silently swallowed all click events. Now
+       above the rotation-progress bar (10) too so it's never
+       obscured. */
+    z-index: 12;
+    cursor: pointer;
+    pointer-events: auto;
     display: none;
     align-items: center;
     gap: 8px;
@@ -701,6 +767,16 @@
   <span class="mk-label">Failing? Load MultiKick</span>
 </a>
 
+<!-- Manual refresh button — sits above the uptime counter. Click to
+     re-poll Kick live status without reloading the page (preserves
+     OBS scene state + uptime counter). Useful when streams seem
+     stuck or proxies were timing out and the operator wants to
+     nudge things without an F5. -->
+<button type="button" class="refresh-btn" id="refreshBtn" title="Re-poll live status">
+  <span class="refresh-icon">↻</span>
+  <span>Refresh</span>
+</button>
+
 <!-- Uptime counter + version (lower-left). Uptime ticks every second
      from page load (format MM:SS auto-promotes to HH:MM:SS at 1h).
      Version sits to the right of the uptime, separated by a thin
@@ -710,7 +786,7 @@
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
   <span class="uptime-divider"></span>
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.2</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.3</span>
 </div>
 
 <div class="stage">
@@ -769,6 +845,37 @@
     }
     tick();
     setInterval(tick, 1000);
+  })();
+
+  /* ==================================================================
+     MANUAL REFRESH BUTTON wiring. Re-runs poll() when clicked. Spins
+     the icon while a poll is in flight + disables re-clicks until
+     the in-flight poll resolves so impatient mashing doesn't queue
+     up a stack of overlapping polls.
+  ================================================================== */
+  (function () {
+    const btn = document.getElementById('refreshBtn');
+    if (!btn) return;
+    let polling = false;
+    btn.addEventListener('click', async function () {
+      if (polling) return;
+      // poll() is defined later in the same script; reference it via
+      // window so the closure resolves at click-time, not load-time.
+      if (typeof window.poll !== 'function') {
+        console.warn('[BRB] refresh clicked but poll() not yet ready');
+        return;
+      }
+      polling = true;
+      btn.classList.add('is-spinning');
+      try {
+        await window.poll();
+      } catch (e) {
+        console.warn('[BRB] manual refresh failed:', e);
+      } finally {
+        polling = false;
+        btn.classList.remove('is-spinning');
+      }
+    });
   })();
 
   function shuffle(arr) {
