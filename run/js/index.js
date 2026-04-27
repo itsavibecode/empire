@@ -87,7 +87,7 @@
   var WATER_FIRST_DISTANCE_M = 4500;
   var WATER_INTERVAL_M = 3500;
   var WATER_ENTER_MS = 2500;
-  var WATER_BODY_MS = 10000;
+  var WATER_BODY_MS = 14000;  // bumped from 10000 to give the Shoovy boat enough time to approach Mike before the body times out
   var WATER_EXIT_MS = 2500;
   var WATER_TOTAL_MS = WATER_ENTER_MS + WATER_BODY_MS + WATER_EXIT_MS;
   var WATER_LIGHTNING_INTERVAL_MS = 1700;  // average gap between flashes
@@ -96,9 +96,9 @@
   var WATER_RAIN_DROPS = 220;              // active raindrops on screen
   // Shoovy mid-water sequence: boat approaches Mike from screen bottom
   // halfway through the water body, triggers a cutscene when close.
-  var SHOOVY_BOAT_SPAWN_MS = 4500;          // ms after water phase start (early in the body)
+  var SHOOVY_BOAT_SPAWN_MS = 2500;          // 2.5s into the body — gives time for the boat to approach
   var SHOOVY_BOAT_HEIGHT_FRAC = 0.32;       // sprite height as frac of viewport (boat is BIG)
-  var SHOOVY_BOAT_VY = 100;                  // px/sec UP toward Mike (slower than world scroll)
+  var SHOOVY_BOAT_VY = 150;                 // px/sec UP toward Mike — fast enough to reach the trigger Y before body ends
   var SHOOVY_BOAT_TRIGGER_Y_FRAC = 0.45;    // when boat top reaches this Y frac, fire cutscene
   var SHOOVY_BOAT_FRAMES = ['shoovy-sail-01', 'shoovy-sail-05', 'shoovy-sail-09', 'shoovy-sail-13'];
   var SHOOVY_BOAT_FRAME_MS = 280;
@@ -703,6 +703,31 @@
         startWaterPhase();
       },
     },
+    // ADIN POST-WATER — fires once Mike returns to street after the
+    // hurricane. Adin reneges on the $70k bait then tosses Mike a
+    // pity 10 Cx coins instead. The reward fires from onComplete +
+    // shows a centered "+10 Cx" flash with a spinning coin.
+    'adin-post-water': {
+      manualOnly: true,
+      panels: [
+        {
+          speaker: 'ADIN ROSS',
+          bgPrefix: 'cutscene-adin-', bgExt: '.png',
+          line: "Hahah get scrammed! Okay fine here is 10 Cx coins.",
+        },
+      ],
+      onComplete: function () {
+        // Award + recompute multiplier (same thresholds as the regular
+        // coin-pickup path) so the new total bumps the player's
+        // multiplier if they crossed a threshold.
+        state.coins += 10;
+        if (state.coins >= 16) state.multiplier = 3;
+        else if (state.coins >= 6) state.multiplier = 2;
+        // Big centered "+10 Cx" flash with spinning coin animation.
+        triggerCoinRewardFlash(10);
+        ga('adin_post_water_reward', { coins: 10 });
+      },
+    },
     'ice-returns': {
       // Bumped 2000 → 3800. ~1800m of solo running before Ice reappears,
       // matching the "long stretch alone, then the parasite returns" beat.
@@ -1236,6 +1261,10 @@
     // Cross-car spawn cadence is dt-based (state.crossCarSpawnTimer
     // is an accumulator), so it's already pause-safe — no shift needed.
     // Same for fauna spawnTimer.
+    // Coin-reward flash overlay
+    if (state.coinRewardFlash && state.coinRewardFlash.startedAt > 0) {
+      state.coinRewardFlash.startedAt += delta;
+    }
   }
 
   // ============================================================
@@ -1326,6 +1355,9 @@
     // lives never decrement, attempt counter increment is skipped, and
     // score-submit dialog is suppressed. HUD shows a small badge.
     godMode: false,
+    // Coin-reward flash overlay — fires on big coin grants like the
+    // post-water Adin gift. {amount, startedAt, durationMs} or null.
+    coinRewardFlash: null,
   };
 
   // ============================================================
@@ -1677,6 +1709,7 @@
       // Phase done — restore street ambient + cut ALL hurricane audio.
       // Stop the loops and any in-flight thunder one-shots so the
       // street resumes in clean silence (apart from mob ambient).
+      var hadShoovyEncounter = state.water.shoovyTriggered;
       state.water.phase = 'none';
       state.water.raindrops = [];
       state.water.lightningUntil = 0;
@@ -1686,6 +1719,15 @@
         stopLoop(THUNDER_VARIANTS[ti]);
       }
       if (state.phase === 'playing') startLoop('mob-angry');
+      // POST-WATER ADIN REWARD — only if Mike actually met Shoovy
+      // (the cutscene fired). Adin pops back in, reneges on the $70k,
+      // tosses 10 Cx as a consolation. Fires once per segment via
+      // shoovyTriggered flag (which gets reset on next startWaterPhase).
+      if (hadShoovyEncounter && !state.cutscenesTriggered['adin-post-water']) {
+        state.cutscenesTriggered['adin-post-water'] = true;
+        // Defer one frame so the water-phase cleanup completes first.
+        setTimeout(function () { startCutscene('adin-post-water'); }, 50);
+      }
     }
 
     if (state.water.phase === 'none') return;
@@ -1970,6 +2012,23 @@
     if (t.frames.length === 1 || !t.frameMs) return t.frames[0];
     var idx = Math.floor((now - p.spawnedAt) / t.frameMs) % t.frames.length;
     return t.frames[idx];
+  }
+
+  // Coin-reward flash overlay — fires on big coin grants (currently
+  // just the post-water Adin gift). Shows "+N Cx" centered with a
+  // spinning cx-coin sprite next to it, scales in then fades out.
+  // Also plays the coin-pickup SFX a few times rapidly to sell the
+  // grant audibly. Drawn from drawEffects each frame while active.
+  function triggerCoinRewardFlash(amount) {
+    state.coinRewardFlash = {
+      amount: amount,
+      startedAt: performance.now(),
+      durationMs: 2400,
+    };
+    // Rapid coin-pickup chirps (5 chirps over ~400ms) for audio feedback
+    for (var i = 0; i < 5; i++) {
+      setTimeout(function () { playSfx('coin-pickup'); }, i * 80);
+    }
   }
 
   function showPickupText(label, color, durationMs) {
@@ -2759,6 +2818,65 @@
   function drawEffects(now) {
     var w = viewW();
     var h = viewH();
+
+    // COIN REWARD FLASH — drawn over everything else so it pops on
+    // top of any other overlays. "+N Cx" centered with a spinning
+    // cx-coin to the LEFT of the text. Scales in (0.6→1.2) over the
+    // first 30% of duration, holds at 1.0 for the middle, fades out
+    // in the last 30%.
+    if (state.coinRewardFlash) {
+      var crf = state.coinRewardFlash;
+      var elapsed = now - crf.startedAt;
+      if (elapsed >= crf.durationMs) {
+        state.coinRewardFlash = null;
+      } else {
+        var t = elapsed / crf.durationMs;       // 0 → 1
+        var scale, alpha;
+        if (t < 0.30) {
+          // Scale-in beat
+          var k = t / 0.30;
+          scale = 0.6 + 0.6 * k;
+          alpha = k;
+        } else if (t < 0.70) {
+          scale = 1.2 - (t - 0.30) / 0.40 * 0.2; // 1.2 → 1.0
+          alpha = 1;
+        } else {
+          // Fade-out
+          var k2 = (t - 0.70) / 0.30;
+          scale = 1.0;
+          alpha = 1 - k2;
+        }
+        // Slight Y rise during the flash for a "popping up" feel
+        var yLift = -t * h * 0.04;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.translate(w / 2, h / 2 + yLift);
+        ctx.scale(scale, scale);
+
+        // Spinning coin sprite — cycle through cx-coin-01..08 fast
+        var coinKey = pickCoinSprite(now);
+        var coinImg = sprites[coinKey];
+        var coinSize = h * 0.13;
+        var textX = 0;
+        if (coinImg) {
+          var coinW = coinImg.width * (coinSize / coinImg.height);
+          // Position coin to the LEFT of the centered text
+          ctx.drawImage(coinImg, -coinSize - 10, -coinSize / 2, coinW, coinSize);
+        }
+
+        // "+N Cx" text in gold with shadow
+        ctx.fillStyle = '#FFD566';
+        ctx.font = 'bold ' + Math.floor(h * 0.13) + 'px "VT323", monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 4;
+        ctx.shadowBlur = 0;
+        ctx.fillText('+' + crf.amount + ' Cx', 14, 0);
+        ctx.restore();
+      }
+    }
 
     // HURRICANE OVERLAY — rain + lightning. Drawn early so the
     // pickup-text + countdown bars later in this function still
@@ -3646,6 +3764,7 @@
     state.coinsArr = [];
     state.pickups = [];
     state.coinParticles = [];
+    state.coinRewardFlash = null;
     state.crossCars = [];
     state.crossCarSpawnTimer = 0;
     state.crossCarNextSpawnMs = CROSS_CAR_SPAWN_MS_FAR;

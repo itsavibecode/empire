@@ -17,6 +17,37 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.49 — 2026-04-27
+
+Two fixes + new feature:
+
+**1. Shoovy cutscene now actually fires.** The math in v0.18.44 was off:
+- `SHOOVY_BOAT_SPAWN_MS = 4500ms` into water body (boat spawns 4.5s in)
+- Boat at 100 px/sec needed ~5.94s to travel from viewport bottom to trigger Y
+- Total time needed: 4500 + 5940 = **10,440ms** into water body
+- But `WATER_BODY_MS = 10,000ms` — body timed out before boat reached trigger
+- Phase flipped to `'exiting'` before cutscene could fire; v0.18.47's "clear boat on exit transition" fix sealed it
+
+Fixed by:
+- `WATER_BODY_MS`: 10s → **14s** (extends the storm — user OK'd this)
+- `SHOOVY_BOAT_SPAWN_MS`: 4500 → **2500** (boat spawns earlier)
+- `SHOOVY_BOAT_VY`: 100 → **150 px/sec** (boat moves faster)
+
+New timing: boat spawns 2.5s into body, takes ~4s to reach trigger Y, cutscene fires at ~6.5s into body. Body ends at 14s — plenty of buffer.
+
+**2. NEW post-water Adin reward.** After Mike returns to street from the storm (only if the Shoovy cutscene actually fired), Adin pops in for one more panel:
+
+> **ADIN ROSS:** *"Hahah get scrammed! Okay fine here is 10 Cx coins."*
+
+`onComplete` adds 10 to `state.coins`, recomputes the multiplier (might bump ×1→×2 if it crossed the 6-coin threshold), and triggers a new **coin-reward-flash overlay** drawn in `drawEffects`:
+
+- Centered "+10 Cx" gold text with the spinning `cx-coin` sprite to its left
+- 2.4s total duration: scales 0.6→1.2 over first 30%, holds at 1.0, fades over last 30%
+- Slight Y-rise during the flash for a "popping up" feel
+- 5 rapid `coin-pickup` SFX chirps over 400ms for audio feedback
+
+Trigger gating: `state.cutscenesTriggered['adin-post-water']` ensures it fires once per game (subsequent water segments don't repeat the bit). Pause-aware: the flash's `startedAt` is shifted by `shiftEffectTimers` so pausing mid-flash doesn't expire it instantly on resume.
+
 ### Run v0.18.48 — 2026-04-27
 
 Fix — water EXIT transition tile was never visible. Real bug, not a perception issue.
