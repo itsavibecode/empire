@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.25 — 2026-04-26
+
+Patch — three fixes from playtest.
+
+- **Cop cars actually flash R/B/R/B now.** v0.18.23's frame-cycle attempt picked `[01, 02, 05, 09]` which was the wrong sample — direct pixel sampling of the extracted sprites' light bars showed odd-numbered frames (01,03,05...) are RED-dominant and even-numbered (02,04,06...) are BLUE-dominant. Old cycle was therefore RED-BLUE-RED-RED — visibly mostly red with one blue flash. Fixed cycle `[01, 02, 03, 04]` at 180ms/frame gives clean R-B-R-B alternation.
+- **Death-pose sprite on the game-over screen.** New 12-pose sprite sheet sliced via `extract-death-sprites.py` (sniped, electrocuted, on-fire, frozen, knocked-out, stars, unconscious, anvil, drowned, R.I.P. tombstone, two bullet variants). One is picked at random and swapped into the game-over overlay's `<img>` element on `endRun`. Sized at 22vh with a drop-shadow + scale-in animation so the death pose lands with some weight before the score reads.
+- **Title-screen text panel** so the title + intro paragraph stay legible against the lighter overlay (introduced in v0.18.23 to let the title art show through). The `h1` and intro `<p>` both get a semi-opaque purple-tinted backing card with a subtle border + drop-shadow. The title art still shows through around the cards.
+
 ### Run v0.18.24 — 2026-04-26
 
 Patch — horse pickup sized properly + pause now actually pauses item effects.

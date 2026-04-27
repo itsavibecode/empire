@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.24">
+  <meta name="version" content="0.18.25">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -192,8 +192,10 @@
     <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
-  <!-- Game-over overlay — shown when lives hit 0 -->
+  <!-- Game-over overlay — shown when lives hit 0. Random death-pose
+       sprite gets swapped into #gameover-death-img on endRun(). -->
   <div class="overlay hidden" id="overlay-gameover">
+    <img class="gameover-death" id="gameover-death-img" src="" alt="" aria-hidden="true">
     <h1>SNIPED</h1>
     <p class="final-score">0 m</p>
     <p class="final-coins">Cx 0</p>
@@ -213,7 +215,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.24</div>
+  <div class="game-version">Run v0.18.25</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

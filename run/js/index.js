@@ -151,11 +151,14 @@
     { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 10 },
     { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 10 },
     // COP CAR — jump-only. Lane shift won't help; you must jump over it.
-    // Animates through 4 light-bar variants at 140ms/frame for the
-    // alternating red/blue flashing-lights effect. Previously each spawn
-    // picked ONE static frame and held it, so only ~25% of cars had any
-    // particular light state — looked broken on screen.
-    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-05','cop-car-09'], frameMs: 140, bobPx: 0, jumpOnly: true },
+    // Animates through 4 light-bar variants at 180ms/frame for the
+    // alternating red/blue flashing-lights effect. Sampled the source
+    // sheet directly (extract-runner-sprites probe): odd-numbered
+    // frames are RED-dominant, even are BLUE-dominant. Previous v0.18.23
+    // cycle was [01,02,05,09] = RED, BLUE, RED, RED — visibly mostly
+    // red with one blue flash. Fixed cycle [01,02,03,04] gives proper
+    // R-B-R-B alternation.
+    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-03','cop-car-04'], frameMs: 180, bobPx: 0, jumpOnly: true },
   ];
   // Preload every sprite referenced by any obstacle type
   OBSTACLE_TYPES.forEach(function (t) {
@@ -206,10 +209,19 @@
     var ick = 'ice-' + (ic < 10 ? '0' + ic : ic);
     SPRITE_PATHS[ick] = 'img/sprites/' + ick + '.png';
   }
-  // Cop car sprites (referenced by OBSTACLE_TYPES below)
-  ['01', '02', '05', '09'].forEach(function (n) {
+  // Cop car sprites (referenced by OBSTACLE_TYPES below). Preload
+  // frames 01-04 — the cycle uses them in order for R/B/R/B
+  // alternating-light animation.
+  ['01', '02', '03', '04'].forEach(function (n) {
     SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
   });
+  // Mike death sprites — 12 different game-over poses. Preloaded so a
+  // random one can render instantly when the gameover overlay shows
+  // (without an empty-image flash).
+  for (var dk = 1; dk <= 12; dk++) {
+    var dkk = 'mike-death-' + (dk < 10 ? '0' + dk : dk);
+    SPRITE_PATHS[dkk] = 'img/sprites/' + dkk + '.png';
+  }
   // Budgie sprites — perched on Mike's shoulder during cutscenes (DOM
   // overlay) AND on the title screen (canvas-rendered). Preload all 16
   // so both render paths can pick frames without flicker.
@@ -2385,6 +2397,15 @@
     setTimeout(function () { playSfx('death-gameover'); }, 600);
     var ov = document.getElementById('overlay-gameover');
     ov.classList.remove('hidden');
+    // Pick a random death-pose sprite for variety on each game over.
+    // 12 poses available (sniped, electrocuted, fire, frozen, anvil,
+    // drowned, R.I.P., etc.).
+    var deathImg = document.getElementById('gameover-death-img');
+    if (deathImg) {
+      var di = Math.floor(Math.random() * 12) + 1;
+      var dk = di < 10 ? '0' + di : '' + di;
+      deathImg.src = 'img/sprites/mike-death-' + dk + '.png';
+    }
     var fs = ov.querySelector('.final-score');
     var fc = ov.querySelector('.final-coins');
     var totalCoinScore = state.coins * state.multiplier * 10;

@@ -134,6 +134,26 @@ html, body {
 #overlay-start {
   background: rgba(10, 10, 20, .42);
 }
+/* But the lighter overlay made the text + intro paragraph hard to
+   read against the busy title art. Wrap the text content in a
+   semi-opaque panel for a clear contrast field while still letting
+   the art show through around it. */
+#overlay-start h1.title-cursive,
+#overlay-start > p {
+  background: rgba(14, 10, 28, .72);
+  border: 1px solid rgba(201, 164, 255, .25);
+  border-radius: 14px;
+  padding: 0.5rem 1.4rem;
+  margin: 0 auto;
+  max-width: min(720px, 92vw);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
+#overlay-start > p {
+  padding: 0.9rem 1.4rem;
+}
+#overlay-start .title-buttons {
+  margin-top: .4rem;
+}
 .overlay h1 {
   font-size: 5rem;
   letter-spacing: .15em;
@@ -179,6 +199,27 @@ html, body {
   font-size: 3.6rem;
   color: #FFD566;
   letter-spacing: .12em;
+}
+/* Death-pose sprite that appears at the top of the game-over overlay
+   (one of 12 poses picked at random). Sized to ~22% of viewport height
+   so it doesn't crowd out the score + buttons below it. */
+.gameover-death {
+  display: block;
+  height: 22vh;
+  width: auto;
+  max-width: 60vw;
+  margin: 0 auto -.4rem;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .55));
+  -webkit-animation: gameover-death-in .35s cubic-bezier(.25,.85,.45,1.1) both;
+          animation: gameover-death-in .35s cubic-bezier(.25,.85,.45,1.1) both;
+}
+@keyframes gameover-death-in {
+  from { transform: scale(0.6) translateY(-30px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);     opacity: 1; }
+}
+@-webkit-keyframes gameover-death-in {
+  from { -webkit-transform: scale(0.6) translateY(-30px); opacity: 0; }
+  to   { -webkit-transform: scale(1) translateY(0);     opacity: 1; }
 }
 .overlay .final-coins {
   font-size: 2rem;
