@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.55 — 2026-04-27 — Cache-bust query strings on JS + CSS
+
+The "v0.18.54 still has all my bugs" report turned out to be a browser-cache problem, not a code problem. The HTML at `/run/` was fetching fresh on hard-refresh (showing `Run v0.18.54`) but `js/index.js` was being served from the browser's cache without a cache-bust query, so users got the new HTML against the OLD JS — which made every JS-side fix (pause hard-stop, Xena height 0.20, chile-police class toggle) appear unfixed.
+
+Fix: append `?v=0.18.55` to the `js/index.js`, `js/leaderboard.js`, and `css/style.css` references in `index.html`. Going forward, every release bump will move the query string with it (v0.18.56 → `?v=0.18.56`) so browsers automatically pull the new asset whenever the HTML changes.
+
+This commit's HTML carries the new `?v=` query, which means the next page load — even just `Ctrl+R`, no need for hard-refresh — will pick up the new JS + CSS for the first time.
+
 ### Run v0.18.54 — 2026-04-27 — Three hotfixes from playtest
 
 1. **Pause now actually freezes everything.** I dropped `!state.paused` from the loop's update() gate during the v0.18.53 refactor — distance + elapsedMs were ticking during pause. Restored as an early-return at the top of update() so pause is a true hard stop on every counter and timer; resume continues to use `shiftEffectTimers` to compensate spawnedAt/expiry timestamps so animations resume mid-cycle.
