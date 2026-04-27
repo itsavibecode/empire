@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.0">
+<meta name="version" content="0.2.1">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -18,6 +18,14 @@
     // bottom of this script. The JSON is the single source of truth for the
     // Confirmed Streamers list across ourempirex.com, /obs/, and /promo/.
     // To change the list, edit streamers.json (or use the admin CMS).
+    //
+    // v0.2.1 — schema is now [{slug, name}, ...] (was just [string, ...]).
+    // The slug drives the kick.com API URL + iframe player URL (lowercase,
+    // no spaces — must match the actual kick.com username). The name is
+    // the display label shown on the tile. Bug pre-fix: the old schema
+    // used `name` for everything, which 404'd for streamers with spaces
+    // in their display name (e.g. "Ice Poseidon" → kick.com/api/.../ice
+    // poseidon → 404). Now we use slug for URLs, name for visuals.
     ROSTER: [],
 
     // How often to re-check live status + viewer counts (ms).
@@ -38,7 +46,25 @@
     // Shown between the top header and the grid. Right now it's a static
     // placeholder ("400 IN THE CHAT") until you wire it to real data.
     CHAT_COUNT_TEXT: '400 IN THE CHAT',
+
+    // -------- PLAYER HOST (v0.2.1) --------
+    // Which iframe host to use for the embedded streams. Default is
+    // 'kick.com' (official). Alternative is 'kick.cx' — a third-party
+    // mirror with a free embed (https://kick.cx/dev-stuff). Useful as
+    // a manual fallback if Kick's official player is acting up.
+    //
+    // Override via URL param: /obs/?player=kick.cx
+    // (No restart needed — the param is read on every iframe build.)
+    PLAYER_HOST: 'kick.com',
   };
+
+  // Honor the ?player= URL override at boot.
+  try {
+    const playerParam = new URLSearchParams(location.search).get('player');
+    if (playerParam === 'kick.cx' || playerParam === 'kick.com') {
+      CONFIG.PLAYER_HOST = playerParam;
+    }
+  } catch (e) { /* malformed URL — ignore */ }
 </script>
 
 <style>
@@ -615,6 +641,47 @@
     0%, 100% { opacity: .35; }
     50%      { opacity: 1; }
   }
+
+  /* ---------- MULTIKICK ESCAPE-HATCH BUTTON (bottom-center)
+     One-click fallback if the embedded grid is acting up. Dynamically
+     rebuilt from currently-known live slugs so the URL is always
+     `https://multikick.com/slug1/slug2/...`. Hidden when no live
+     streamers are known (clicking would lead to a blank page). */
+  .multikick-btn {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid var(--gold-dark);
+    background: linear-gradient(135deg, rgba(15,12,19,.92), rgba(9,7,11,.95));
+    color: var(--gold);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    text-decoration: none;
+    text-shadow: 0 0 6px rgba(212,169,74,.4);
+    transition: opacity .2s, border-color .2s, color .2s;
+    opacity: .65;
+    backdrop-filter: blur(2px);
+  }
+  .multikick-btn.visible { display: inline-flex; }
+  .multikick-btn:hover {
+    opacity: 1;
+    border-color: var(--gold);
+    color: var(--gold-hot);
+  }
+  .multikick-btn .mk-icon {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px rgba(212,169,74,.6);
+  }
 </style>
 </head>
 <body>
@@ -636,8 +703,18 @@
 <!-- Version pill (upper-left) — confirms which build of the BRB scene
      is loading in the OBS browser source. -->
 <div class="version-pill" aria-hidden="true">
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.0</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.1</span>
 </div>
+
+<!-- MultiKick escape-hatch button (bottom-center) — links to
+     multikick.com with all currently-live slugs in the path so the
+     operator can switch to MultiKick's grid in one click if the
+     embedded grid here is acting up. Hidden until at least one
+     streamer is known to be live. -->
+<a class="multikick-btn" id="multikickBtn" href="https://multikick.com/" target="_blank" rel="noopener" aria-hidden="true">
+  <span class="mk-icon"></span>
+  <span class="mk-label">Failing? Load MultiKick</span>
+</a>
 
 <!-- Uptime counter (lower-left) — ticks every second from page load.
      Format auto-promotes from MM:SS to HH:MM:SS once the page has been
@@ -842,7 +919,11 @@
     const ls = data.livestream;
     const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
     return {
-      username: slug,
+      // slug is the kick.com username (lowercase, no spaces) — used for
+      // API URL + iframe player URL. Matches the slug field in
+      // streamers.json. Display label comes from `name` set in the
+      // worker that calls this function.
+      slug: slug,
       isLive,
       viewers: isLive ? Number(ls.viewer_count || 0) : 0,
       title: isLive ? (ls.session_title || '') : '',
@@ -857,8 +938,12 @@
   async function fetchChannelLive(slug) {
     try {
       return await Promise.any(PROXIES.map(build => tryProxy(build, slug)));
-    } catch {
-      return { username: slug, isLive: false, viewers: 0, known: false };
+    } catch (e) {
+      // v0.2.1 — log proxy failures so we can diagnose outages from
+      // the console. The aggregate "all proxies failed for everyone"
+      // case is detected later in poll() by counting known:false.
+      console.warn('[BRB] all proxies failed for', slug, e && e.errors ? e.errors.map(x => String(x)) : e);
+      return { slug: slug, isLive: false, viewers: 0, known: false };
     }
   }
 
@@ -874,7 +959,11 @@
     async function worker() {
       while (cursor < CONFIG.ROSTER.length) {
         const i = cursor++;
-        const r = await fetchChannelLive(CONFIG.ROSTER[i]);
+        const entry = CONFIG.ROSTER[i];   // {slug, name}
+        const r = await fetchChannelLive(entry.slug);
+        // Stash the display name on the result so tile rendering can
+        // show "Ice Poseidon" while the iframe URL uses "iceposeidon".
+        r.name = entry.name;
         results[i] = r;
         if (onResult) onResult(r, results);
       }
@@ -886,9 +975,16 @@
 
   // localStorage cache so the page shows the last-known live grid
   // INSTANTLY on load while fresh polling happens in the background.
-  // Cache is considered fresh for 5 minutes.
+  //
+  // v0.2.1 — TTL bumped 5 min → 30 min. The 5-min ceiling was wiping
+  // perfectly-good cached state during brief CORS-proxy outages and
+  // leaving the BRB scene stuck on "WARMING UP" even though the cache
+  // had a known-live grid only minutes old. 30 min strikes a better
+  // balance: long enough to ride through proxy hiccups without losing
+  // the screen, short enough that a streamer who's truly been offline
+  // for half an hour falls out.
   const LIVE_CACHE_KEY = 'obs-live-cache-v1';
-  const LIVE_CACHE_TTL_MS = 5 * 60 * 1000;
+  const LIVE_CACHE_TTL_MS = 30 * 60 * 1000;
   function saveLiveCache(results) {
     try {
       localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
@@ -921,13 +1017,25 @@
     </svg>`;
 
   function tileHTML(s, opts = {}) {
-    const name = s.username;
+    // slug = kick.com URL slug (lowercase, no spaces) for iframe + API
+    // name = display label shown on the card. Falls back to slug if
+    //   the entry doesn't carry a display name (e.g. legacy cache rows
+    //   from v0.2.0 had only `username`).
+    const slug = s.slug || s.username;
+    const name = s.name || s.username || slug;
     const isTop = !!opts.isTop;
     // Top streamer (highest viewer count on the current page) plays with
     // audio unmuted. All others stay muted so the scene isn't chaos.
     // Kick's player accepts `muted=false` as the signal to play audio.
     const muted = isTop ? 'false' : 'true';
-    const src = `https://player.kick.com/${encodeURIComponent(name)}?autoplay=true&muted=${muted}`;
+    // v0.2.1 — host is configurable. Default = official player.kick.com.
+    // Alternative = player.kick.cx (third-party free embed). The
+    // ?muted= param is honored by both. kick.cx accepts more URL
+    // options (?volume=false &c.) but autoplay+muted is enough.
+    const playerHost = CONFIG.PLAYER_HOST === 'kick.cx'
+      ? 'player.kick.cx'
+      : 'player.kick.com';
+    const src = `https://${playerHost}/${encodeURIComponent(slug)}?autoplay=true&muted=${muted}`;
     const audioBadge = isTop
       ? '<div class="audio-badge"><span class="audio-icon">♪</span>AUDIO LIVE</div>'
       : '';
@@ -940,7 +1048,7 @@
         <div class="embed">
           <div class="placeholder">Loading ${name}…</div>
           <iframe
-            data-streamer="${name}"
+            data-streamer="${slug}"
             data-featured="${isTop}"
             src="${src}"
             allow="autoplay; fullscreen; encrypted-media"
@@ -1005,7 +1113,12 @@
     const page = livePages[idx];
     if (!page || page.length === 0) return;
     const count = Math.min(page.length, 6);
-    const isTopName = page[0] ? page[0].username : null;
+    // Tile-key resolver — slug is the canonical key, but legacy cache
+    // entries (saved by v0.2.0 before the refactor) only carry
+    // `username`. Fall back so a stale cache from before the upgrade
+    // still renders without thrashing the DOM.
+    const tileKey = s => s.slug || s.username;
+    const isTopSlug = page[0] ? tileKey(page[0]) : null;
 
     // First-time mount: create the grid element fresh
     let grid = content.querySelector('.grid');
@@ -1028,8 +1141,9 @@
       }
     });
 
-    // Set of streamers we WANT mounted on this page
-    const wanted = new Set(page.map(s => s.username));
+    // Set of streamers we WANT mounted on this page (keyed by slug,
+    // matches data-streamer attribute set in tileHTML)
+    const wanted = new Set(page.map(s => s.slug));
 
     // Drop tiles for streamers not on this page (offline, rotated off, etc.)
     for (const [name, tile] of existing) {
@@ -1042,8 +1156,8 @@
     // For each desired streamer in order, reuse OR create + position
     for (let i = 0; i < page.length; i++) {
       const s = page[i];
-      const isTop = s.username === isTopName;
-      let tile = existing.get(s.username);
+      const isTop = s.slug === isTopSlug;
+      let tile = existing.get(s.slug);
 
       if (tile) {
         // EXISTING tile — update viewer badge in place, no iframe reload
@@ -1117,12 +1231,33 @@
       : `— ${liveCount} Live · ${viewers} Viewers —`;
   }
 
+  // v0.2.1 — keep the MultiKick fallback button URL in sync with the
+  // current live grid. URL is `multikick.com/slug1/slug2/...`. Hidden
+  // when nothing is live (clicking would land on a blank multikick).
+  function updateMultiKickButton(live) {
+    const btn = document.getElementById('multikickBtn');
+    if (!btn) return;
+    if (!live || live.length === 0) {
+      btn.classList.remove('visible');
+      btn.setAttribute('aria-hidden', 'true');
+      btn.href = 'https://multikick.com/';
+      return;
+    }
+    // Build path. MultiKick caps at ~6 simultaneous streams; truncate
+    // so the URL doesn't get absurdly long.
+    const slugs = live.slice(0, 6).map(s => s.slug || s.username).filter(Boolean);
+    btn.href = 'https://multikick.com/' + slugs.join('/');
+    btn.classList.add('visible');
+    btn.setAttribute('aria-hidden', 'false');
+  }
+
   // Re-render the grid given a list of (currently known) live streamers.
   // Extracted so we can call it incrementally as fetch results arrive.
   function applyLiveResults(live, options = {}) {
     live = live.slice().sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
     const totalViewers = live.reduce((sum, s) => sum + (s.viewers || 0), 0);
     updateSummary(live.length, totalViewers);
+    updateMultiKickButton(live);
 
     if (live.length === 0) {
       // Only show the "none live" state if this is a final result
@@ -1144,11 +1279,64 @@
     }
 
     // Preserve current page index if the live set hasn't changed
-    const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.username))) ===
-                         JSON.stringify(livePages.map(p => p.map(x => x.username)));
+    const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.slug))) ===
+                         JSON.stringify(livePages.map(p => p.map(x => x.slug)));
     livePages = pages;
     if (!sameAsBefore) currentPageIdx = 0;
     startRotation();
+  }
+
+  // Build a "fallback bench" of rostered streamers shown when we have
+  // nothing else: no live streamers confirmed, no fresh cache. Embeds
+  // the iframes anyway — Kick's player gracefully shows the channel's
+  // OFFLINE landing card (avatar, recent VODs, follow CTA), which is
+  // way better BRB content than a "WARMING UP" spinner.
+  //
+  // Picks the FIRST 4 ROSTER entries (by streamers.json order, which is
+  // also the visual order on the homepage / promo page). Capped at 4
+  // so it doesn't fill the whole grid with offline placeholders if
+  // nobody's live yet.
+  function renderFallbackBench() {
+    const entries = (CONFIG.ROSTER || []).slice(0, 4);
+    if (!entries.length) {
+      renderNoneLive();
+      return;
+    }
+    livePages = [];
+    currentPageIdx = 0;
+    if (rotateTimer) clearInterval(rotateTimer);
+    rotationProgress.style.width = '0%';
+
+    // Reuse the existing tile builder. Synthesize "stub" streamer
+    // records with isLive: false; the iframe still loads and Kick's
+    // player handles the offline state visually.
+    const stubs = entries.map(e => ({
+      slug: e.slug,
+      name: e.name,
+      isLive: false,
+      viewers: 0,
+      title: '',
+      known: false,
+    }));
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    grid.dataset.count = stubs.length;
+    stubs.forEach((s, i) => grid.appendChild(buildTile(s, i === 0)));
+    content.innerHTML = '';
+    content.appendChild(grid);
+    // Replace the "VIEWERS" badges (we don't have a count) with a
+    // muted "OFFLINE" badge so users don't see "0 VIEWERS" forever.
+    grid.querySelectorAll('.tile').forEach(t => {
+      const vb = t.querySelector('.viewers-badge');
+      if (vb) {
+        vb.textContent = 'OFFLINE';
+        vb.style.background = 'linear-gradient(135deg, #2a2530 0%, #1a1620 100%)';
+        vb.style.color = 'var(--ink-dim)';
+      }
+      const lb = t.querySelector('.live-badge');
+      if (lb) lb.style.display = 'none';
+    });
+    liveSummary.textContent = '— Connecting to streams —';
   }
 
   async function poll() {
@@ -1161,7 +1349,37 @@
         if (liveSoFar.length > 0) applyLiveResults(liveSoFar);
       });
       const live = results.filter(r => r && r.isLive);
+
+      // v0.2.1 — PROXY OUTAGE DETECTION. Count results where ALL
+      // proxies failed (known: false). If essentially every fetch
+      // failed, the "no one is live" verdict is unreliable — don't
+      // wipe the screen to "WARMING UP" on bad data. Instead keep
+      // whatever's currently on screen (cache or stale tiles) and
+      // log so we can diagnose from the console.
+      const knownFails = results.filter(r => r && !r.known).length;
+      const total = results.length;
+      const knownFailRatio = total > 0 ? knownFails / total : 0;
+      console.log('[BRB] poll done',
+        'live=' + live.length,
+        'known=' + (total - knownFails) + '/' + total,
+        'failed=' + knownFails);
+      if (live.length === 0 && knownFailRatio > 0.5) {
+        console.warn('[BRB] >50% of fetches failed (proxy outage?). '
+          + 'Keeping current display, NOT wiping to "warming up".');
+        // Don't call applyLiveResults with final:true — preserves
+        // whatever tiles or cache are currently shown.
+        return;
+      }
+
       applyLiveResults(live, { final: true });
+
+      // v0.2.1 — if we have nothing live AND nothing cached AND we DID
+      // get reliable poll results (not a proxy outage), show the
+      // fallback bench so the BRB scene has SOMETHING on screen.
+      if (live.length === 0) {
+        renderFallbackBench();
+      }
+
       // Save successful poll to cache so next page-load is instant
       saveLiveCache(results);
     } catch (err) {
@@ -1176,14 +1394,27 @@
     .then(r => r.json())
     .then(data => {
       const list = Array.isArray(data) ? data : (data.streamers || []);
-      CONFIG.ROSTER = list.map(s => s.name);
-      // INSTANT FIRST PAINT: if we have a recent cache (< 5 min old),
+      // v0.2.1 — store {slug, name} objects so the URL slug (lowercase,
+      // no spaces) is used for kick.com API + iframe URLs, while the
+      // display name (with capitals/spaces) is shown on the tile card.
+      // Pre-fix: streamers like "Ice Poseidon" 404'd on every poll
+      // because we used the display name as the URL slug.
+      CONFIG.ROSTER = list.map(s => ({
+        slug: (s.slug || s.name || '').trim(),
+        name: (s.name || s.slug || '').trim(),
+      })).filter(e => e.slug);
+      console.log('[BRB] roster loaded:', CONFIG.ROSTER.length, 'streamers');
+      // INSTANT FIRST PAINT: if we have a recent cache (< 30 min old),
       // render those streamers right away so the page isn't blank
       // while the first poll is in flight. Fresh data overwrites this
       // as soon as it arrives.
       const cached = loadLiveCache();
       if (cached && cached.length > 0) {
+        console.log('[BRB] cache hit:', cached.length, 'cached live streamers');
         applyLiveResults(cached);
+      } else {
+        console.log('[BRB] no usable cache, falling back to bench while first poll runs');
+        renderFallbackBench();
       }
       poll();
       setInterval(poll, CONFIG.POLL_MS);
