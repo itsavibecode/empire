@@ -17,6 +17,46 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.34 — 2026-04-27
+
+Major — **HURRICANE / WATER SEGMENT**. Periodically the road ends at a cliff and Mike gets washed onto the open sea on a mattress raft for ~15 seconds. Storm overlay (lightning + rain), audio swap (mob ambient → water + rain loops), no street obstacles or pickups during the segment.
+
+**Asset pipeline:**
+
+- New `extract-water-hurricane.py` script:
+  - Copies the 4 source water road tiles (`1roadwater.png`, `2aroadwater.png`, `2broadwater.png`, `3roadwater.png` from `/run/concept/`) into `/run/img/bg/` as `bg-water-enter.png`, `bg-water-tile-a.png`, `bg-water-tile-b.png`, `bg-water-exit.png`.
+  - Slices the Gemini-generated mattress sprite sheet (3×4 grid, alpha-clean) into 12 individual `mike-mattress-XX.png` files via the same connected-component blob filter the budgie + cop-overhead extractors use.
+
+**Trigger flow:**
+
+- First water segment fires at ~1200m. If Ice is currently with Mike, a NEW `before-water` cutscene plays first:
+  - **ICE:** *"Mike, you ever been to the North Pole?"*
+  - **MIKE:** *"The fuck? You think because I'm short I be out there like some ham ass elf wrapping Christmas presents?"*
+  - On complete: Ice splits + water phase begins.
+- If Ice already gone (e.g., player did the `mike-tells-off` arc instead), water phase fires directly without cutscene.
+- Subsequent water segments trigger every ~3500m thereafter, no cutscene.
+- The `before-water` cutscene is `manualOnly: true` so the standard distance-loop in `maybeTriggerCutscene` skips it — only the water trigger logic can fire it.
+
+**Phase machine** (~15s total):
+
+| Phase | Duration | What happens |
+|---|---|---|
+| `entering` | 2.5s | `bg-water-enter` (cliff edge) scrolls UP past Mike. Already on mattress sprite. Storm overlay active. |
+| `water` | 10s | Pure sea — `bg-water-tile-a` and `bg-water-tile-b` ALTERNATE in the vertical scroll loop, faking animated waves. Lightning + rain at full intensity. |
+| `exiting` | 2.5s | `bg-water-exit` (boat ramp) scrolls UP, returning to street. Storm clears at end. |
+
+**Storm effects:**
+
+- **Rain:** 220 drops constantly recycling. Random Y velocity (14-28 px/frame) for parallax depth fake; horizontal drift = -0.18× vy for hurricane-wind slant. Drawn as slanted line streaks at low opacity.
+- **Lightning:** white-screen flashes on a randomized cadence (avg 1.7s ± 1.1s jitter). Each flash is a 110ms stuttering bright/dim alternation for that real-lightning feel. Triggers `playSfx('thunder')` (no-op if asset not yet loaded).
+- **Storm tint:** subtle blue-grey full-screen fill so the segment reads as overcast even between flashes.
+
+**Spawn suppression:** while `state.water.phase !== 'none'`, the obstacle / pickup / cross-car / fauna spawn blocks all gate to `!inWater`. Existing arrays are also CLEARED at phase start so leftover NPCs don't keep scrolling across the sea. Naturally re-populates after the exit transition.
+
+**Mike's sprite:** `drawPlayer` swaps to `mike-mattress-XX` (12 frames cycling at 280ms each) for the entire phase, with a sine-wave Y-bob (~6px) for the rocking-on-waves feel. Renders at 1.4× normal Mike height since the sprite includes the mattress underneath.
+
+**Audio:** new `AUDIO_DEFS` entries `water-loop` (looped wave bed), `rain-loop` (looped rain), and `thunder` (one-shot per flash). Files don't exist yet — the audio system silently no-ops on missing files, so this segment plays in (visual-only) silence until you drop MP3s into `/run/audio/`. Mob ambient stops on phase entry, resumes on phase exit.
+
 ### Run v0.18.33 — 2026-04-27
 
 Polish — background fauna walking the sidewalks. Pigeons, cats, dogs, and goats now appear ambient on the 7%-margin sidewalk strips outside the 5 driving lanes. Pure visual layer — no collision, no gameplay impact.

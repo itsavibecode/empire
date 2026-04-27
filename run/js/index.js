@@ -42,6 +42,25 @@
   var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  // HURRICANE / WATER SEGMENT — periodically the road ENDS at a cliff
+  // and Mike is washed onto the open sea on a mattress raft. Lasts a
+  // total of ~15 seconds split into:
+  //   ENTERING (~2.5s): the cliff-edge tile scrolls up past Mike
+  //   WATER    (~10s):  alternating sea tiles + lightning + rain +
+  //                     Mike on his mattress; NO obstacles or pickups
+  //   EXITING  (~2.5s): boat-ramp tile scrolls up; back to street
+  // Triggered by distance: first at ~1200m, then every ~3500m after.
+  var WATER_FIRST_DISTANCE_M = 1200;
+  var WATER_INTERVAL_M = 3500;
+  var WATER_ENTER_MS = 2500;
+  var WATER_BODY_MS = 10000;
+  var WATER_EXIT_MS = 2500;
+  var WATER_TOTAL_MS = WATER_ENTER_MS + WATER_BODY_MS + WATER_EXIT_MS;
+  var WATER_LIGHTNING_INTERVAL_MS = 1700;  // average gap between flashes
+  var WATER_LIGHTNING_INTERVAL_JITTER_MS = 1100;
+  var WATER_LIGHTNING_FLASH_MS = 110;      // duration of each white flash
+  var WATER_RAIN_DROPS = 220;              // active raindrops on screen
+
   // BACKGROUND FAUNA — pigeons/cats/dogs/goats walking the sidewalks.
   // Pure ambient visuals, no collision. Spawn on the LEFT or RIGHT
   // sidewalk strip (the 7% margin outside the 5 driving lanes), scroll
@@ -206,6 +225,19 @@
   for (var bgi = 1; bgi <= 4; bgi++) {
     SPRITE_PATHS['bg-road-' + bgi] = 'img/bg/bg-road-tile-' + bgi + '.png';
   }
+  // Water/hurricane segment background tiles. The two pure-water tiles
+  // (a + b) alternate within the scroll loop to fake animated waves.
+  // Enter + exit are one-shot transition tiles bookending the segment.
+  SPRITE_PATHS['bg-water-enter']  = 'img/bg/bg-water-enter.png';
+  SPRITE_PATHS['bg-water-tile-a'] = 'img/bg/bg-water-tile-a.png';
+  SPRITE_PATHS['bg-water-tile-b'] = 'img/bg/bg-water-tile-b.png';
+  SPRITE_PATHS['bg-water-exit']   = 'img/bg/bg-water-exit.png';
+  // Mike-on-mattress sprites — replace his run cycle during the water
+  // segment. 12 frames; cycle through them slowly for the floating bob.
+  for (var mm = 1; mm <= 12; mm++) {
+    var mmk = 'mike-mattress-' + (mm < 10 ? '0' + mm : mm);
+    SPRITE_PATHS[mmk] = 'img/sprites/' + mmk + '.png';
+  }
   // Title-screen background art (Mike + Ice on Chilean street). Stored
   // as a JPEG (800 KB) instead of the 7 MB source PNG since it's a
   // photographic-style image that compresses fine without quality loss.
@@ -312,6 +344,15 @@
     'bonus-end':           { src: 'audio/Blip/MP3/Blip2.mp3',      channel: 'sfx' },
     'dialogue-beep':       { src: 'audio/Blip/MP3/Blip3.mp3',      channel: 'dialogue' },
     'jump':                { src: 'audio/Jump/MP3/Jump1.mp3',      channel: 'sfx' },
+    // Hurricane segment audio. Files may not exist yet — startLoop /
+    // playSfx swallow load failures, so these will silently no-op
+    // until you drop the MP3s into /run/audio/. Add when sourced:
+    //   audio/water-loop.mp3  (calm waves looping)
+    //   audio/rain-loop.mp3   (heavy rain bed)
+    //   audio/thunder.mp3     (one-shot thunderclap on lightning)
+    'water-loop':          { src: 'audio/water-loop.mp3',          channel: 'sfx', loop: true },
+    'rain-loop':           { src: 'audio/rain-loop.mp3',           channel: 'sfx', loop: true },
+    'thunder':             { src: 'audio/thunder.mp3',             channel: 'sfx' },
   };
 
   var audioInstances = {};
@@ -517,6 +558,33 @@
       ],
       onComplete: function () { state.iceSidekickJoined = false; },
     },
+    // BEFORE-WATER — fires once before the FIRST water segment, but
+    // only if Ice is still with Mike at that point. Sets up the
+    // "Ice abandons Mike at the water edge" beat. Triggered manually
+    // by maybeTriggerWater (not by distance loop in
+    // maybeTriggerCutscene), so manualOnly: true.
+    'before-water': {
+      manualOnly: true,
+      requires: function () { return state.iceSidekickJoined; },
+      panels: [
+        {
+          speaker: 'ICE POSEIDON',
+          bgPrefix: 'cutscene-', bgExt: '.png',
+          line: "Mike, you ever been to the North Pole?",
+        },
+        {
+          speaker: 'MIKE SMALLS JR',
+          bgPrefix: 'cutscene-mike-', bgExt: '.png',
+          line: "The fuck? You think because I'm short I be out there like some ham ass elf wrapping Christmas presents?",
+        },
+      ],
+      onComplete: function () {
+        // Ice splits before the water — Mike's solo on the mattress.
+        state.iceSidekickJoined = false;
+        state.iceTrailing = false;
+        startWaterPhase();
+      },
+    },
     'ice-returns': {
       // Bumped 2000 → 3800. ~1800m of solo running before Ice reappears,
       // matching the "long stretch alone, then the parasite returns" beat.
@@ -565,6 +633,9 @@
     if (cutscene.active) return;
     for (var defId in CUTSCENE_DEFS) {
       var def = CUTSCENE_DEFS[defId];
+      // manualOnly defs (like 'before-water') only fire when something
+      // explicitly calls startCutscene(defId) — skip the distance loop.
+      if (def.manualOnly) continue;
       if (state.distance < def.triggerDistanceM) continue;
       if (state.cutscenesTriggered[defId]) continue;
       if (def.requires && !def.requires()) continue;
@@ -1015,6 +1086,16 @@
     fauna: [],
     faunaSpawnTimer: 0,
     faunaNextSpawnMs: 0,
+    // Hurricane / water segment state machine.
+    water: {
+      phase: 'none',        // 'none' | 'entering' | 'water' | 'exiting'
+      startedAt: 0,         // wall-clock ms of phase entry
+      lastTriggeredAt: 0,   // distance (m) of last water trigger; 0 = never
+      lastLightningAt: 0,
+      nextLightningAt: 0,
+      lightningUntil: 0,    // wall-clock ms until current flash ends
+      raindrops: [],        // [{x, y, vy, len}]
+    },
     // Random death-pose sprite picked at endRun. Rendered on the road
     // (drawPlayer) AND in the gameover overlay panel so they match.
     gameOverDeathKey: null,
@@ -1284,6 +1365,124 @@
       hit: false,
     });
     return lane; // so coin spawner can avoid the same lane
+  }
+
+  // ============================================================
+  // HURRICANE / WATER SEGMENT
+  // ============================================================
+
+  // Called every frame in update(). If conditions are met, kicks off
+  // the pre-water cutscene (which then chains into startWaterPhase via
+  // its onComplete) OR starts the water phase directly when there's
+  // no Ice to do the cutscene with.
+  function maybeTriggerWater() {
+    if (state.water.phase !== 'none') return;
+    if (cutscene.active) return;
+    var distSinceLast = state.distance - state.water.lastTriggeredAt;
+    var threshold = state.water.lastTriggeredAt === 0
+      ? WATER_FIRST_DISTANCE_M
+      : WATER_INTERVAL_M;
+    if (distSinceLast < threshold) return;
+    // First-water + Ice still with Mike → fire the "Mike, you ever
+    // been to the North Pole?" cutscene first; its onComplete starts
+    // the water phase. Otherwise just dive straight in.
+    var firstWater = state.water.lastTriggeredAt === 0;
+    if (firstWater && state.iceSidekickJoined && !state.cutscenesTriggered['before-water']) {
+      state.cutscenesTriggered['before-water'] = true;
+      startCutscene('before-water');
+    } else {
+      startWaterPhase();
+    }
+  }
+
+  function startWaterPhase() {
+    var now = performance.now();
+    state.water.phase = 'entering';
+    state.water.startedAt = now;
+    state.water.lastTriggeredAt = state.distance;
+    // Clear any in-flight street objects so they don't keep scrolling
+    // on top of the sea. Pickups too — collecting a ham mid-ocean
+    // would be weird. Coin particles let cull naturally.
+    state.obstacles = [];
+    state.coinsArr = [];
+    state.pickups = [];
+    state.crossCars = [];
+    state.fauna = [];
+    // Audio swap: stop street ambient, start water + rain bed
+    stopLoop('mob-angry');
+    startLoop('water-loop');
+    startLoop('rain-loop');
+    // Spawn the initial swarm of raindrops at random offsets
+    seedRaindrops();
+    // Schedule first lightning flash a bit into the segment
+    state.water.nextLightningAt = now + 800 + Math.random() * 1200;
+    state.water.lightningUntil = 0;
+    ga('water_segment_started', { at_distance: Math.floor(state.distance) });
+  }
+
+  // Advances the water state machine (entering → water → exiting →
+  // none) and fires lightning + spawns/moves raindrops while active.
+  function tickWater(now) {
+    if (state.water.phase === 'none') return;
+    var elapsed = now - state.water.startedAt;
+    if (state.water.phase === 'entering' && elapsed >= WATER_ENTER_MS) {
+      state.water.phase = 'water';
+    } else if (state.water.phase === 'water' && elapsed >= WATER_ENTER_MS + WATER_BODY_MS) {
+      state.water.phase = 'exiting';
+    } else if (state.water.phase === 'exiting' && elapsed >= WATER_TOTAL_MS) {
+      // Phase done — restore street ambient + clear weather effects.
+      state.water.phase = 'none';
+      state.water.raindrops = [];
+      state.water.lightningUntil = 0;
+      stopLoop('water-loop');
+      stopLoop('rain-loop');
+      if (state.phase === 'playing') startLoop('mob-angry');
+    }
+
+    if (state.water.phase === 'none') return;
+
+    // Lightning trigger — schedule one-shot white-screen flashes.
+    if (now >= state.water.nextLightningAt) {
+      state.water.lightningUntil = now + WATER_LIGHTNING_FLASH_MS;
+      state.water.nextLightningAt = now + WATER_LIGHTNING_INTERVAL_MS
+        + Math.random() * WATER_LIGHTNING_INTERVAL_JITTER_MS;
+      // Optional thunder SFX — silently no-op if asset not loaded
+      playSfx('thunder');
+    }
+
+    // Raindrops — physics tick. Reset to top when off-screen bottom
+    // (rain is constant during the segment, no spawn cadence needed).
+    var vh = viewH();
+    var vw = viewW();
+    for (var i = 0; i < state.water.raindrops.length; i++) {
+      var d = state.water.raindrops[i];
+      d.y += d.vy;
+      // Slight horizontal drift for hurricane-wind feel
+      d.x -= d.vy * 0.18;
+      if (d.y > vh + d.len || d.x < -20) {
+        // Recycle: respawn at random Y above viewport top + random X
+        d.x = Math.random() * (vw + 100);
+        d.y = -Math.random() * vh * 0.5 - d.len;
+      }
+    }
+  }
+
+  function seedRaindrops() {
+    state.water.raindrops = [];
+    var vh = viewH();
+    var vw = viewW();
+    for (var i = 0; i < WATER_RAIN_DROPS; i++) {
+      // vy is per-frame px (assumes ~16ms tick); use a range so close
+      // drops fall faster than far drops (parallax depth fake).
+      var vy = 14 + Math.random() * 14;
+      var len = 14 + Math.random() * 18;
+      state.water.raindrops.push({
+        x: Math.random() * (vw + 100),
+        y: Math.random() * vh,
+        vy: vy,
+        len: len,
+      });
+    }
   }
 
   // Background fauna — pick a random species (weighted), random frame
@@ -1582,10 +1781,16 @@
     var nowMs = performance.now();
     tickEffects(nowMs);
     tickCutscene(nowMs);
+    tickWater(nowMs);
     if (cutscene.active) return;
     if (nowMs < state.effects.hamFreezeUntil) return;
     // Distance-triggered cut scene (first encounter only)
     maybeTriggerCutscene();
+    // Distance-triggered hurricane segment (clean street between cut scenes)
+    maybeTriggerWater();
+    // While the water segment is active, NO obstacles / pickups /
+    // cross-cars / fauna spawn (Mike's at sea, not on the street).
+    var inWater = state.water.phase !== 'none';
 
     // Effective speed — modified by active bonus/debuff effects
     var effSpeed = state.speed;
@@ -1645,7 +1850,7 @@
       SPAWN_INTERVAL_MIN,
       SPAWN_INTERVAL_INITIAL - t * 0.05
     );
-    if (state.spawnTimer >= spawnInterval) {
+    if (!inWater && state.spawnTimer >= spawnInterval) {
       state.spawnTimer = 0;
       var obstLane = spawnObstacle();
       // Coin shower during ham bonus — much heavier than before. Was
@@ -1680,7 +1885,7 @@
     // random in the FAUNA_SPAWN_MIN..MAX range so the street feels
     // populated without becoming a parade.
     state.faunaSpawnTimer += dt * 1000;
-    if (state.faunaSpawnTimer >= state.faunaNextSpawnMs) {
+    if (!inWater && state.faunaSpawnTimer >= state.faunaNextSpawnMs) {
       state.faunaSpawnTimer = 0;
       state.faunaNextSpawnMs = FAUNA_SPAWN_MIN_MS
         + Math.random() * (FAUNA_SPAWN_MAX_MS - FAUNA_SPAWN_MIN_MS);
@@ -1697,7 +1902,7 @@
     // Cross-traffic cop car spawning + movement. Spawns kick in at
     // CROSS_CAR_START_DISTANCE_M and accelerate (shorter intervals)
     // as distance grows.
-    if (state.distance >= CROSS_CAR_START_DISTANCE_M) {
+    if (!inWater && state.distance >= CROSS_CAR_START_DISTANCE_M) {
       state.crossCarSpawnTimer += dt * 1000; // ms
       if (state.crossCarSpawnTimer >= state.crossCarNextSpawnMs) {
         state.crossCarSpawnTimer = 0;
@@ -2125,6 +2330,37 @@
   function drawEffects(now) {
     var w = viewW();
     var h = viewH();
+
+    // HURRICANE OVERLAY — rain + lightning. Drawn early so the
+    // pickup-text + countdown bars later in this function still
+    // render on top.
+    if (state.water.phase !== 'none') {
+      // Slight blue-grey storm tint
+      ctx.fillStyle = 'rgba(28, 50, 70, 0.18)';
+      ctx.fillRect(0, 0, w, h);
+      // Rain — slanted streaks, white at low opacity
+      ctx.strokeStyle = 'rgba(200, 220, 255, 0.55)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (var di = 0; di < state.water.raindrops.length; di++) {
+        var d = state.water.raindrops[di];
+        ctx.moveTo(d.x, d.y);
+        // Match the horizontal drift used in tickWater for visual
+        // consistency: -0.18 * vy per frame, scaled by len.
+        ctx.lineTo(d.x + d.len * 0.18, d.y - d.len);
+      }
+      ctx.stroke();
+      // Lightning flash — full-screen white at high alpha during the
+      // brief flash window. Two sub-flashes per trigger (jagged feel).
+      if (now < state.water.lightningUntil) {
+        var fProg = (state.water.lightningUntil - now) / WATER_LIGHTNING_FLASH_MS;
+        // Stutter: alpha bounces high → low → high within the window
+        var flickerOn = Math.floor((1 - fProg) * 6) % 2 === 0;
+        ctx.fillStyle = flickerOn ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.30)';
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+
     // HAM FREEZE — white→purple flash full-screen
     if (now < state.effects.hamFreezeUntil) {
       var flashOn = (Math.floor(now / 60) % 2 === 0);
@@ -2409,6 +2645,12 @@
   function drawRoad(yTop, yBot) {
     var w = viewW();
     var roadH = yBot - yTop;
+    // During the water segment, swap the regular road tile out for
+    // the water tile sequence (enter → alternating sea → exit).
+    if (state.water.phase !== 'none') {
+      drawWaterRoad(yTop, yBot);
+      return;
+    }
     var bg = currentRoadKey ? sprites[currentRoadKey] : null;
 
     if (bg) {
@@ -2435,6 +2677,105 @@
     } else {
       // --- Procedural fallback (used if road image fails to load) ---
       drawRoadProcedural(yTop, yBot);
+    }
+  }
+
+  // Water-segment road renderer. Composes a vertical sequence of
+  // tiles based on phase elapsed time:
+  //   ENTERING: scrolls the bg-water-enter tile UP through the
+  //     viewport (one-shot transition from street → cliff edge).
+  //   WATER:    alternates tile-a / tile-b stacked vertically in the
+  //     scroll loop, faking animated sea waves.
+  //   EXITING:  scrolls the bg-water-exit tile UP (boat-ramp → street).
+  // All tiles share the same scale-to-fit-viewport-width math as the
+  // regular road renderer + the same distancePx scroll offset so
+  // motion stays continuous through the phase boundaries.
+  function drawWaterRoad(yTop, yBot) {
+    var w = viewW();
+    var roadH = yBot - yTop;
+    var enter = sprites['bg-water-enter'];
+    var tileA = sprites['bg-water-tile-a'];
+    var tileB = sprites['bg-water-tile-b'];
+    var exit  = sprites['bg-water-exit'];
+    if (!tileA || !tileB) return; // assets not loaded — skip
+    var refImg = enter || tileA;
+    var bgScale = w / refImg.width;
+    var tileH = refImg.height * bgScale;
+    var offset = state.distancePx % tileH;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, yTop, w, roadH);
+    ctx.clip();
+
+    // Fill the full clip with sea first so any gap reads as ocean,
+    // not the bg-color flash beneath. tileA color sample.
+    ctx.fillStyle = '#1d6587';
+    ctx.fillRect(0, yTop, w, roadH);
+
+    // Compute the scroll position of the SPECIAL transition tile (one
+    // per phase). Its top-edge Y when first entering = below the
+    // viewport, then it scrolls UP past Mike. We anchor the transition
+    // to the phase's start time so it appears once and only once.
+    var phase = state.water.phase;
+    var elapsed = performance.now() - state.water.startedAt;
+    var transitionTile = null;
+    var transitionDur = 0;
+    if (phase === 'entering') {
+      transitionTile = enter;
+      transitionDur = WATER_ENTER_MS;
+    } else if (phase === 'exiting') {
+      transitionTile = exit;
+      transitionDur = WATER_EXIT_MS;
+    }
+    if (transitionTile && transitionDur > 0) {
+      // Transition tile starts BELOW yBot at elapsed=0 and reaches
+      // yTop at elapsed=transitionDur (scrolls full screen height).
+      var tProgress = Math.min(1, elapsed / transitionDur);
+      var transitionTileH = transitionTile.height * (w / transitionTile.width);
+      // For ENTER: t=0 → tile bottom at yBot; t=1 → tile top at yTop
+      //            (so the road→cliff scrolls from bottom edge up off the top).
+      // For EXIT: same scroll direction (up) — boat-ramp comes from
+      //           bottom and approaches Mike, then he's back on street.
+      var tileTopY;
+      if (phase === 'entering') {
+        // Tile top moves from (yBot) DOWN to (yTop - transitionTileH)
+        // — i.e. it scrolls UP across the screen. Linear interp.
+        tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
+      } else {
+        // EXITING: same upward scroll
+        tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
+      }
+      // Background sea (alternating tiles) above + below the transition
+      // tile so there's never a gap. We render the sea first, then
+      // overlay the transition.
+      drawAlternatingSea(0, yTop, yBot, tileH, offset);
+      ctx.drawImage(transitionTile, 0, tileTopY, w, transitionTileH);
+    } else {
+      // WATER phase — pure animated sea
+      drawAlternatingSea(0, yTop, yBot, tileH, offset);
+    }
+    ctx.restore();
+  }
+
+  // Helper: tile bg-water-tile-a and bg-water-tile-b ALTERNATING
+  // vertically with the standard scroll offset, so the wave pattern
+  // animates as the world scrolls past.
+  function drawAlternatingSea(x, yTop, yBot, tileH, offset) {
+    var w = viewW();
+    var tileA = sprites['bg-water-tile-a'];
+    var tileB = sprites['bg-water-tile-b'];
+    if (!tileA || !tileB) return;
+    var firstY = yTop - offset + tileH;
+    // Tile index 0 = A, 1 = B, 2 = A, 3 = B... Pick which tile to use
+    // for the FIRST drawn tile based on how many full tile-heights
+    // have passed in the total scroll.
+    var startIdx = Math.floor(state.distancePx / tileH);
+    var i = 0;
+    for (var ty = firstY - tileH; ty - tileH < yBot; ty += tileH) {
+      var tile = ((startIdx + i) % 2 === 0) ? tileA : tileB;
+      ctx.drawImage(tile, x, ty, w, tileH);
+      i++;
     }
   }
 
@@ -2711,6 +3052,27 @@
     //    Mike+Ice duo if Ice has joined post-cutscene)
     // 2. Otherwise → standard run-cycle (with jump-pose freeze if airborne)
     var nowMs = performance.now();
+    // WATER PHASE — Mike sits on a mattress, no run cycle. Cycle
+    // through the 12 mattress frames slowly for a "floating bob"
+    // animation. Bigger render scale than running Mike since the
+    // mattress sprite includes the raft underneath.
+    if (state.water.phase !== 'none') {
+      var mFrame = Math.floor(nowMs / 280) % 12 + 1;
+      var mKey = 'mike-mattress-' + (mFrame < 10 ? '0' + mFrame : mFrame);
+      var mImg = sprites[mKey];
+      if (mImg) {
+        var mHeightFrac = PLAYER_TARGET_HEIGHT_FRAC * 1.4;
+        var mTargetH = viewH() * mHeightFrac;
+        var mScale = mTargetH / mImg.height;
+        var mDw = mImg.width * mScale;
+        var mDh = mTargetH;
+        // Slight up/down bob on top of the frame cycle for that
+        // "rocking on waves" feel
+        var bob = Math.sin(nowMs / 380) * 6;
+        ctx.drawImage(mImg, x - mDw / 2, playerY() - mDh + bob, mDw, mDh);
+      }
+      return;
+    }
     var onHorse = nowMs < state.effects.horseBoostUntil;
     var key, sizingKey;
     if (onHorse) {
@@ -2790,6 +3152,13 @@
     state.fauna = [];
     state.faunaSpawnTimer = 0;
     state.faunaNextSpawnMs = FAUNA_SPAWN_MIN_MS;
+    state.water.phase = 'none';
+    state.water.startedAt = 0;
+    state.water.lastTriggeredAt = 0;
+    state.water.lastLightningAt = 0;
+    state.water.nextLightningAt = 0;
+    state.water.lightningUntil = 0;
+    state.water.raindrops = [];
     state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;
