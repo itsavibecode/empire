@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.6 — 2026-04-26
+
+Fix — leaderboard tooltips were invisible. The v0.1.4/v0.1.5 tooltips used `position: absolute` inside each `.lb-row`, but the parent `.lb-list` has `overflow: hidden` (kept that way so long word lists don't break the layout). The tooltips were rendered to the LEFT of the row with `right: calc(100% + 12px)` — which put them outside the leaderboard's box, where overflow:hidden silently clipped them away. The CSS was right, the math was right, the tooltip was just off-screen.
+
+Refactored to a single shared `#lbTooltip` element appended to `<body>` with `position: fixed`. JavaScript event delegation on `#lbList` populates the tooltip's HTML on hover (looking up the row's data via a `lbCurrent` array indexed by `data-idx`) and positions it to the left of the hovered cell using `getBoundingClientRect`. If positioning to the left would clip off-viewport, it flips to the right side. Hides on scroll inside the leaderboard so it doesn't visually detach.
+
+Same two tooltips as v0.1.5 — hover the WORD for the source breakdown, hover the `Nu · Mx` meta for the user list — but now actually visible.
+
 ### Trending v0.1.5 — 2026-04-26
 
 Patch — second per-row tooltip on the `Nu · Mx` meta cell. Now there are TWO tooltips per leaderboard row:

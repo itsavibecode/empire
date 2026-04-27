@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.5">
+<meta name="version" content="0.1.6">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -223,16 +223,15 @@
      - .word-tooltip on the WORD column: which streamer chat said it last
        + breakdown by chat source.
      - .users-tooltip on the META column (the "2u · 5x" part): the actual
-       list of usernames who said it, with per-user count. */
-  .lb-row { position: relative; }
+       list of usernames who said it, with per-user count.
+     Rendered as a SINGLE shared #lbTooltip element appended to <body>
+     (positioned `fixed`) so it escapes the `.lb-list` `overflow:hidden`
+     parent — that was clipping the v0.1.6 implementation invisible. */
   .lb-row .word { cursor: help; }
   .lb-row .meta { cursor: help; }
-  .lb-tooltip {
-    position: absolute;
-    right: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%);
-    width: 240px;
+  #lbTooltip {
+    position: fixed;
+    width: 260px;
     padding: 12px 14px;
     background: rgba(20, 16, 12, 0.97);
     border: 1px solid var(--gold-dark);
@@ -247,12 +246,12 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
     opacity: 0;
     pointer-events: none;
-    transition: opacity .15s ease;
-    z-index: 50;
+    transition: opacity .12s ease;
+    z-index: 9000;
+    visibility: hidden;
   }
-  .lb-row .word:hover ~ .word-tooltip { opacity: 1; }
-  .lb-row .meta:hover ~ .users-tooltip { opacity: 1; }
-  .lb-tooltip .wt-label {
+  #lbTooltip.show { opacity: 1; visibility: visible; }
+  #lbTooltip .wt-label {
     color: var(--ink-dim);
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
@@ -260,26 +259,26 @@
     text-transform: uppercase;
     margin-bottom: 2px;
   }
-  .lb-tooltip .wt-last {
+  #lbTooltip .wt-last {
     color: var(--gold-hot);
     font-weight: 600;
     font-size: 14px;
     margin-bottom: 8px;
   }
-  .lb-tooltip .wt-bd-row {
+  #lbTooltip .wt-bd-row {
     display: flex; justify-content: space-between;
     padding: 2px 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
   }
-  .lb-tooltip .wt-bd-row .name { color: var(--ink); }
-  .lb-tooltip .wt-bd-row .cnt { color: var(--gold); }
-  .lb-tooltip .wt-none {
+  #lbTooltip .wt-bd-row .name { color: var(--ink); }
+  #lbTooltip .wt-bd-row .cnt { color: var(--gold); }
+  #lbTooltip .wt-none {
     color: var(--ink-dim);
     font-style: italic;
     font-size: 11px;
   }
-  .lb-tooltip .wt-more {
+  #lbTooltip .wt-more {
     color: var(--ink-dim);
     font-size: 10px;
     font-style: italic;
@@ -582,6 +581,11 @@
        visible with ?debug=1, force hidden with ?debug=0. -->
   <div class="debug-panel hidden" id="debugPanel"></div>
 
+  <!-- Shared leaderboard tooltip — single element, repositioned on
+       hover. Lives at the top of the body so it escapes the
+       leaderboard's overflow:hidden parent. -->
+  <div id="lbTooltip" role="tooltip"></div>
+
 </div>
 
 <!-- Word cloud renderer (small, no deps) -->
@@ -594,7 +598,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.5';
+const TRENDING_VERSION = '0.1.6';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
@@ -1087,6 +1091,10 @@ async function pollRosterAndSubscribe() {
 
 // --- Render ---------------------------------------------------------------
 
+// Top12 from the most recent render — used by the shared hover-tooltip
+// handler to look up source/user data for whichever row was hovered.
+let lbCurrent = [];
+
 const cloudCanvas = document.getElementById('cloudCanvas');
 const cloudEmpty = document.getElementById('cloudEmpty');
 const lbList = document.getElementById('lbList');
@@ -1188,55 +1196,113 @@ function renderLeaderboard(top12) {
     lbList.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;text-align:center;padding:20px;line-height:1.5;">${escapeHtml(reason)}</div>`;
     return;
   }
+  // Stash the top12 data globally so the shared tooltip handler can
+  // look up the row's word data on hover (re-using lbCurrent to avoid
+  // re-encoding the entire object as data-attrs on every render).
+  lbCurrent = top12;
   lbList.innerHTML = top12.map((t, i) => {
     const cls = i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '';
-    // SOURCE TOOLTIP: per-streamer breakdown, sorted desc, capped at 6
+    return `
+    <div class="lb-row${cls}" data-idx="${i}">
+      <span class="rank">${i + 1}.</span>
+      <span class="word" data-tip="source">${escapeHtml(t.word)}</span>
+      <span class="meta" data-tip="users">${t.uniqueUsers}u · ${t.count}x</span>
+    </div>`;
+  }).join('');
+}
+
+// Build the HTML body of either tooltip variant for a given top12 entry.
+function buildTooltipHtml(t, kind) {
+  if (kind === 'source') {
     const breakdown = Object.entries(t.srcCounts || {})
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
     const lastDisp = t.lastSrc ? (slugToDisplay[t.lastSrc] || t.lastSrc) : null;
-    const sourceTip = lastDisp ? `
-      <div class="lb-tooltip word-tooltip">
-        <div class="wt-label">Last said in</div>
-        <div class="wt-last">${escapeHtml(lastDisp)}</div>
-        <div class="wt-label">By chat</div>
-        ${breakdown.length === 0
-          ? '<div class="wt-none">no source data</div>'
-          : breakdown.map(([slug, cnt]) =>
-              `<div class="wt-bd-row"><span class="name">${escapeHtml(slugToDisplay[slug] || slug)}</span><span class="cnt">${cnt}x</span></div>`
-            ).join('')}
-      </div>` : '';
-
-    // USERS TOOLTIP: actual usernames + per-user mention count, capped
-    // at 10 to keep the tooltip readable. Total user count is shown
-    // alongside so it's clear when more are hidden.
-    const SHOW = 10;
-    const visible = (t.userList || []).slice(0, SHOW);
-    const hidden = Math.max(0, t.uniqueUsers - visible.length);
-    const usersTip = `
-      <div class="lb-tooltip users-tooltip">
-        <div class="wt-label">Said by ${t.uniqueUsers} user${t.uniqueUsers === 1 ? '' : 's'}</div>
-        ${visible.length === 0
-          ? '<div class="wt-none">no user data</div>'
-          : visible.map(u =>
-              `<div class="wt-bd-row"><span class="name">${escapeHtml(u.name)}</span><span class="cnt">${u.count}x</span></div>`
-            ).join('')}
-        ${hidden > 0 ? `<div class="wt-more">+${hidden} more…</div>` : ''}
-      </div>`;
-
+    if (!lastDisp) return '<div class="wt-none">no source data yet</div>';
     return `
-    <div class="lb-row${cls}">
-      <span class="rank">${i + 1}.</span>
-      <span class="word">${escapeHtml(t.word)}</span>
-      <span class="meta">${t.uniqueUsers}u · ${t.count}x</span>
-      ${sourceTip}
-      ${usersTip}
-    </div>`;
-  }).join('');
+      <div class="wt-label">Last said in</div>
+      <div class="wt-last">${escapeHtml(lastDisp)}</div>
+      <div class="wt-label">By chat</div>
+      ${breakdown.length === 0
+        ? '<div class="wt-none">no source data</div>'
+        : breakdown.map(([slug, cnt]) =>
+            `<div class="wt-bd-row"><span class="name">${escapeHtml(slugToDisplay[slug] || slug)}</span><span class="cnt">${cnt}x</span></div>`
+          ).join('')}`;
+  }
+  // kind === 'users'
+  const SHOW = 10;
+  const visible = (t.userList || []).slice(0, SHOW);
+  const hidden = Math.max(0, t.uniqueUsers - visible.length);
+  return `
+    <div class="wt-label">Said by ${t.uniqueUsers} user${t.uniqueUsers === 1 ? '' : 's'}</div>
+    ${visible.length === 0
+      ? '<div class="wt-none">no user data</div>'
+      : visible.map(u =>
+          `<div class="wt-bd-row"><span class="name">${escapeHtml(u.name)}</span><span class="cnt">${u.count}x</span></div>`
+        ).join('')}
+    ${hidden > 0 ? `<div class="wt-more">+${hidden} more…</div>` : ''}`;
 }
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 }
+
+// Shared leaderboard tooltip — wired via event delegation on #lbList
+// so it survives every re-render. Positioned to the LEFT of the
+// hovered cell, vertically centered. Falls right of the cell if the
+// left side would clip off-viewport.
+(function setupLbTooltip() {
+  const lbListEl = document.getElementById('lbList');
+  const tipEl = document.getElementById('lbTooltip');
+  if (!lbListEl || !tipEl) return;
+
+  function position(cellRect) {
+    const tipW = tipEl.offsetWidth;
+    const tipH = tipEl.offsetHeight;
+    let left = cellRect.left - tipW - 12;
+    if (left < 8) left = cellRect.right + 12; // flip to right side if it'd clip
+    let top = cellRect.top + (cellRect.height / 2) - (tipH / 2);
+    if (top < 8) top = 8;
+    if (top + tipH > window.innerHeight - 8) top = window.innerHeight - tipH - 8;
+    tipEl.style.left = left + 'px';
+    tipEl.style.top = top + 'px';
+  }
+
+  function show(target) {
+    const row = target.closest('.lb-row');
+    if (!row) return;
+    const idx = parseInt(row.dataset.idx, 10);
+    const data = lbCurrent[idx];
+    if (!data) return;
+    const kind = target.dataset.tip;
+    if (!kind) return;
+    tipEl.innerHTML = buildTooltipHtml(data, kind);
+    tipEl.classList.add('show');
+    // Position after content + class set so offsetWidth/Height is accurate
+    position(target.getBoundingClientRect());
+  }
+
+  function hide() {
+    tipEl.classList.remove('show');
+  }
+
+  // Use mouseover/out so we get firing on the children too (rank/word/meta
+  // are spans inside .lb-row). Filter to elements with data-tip.
+  lbListEl.addEventListener('mouseover', (e) => {
+    const t = e.target.closest('[data-tip]');
+    if (t && lbListEl.contains(t)) show(t);
+  });
+  lbListEl.addEventListener('mouseout', (e) => {
+    // Only hide when leaving the [data-tip] element entirely (not just
+    // moving to a child of it).
+    const t = e.target.closest('[data-tip]');
+    if (!t) return;
+    if (e.relatedTarget && t.contains(e.relatedTarget)) return;
+    hide();
+  });
+  // Hide on scroll inside leaderboard so the floating tooltip doesn't
+  // detach visually from the cell.
+  lbListEl.addEventListener('scroll', hide, { passive: true });
+})();
 
 function updateConnStatus() {
   const el = document.getElementById('connStatus');
