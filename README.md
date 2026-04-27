@@ -1000,6 +1000,20 @@ Iteration 2 on the runner. Big visual + UX changes.
 
 (Inherited the v0.13.0 number from the previous shared-version scheme. No functional changes since the OG/Twitter share metadata + cropped PNG export work in v0.10.16/0.10.17.)
 
+### Site v0.13.2 — 2026-04-27
+
+Two more homepage sections are now CMS-editable: the **Wristband** section (small uppercase pill / headline / paragraph / red warning line / wristband photo) and the **Featured Group** section (label / group name / optional tagline / description / repeatable detail rows / group-house photo).
+
+**Bootstrap step.** Both sections previously embedded their photos as inline base64 data URIs (~80 KB and ~150 KB of base64 in `index.html` itself). One-time decode → saved to `/wristband.jpg` and `/featured-group-house.png` at the repo root, then `index.html` was rewritten to reference the files. The CMS image widget can now upload replacements without manual base64 fiddling. Removes ~310 KB of base64 bloat from the served HTML — pages-served size shrinks accordingly, and the browser can now lazy-load + cache the images independently.
+
+**New JSON sources.**
+- `wristband.json` — `label`, `title`, `description`, `warning` (optional), `image`, `image_alt`.
+- `featured-group.json` — `label`, `name`, `tagline` (optional), `description`, `details` list (each row has `icon` / `heading` / `body`), `house_image`, `house_image_alt`.
+
+**New sync scripts.** `sync-wristband.py` regenerates the whole `<section class="wristband-section">` block; `sync-featured-group.py` regenerates the whole `<section class="dtb-section">` block (CSS class kept for styling continuity even though the section is now group-agnostic). Both wired into the existing content-sync workflow next to `sync-cta.py`. Both idempotent — running them against the live HTML produces zero diff if the JSON matches.
+
+**CMS UX.** The Featured Group's detail rows are a draggable list (same pattern as the About section's detail rows) so admins can add/remove rows freely — e.g. add a third detail for "Streaming Schedule" without a code change. The optional `tagline` and `warning` fields render conditionally: leave them blank in the CMS and the corresponding HTML element is omitted entirely (no empty pill).
+
 ### Site v0.13.1 — 2026-04-27
 
 Hero CTA buttons updated + made editable in the CMS.

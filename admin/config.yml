@@ -333,3 +333,117 @@ collections:
                 widget: string
                 hint: 'Where the button links. Full https://... URL for external sites, or a path starting with "/" for an in-site link.'
                 pattern: ['^(https?://|/).+', 'Must be a full URL or a path starting with /']
+
+  - name: wristband
+    label: Wristband Section
+    description: |
+      The "Official EmpireX Wristbands" section just above the Featured
+      Group on the homepage — small uppercase pill, headline, paragraph,
+      red warning line, and the wristband photo.
+
+      Saving here triggers the GitHub Action that regenerates the section
+      in index.html (~30 seconds after save).
+    files:
+      - file: wristband.json
+        label: Wristband content
+        name: wristband_file
+        format: json
+        fields:
+          - name: label
+            label: 'Section label (small uppercase pill above the headline)'
+            widget: string
+            hint: 'e.g. "Your Pass In"'
+          - name: title
+            label: 'Headline'
+            widget: string
+            hint: 'The big bold heading next to the photo. e.g. "Official EmpireX Wristbands"'
+          - name: description
+            label: 'Description paragraph'
+            widget: text
+            hint: 'The body text below the headline. Plain text — no HTML.'
+          - name: warning
+            label: 'Warning line (red callout)'
+            widget: string
+            required: false
+            hint: 'The red attention line below the description. Leave blank to hide it. Emoji allowed (e.g. "⚠️ No wristband = No entry...").'
+          - name: image
+            label: 'Wristband photo'
+            widget: image
+            choose_url: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'The wristband product photo shown next to the text. Saved at the repo root.'
+          - name: image_alt
+            label: 'Photo alt text (for accessibility)'
+            widget: string
+            default: 'Our Empire Wristband'
+            hint: 'Description of the photo for screen readers. e.g. "Our Empire Wristband".'
+
+  - name: featured_group
+    label: Featured Group Section
+    description: |
+      The "Featured Group" section that highlights one streaming group
+      (currently Sky9). Shows a small label pill, the group name as a
+      big title, an optional tagline ("🏆 Hall of Fame Group"), a
+      description, a list of detail rows (each with an emoji icon +
+      heading + body), and the group's house photo.
+
+      Drag detail rows to reorder. Add or remove rows as needed.
+      Saving here triggers the GitHub Action that regenerates the
+      section in index.html (~30 seconds after save).
+    files:
+      - file: featured-group.json
+        label: Featured Group content
+        name: featured_group_file
+        format: json
+        fields:
+          - name: label
+            label: 'Section label (small uppercase pill above the name)'
+            widget: string
+            default: 'Featured Group'
+            hint: 'e.g. "Featured Group"'
+          - name: name
+            label: 'Group name (the big title)'
+            widget: string
+            hint: 'Shown as the section''s big bold title. e.g. "Sky9".'
+          - name: tagline
+            label: 'Tagline (optional gold pill above the description)'
+            widget: string
+            required: false
+            hint: 'Optional small badge — leave blank to hide. Emoji allowed (e.g. "🏆 Hall of Fame Group").'
+          - name: description
+            label: 'Description paragraph'
+            widget: text
+            hint: 'The body text describing the group. Plain text — no HTML.'
+          - name: details
+            label: 'Detail rows'
+            label_singular: 'Detail row'
+            widget: list
+            collapsed: false
+            summary: '{{fields.icon}} {{fields.heading}} — {{fields.body}}'
+            hint: 'Each row is an icon + heading + body. Drag to reorder. Add or remove rows as needed.'
+            fields:
+              - name: icon
+                label: 'Icon (single emoji)'
+                widget: string
+                hint: 'A single emoji shown to the left of the row (e.g. "📅", "🏠", "🎤"). Use one emoji only.'
+              - name: heading
+                label: 'Heading'
+                widget: string
+                hint: 'Short label, e.g. "Wristband Admission", "Property".'
+              - name: body
+                label: 'Body'
+                widget: text
+                hint: 'The text shown beneath the heading.'
+          - name: house_image
+            label: 'House photo'
+            widget: image
+            choose_url: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'The group''s house / venue photo shown next to the details. Saved at the repo root.'
+          - name: house_image_alt
+            label: 'Photo alt text (for accessibility)'
+            widget: string
+            default: 'Featured group house'
+            hint: 'Description of the photo for screen readers. e.g. "Sky9 Group House".'

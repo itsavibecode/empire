@@ -1,0 +1,20 @@
+{
+  "label": "Featured Group",
+  "name": "Sky9",
+  "tagline": "🏆 Hall of Fame Group",
+  "description": "Hall of Fame group Sky9 is officially confirmed for EmpireX. They will be co-hosting the opening kickoff with the Our.Empire team on Day 1.",
+  "details": [
+    {
+      "icon": "📅",
+      "heading": "Wristband Admission",
+      "body": "June 11, 2026 • 9:00 PM – 12:00 AM"
+    },
+    {
+      "icon": "🏠",
+      "heading": "Property",
+      "body": "Private luxury home with pool — Sky9 Group house"
+    }
+  ],
+  "house_image": "/featured-group-house.png",
+  "house_image_alt": "Sky9 Group House"
+}
