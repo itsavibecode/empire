@@ -89,8 +89,12 @@
     { kind: 'weed', frames: _seq('weed-spin-', 16),  frameMs: 70,  weight: 2 },
     // HORSE — 8-sec speed boost. Static icon (will replace with proper
     // spinning sheet later). Mike's run-cycle gets temporarily swapped
-    // for the horse-riding sprite during the boost window.
-    { kind: 'horse', frames: ['horse-icon'],         frameMs: 0,   weight: 1 },
+    // for the horse-riding sprite during the boost window. Renders at
+    // its OWN scale (heightFrac 0.22) instead of the standard pickup
+    // size — it's a horse, not a bag of weed, so it should read at
+    // approximately Mike's full standing height when sitting on the
+    // sidewalk, not as a tiny floating icon.
+    { kind: 'horse', frames: ['horse-icon'],         frameMs: 0,   weight: 1, heightFracOverride: 0.22 },
   ];
   var PICKUP_TARGET_HEIGHT_FRAC = 0.09;
 
@@ -790,12 +794,35 @@
     if (state.phase !== 'playing') return;
     setPaused(!state.paused);
   }
+  // Track when the player paused so we can SHIFT every wall-clock
+  // expiry timestamp forward by the same delta on resume. Without this,
+  // a long pause silently expires every active effect (horse, ham,
+  // weed, controls-reversed, invuln, etc.) — bug reported in playtest:
+  // pausing during a horse boost lost the horse on resume.
+  var pauseStartedAt = 0;
+
   function setPaused(v) {
+    var wasPaused = state.paused;
     state.paused = !!v;
     var ov = document.getElementById('overlay-pause');
     if (ov) ov.classList.toggle('hidden', !state.paused);
     var btn = document.getElementById('btn-pause');
     if (btn) btn.classList.toggle('is-paused', state.paused);
+
+    var now = performance.now();
+    if (state.paused && !wasPaused) {
+      // Just paused — record the wall-clock so we know how long we were
+      // paused for when the player resumes.
+      pauseStartedAt = now;
+    } else if (!state.paused && wasPaused) {
+      // Resuming — every "expires-at" timestamp in state needs to shift
+      // forward by the pause duration so effects continue from where
+      // they left off, not in their already-expired ghost state.
+      var pauseDur = now - pauseStartedAt;
+      if (pauseDur > 0) shiftEffectTimers(pauseDur);
+      pauseStartedAt = 0;
+    }
+
     // Pause/resume looping audio. SFX (one-shot) don't need to be touched.
     Object.keys(AUDIO_DEFS).forEach(function (k) {
       var def = AUDIO_DEFS[k];
@@ -812,6 +839,32 @@
         }
       }
     });
+  }
+
+  // Shift every wall-clock expiry timestamp forward by delta (ms).
+  // Called on resume so the effect that was halfway through a pause
+  // doesn't appear to have expired in the gap.
+  function shiftEffectTimers(delta) {
+    var e = state.effects;
+    if (e.hamFreezeUntil > 0)         e.hamFreezeUntil += delta;
+    if (e.hamBonusUntil > 0)          e.hamBonusUntil += delta;
+    if (e.weedDebuffUntil > 0)        e.weedDebuffUntil += delta;
+    if (e.horseBoostUntil > 0)        e.horseBoostUntil += delta;
+    if (e.controlsReversedUntil > 0)  e.controlsReversedUntil += delta;
+    if (e.textShownAt > 0)            e.textShownAt += delta;
+    if (e.textShownUntil > 0)         e.textShownUntil += delta;
+    if (state.invulnUntil > 0)        state.invulnUntil += delta;
+    // Player jump in progress
+    if (state.player && state.player.jumpStart > 0) state.player.jumpStart += delta;
+    // Ice neck-stretch animation
+    if (state.ice && state.ice.neckStretchUntil > 0) state.ice.neckStretchUntil += delta;
+    // Coin particles' spawnedAt + life is alive-time-relative; shift
+    // their spawnedAt so the elapsed math stays correct.
+    if (state.coinParticles) {
+      for (var i = 0; i < state.coinParticles.length; i++) {
+        state.coinParticles[i].spawnedAt += delta;
+      }
+    }
   }
 
   // ============================================================
@@ -1169,7 +1222,11 @@
 
   function spawnPickup(avoidLane) {
     var type = pickWeightedPickupType();
-    var size = scaledSize(type.frames[0], PICKUP_TARGET_HEIGHT_FRAC);
+    // Per-type height override (horse renders MUCH bigger than the
+    // generic pickup size since it's a real animal silhouette, not a
+    // small collectible item).
+    var heightFrac = type.heightFracOverride || PICKUP_TARGET_HEIGHT_FRAC;
+    var size = scaledSize(type.frames[0], heightFrac);
     // HORSE spawns on the SIDEWALK only — placed in lane 0 or lane LANES-1
     // (the edge lanes) so the player has to swerve to the side of the
     // road to grab it. Other pickups spawn anywhere as before.

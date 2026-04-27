@@ -17,6 +17,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.24 — 2026-04-26
+
+Patch — horse pickup sized properly + pause now actually pauses item effects.
+
+- **Horse pickup is no longer a tiny floating icon.** It was rendering at the standard `PICKUP_TARGET_HEIGHT_FRAC: 0.09` (9% of viewport height) which fit the ham/weed/400 collectibles but read as a thumbnail next to a real animal. Added a per-type `heightFracOverride` field on `PICKUP_TYPES`; horse uses `0.22` (22% of viewport height) so it renders at roughly Mike's full standing height when sitting on the sidewalk. The other pickups keep the smaller default.
+- **Pause now actually pauses active item effects.** Reported in playtest: pausing during a horse boost lost the horse on resume. Cause: every effect timer (`hamFreezeUntil`, `hamBonusUntil`, `weedDebuffUntil`, `horseBoostUntil`, `controlsReversedUntil`, `invulnUntil`, `textShownUntil`, etc.) is stored as an absolute `performance.now()` wall-clock timestamp. While paused, the wall-clock kept advancing → the timestamps silently expired in the gap. Fix: `setPaused()` records `pauseStartedAt` on the way in and on resume calls a new `shiftEffectTimers(delta)` that advances every wall-clock expiry forward by the pause duration. Also shifts player jump timing, Ice neck-stretch, and coin-particle spawn times so animation state stays consistent across the pause too.
+
 ### Run v0.18.23 — 2026-04-26
 
 Heavy patch — one ship covering eight playtest items:
