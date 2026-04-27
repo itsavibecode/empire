@@ -426,6 +426,103 @@ html, body {
   position: relative;
 }
 
+/* ---- JAIL overlay (v0.18.52) — Mike + Xena behind bars + bail dialogue.
+   Sits ABOVE pause overlay (z 20) so it can't be dismissed by an accidental
+   pause click. Jail bg fills the screen behind a dialogue chrome at the
+   bottom; eye-blink animation is driven by JS swapping the <img> src. */
+.overlay-jail {
+  background: rgba(0, 0, 0, .88);
+  z-index: 35;
+  padding: 0;
+  justify-content: flex-start;
+  align-items: center;
+}
+.jail-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #0a0810;
+  pointer-events: none;
+  /* Pixel art — keep crisp on scale */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.jail-dialogue {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 1.4rem 2rem 1.6rem;
+  background: linear-gradient(180deg, rgba(8, 6, 12, .35) 0%, rgba(8, 6, 12, .92) 35%, rgba(8, 6, 12, .98) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .8rem;
+  text-align: center;
+  z-index: 2;
+}
+.jail-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: .35em;
+  color: #FFD566;
+  text-shadow: 0 0 14px rgba(255, 60, 60, .55), 0 0 20px rgba(40, 90, 220, .45);
+}
+.jail-text {
+  max-width: 720px;
+  font-size: 1.1rem;
+  line-height: 1.45;
+  color: #f5f1eb;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, .85);
+}
+.jail-choices {
+  display: flex;
+  gap: .8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: .4rem;
+}
+.jail-choices button {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .7rem 1.4rem;
+  border: 2px solid #8E5CCB;
+  background: linear-gradient(135deg, rgba(40, 28, 70, .95), rgba(20, 14, 38, .95));
+  color: #f5f1eb;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.jail-choices button:hover {
+  transform: translateY(-1px);
+  border-color: #FFD566;
+  background: linear-gradient(135deg, rgba(60, 42, 100, .95), rgba(30, 20, 60, .95));
+}
+.jail-choices button#jail-pay {
+  border-color: #FFD566;
+  color: #FFE176;
+  text-shadow: 0 0 10px rgba(255, 213, 102, .55);
+}
+.jail-choices button#jail-pay:hover {
+  background: linear-gradient(135deg, rgba(80, 60, 0, .95), rgba(40, 28, 0, .95));
+}
+.jail-choices button.is-disabled,
+.jail-choices button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  border-color: #4a3a6e;
+  color: #8a8275;
+}
+.jail-choices button.is-disabled:hover,
+.jail-choices button:disabled:hover {
+  transform: none;
+  border-color: #4a3a6e;
+  background: linear-gradient(135deg, rgba(40, 28, 70, .95), rgba(20, 14, 38, .95));
+}
+
 /* ---- Settings (audio) panel — gear icon top-right + collapsible panel ---- */
 .audio-controls {
   position: fixed;

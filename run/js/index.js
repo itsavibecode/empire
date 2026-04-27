@@ -1440,6 +1440,29 @@
     leaderboardTopScore: null,
     newRecordTriggered: false,
     newRecordFlash: null,
+    // ============================================================
+    // JAIL FEATURE (v0.18.52). Mike gets jailed on his 2nd cumulative
+    // cop touch (cop cars + cross-traffic cops both count; chase
+    // officers don't currently collide). Counter resets on death,
+    // quit, or successful bail.
+    // ============================================================
+    copTouches: 0,         // cumulative cop hits this run (resets at jail-bail)
+    bailCount: 0,          // self-bails so far this run (drives price doubling)
+    jail: {
+      // Phase machine for the jail sequence:
+      //   'none'       — not jailed, normal play
+      //   'busted'     — BUSTED flash + sirencops.mp3, world frozen,
+      //                  ~2.4s before transitioning to 'cell'
+      //   'cell'       — jail bg + dialogue overlay; awaiting choice
+      //   'bailing'    — bailed-out.mp3 + fade-back to gameplay
+      phase: 'none',
+      startedAt: 0,        // wall-clock ms of phase entry (used for blink
+                           //  loop on jail bg + BUSTED flash math)
+      // Saved checkpoint so a self-bail can restore Mike at the spot
+      // he was caught (with the soft 150m roll-back per design).
+      checkpointDistance: 0,
+      checkpointLane: 0,
+    },
   };
 
   // ============================================================
@@ -1544,6 +1567,7 @@
 
   function triggerJump() {
     if (state.phase !== 'playing' || state.paused) return;
+    if (state.jail && state.jail.phase !== 'none') return; // no jumping in jail
     var now = performance.now();
     // Block re-jumping mid-air (force a clean landing first)
     if (now - state.player.jumpStart < JUMP_DURATION * 1000) return;
@@ -1607,6 +1631,7 @@
         return;
       }
       if (state.paused) return; // ignore lane input while paused
+      if (state.jail && state.jail.phase !== 'none') return; // ditto for jail
       if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
         shiftLane(-1); e.preventDefault();
       } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
@@ -2152,6 +2177,176 @@
   // spinning cx-coin sprite next to it, scales in then fades out.
   // Also plays the coin-pickup SFX a few times rapidly to sell the
   // grant audibly. Drawn from drawEffects each frame while active.
+  // ============================================================
+  // JAIL FEATURE (v0.18.52)
+  // ============================================================
+
+  // Constants
+  var JAIL_BAIL_PRICE_BASE   = 75;     // 1st jail bail cost
+  var JAIL_BUSTED_FLASH_MS   = 2400;   // BUSTED text flash duration
+  var JAIL_RESUME_ROLLBACK_M = 150;    // soft penalty on self-bail
+  var JAIL_BAIL_FADE_MS      = 1400;   // fade-back duration to gameplay
+  var JAIL_BG_BLINK_MS       = 600;    // eye-blink loop on jail bg
+
+  // Returns the bail price for the player's CURRENT bail attempt.
+  // Doubles each prior self-bail this run: 75 → 150 → 300 → 600...
+  function jailBailPrice() {
+    return JAIL_BAIL_PRICE_BASE * Math.pow(2, state.bailCount);
+  }
+
+  // Cop touch interceptor — called from BOTH the lane-cop-car
+  // collision and cross-traffic cop-car collision. Increments the
+  // counter; on the 2nd hit, triggers jail INSTEAD of life loss.
+  // Returns true if the caller should skip the regular life-loss /
+  // death code path (i.e., we entered jail this frame).
+  function handleCopHit(now) {
+    if (state.godMode) return false;        // dev mode never gets jailed
+    if (state.jail.phase !== 'none') return true; // already jailed
+    state.copTouches += 1;
+    if (state.copTouches >= 2) {
+      enterJail(now);
+      return true;     // skip life-loss path
+    }
+    // First cop hit — fall through to normal life-loss behavior.
+    return false;
+  }
+
+  function enterJail(now) {
+    if (now == null) now = performance.now();
+    state.jail.phase = 'busted';
+    state.jail.startedAt = now;
+    state.jail.checkpointDistance = state.distance;
+    state.jail.checkpointLane = state.player.targetLane;
+    state.invulnUntil = now + 999999;        // freeze hit detection
+    // Pause every looping audio track. We resume the right ones on
+    // bail-out, or stop them entirely on quit.
+    Object.keys(AUDIO_DEFS).forEach(function (k) {
+      var def = AUDIO_DEFS[k];
+      if (!def.loop) return;
+      var inst = audioInstances[k];
+      if (inst && !inst.paused) inst.pause();
+    });
+    // Sirens during the BUSTED flash.
+    playSfx('sirencops');
+    ga('jailed', {
+      at_distance: Math.floor(state.distance),
+      cop_touches: state.copTouches,
+      bail_count_so_far: state.bailCount,
+    });
+  }
+
+  // Tick called from update() / render() — handles the BUSTED → cell
+  // transition once the flash duration is up.
+  function tickJail(now) {
+    if (state.jail.phase === 'busted') {
+      if (now - state.jail.startedAt >= JAIL_BUSTED_FLASH_MS) {
+        state.jail.phase = 'cell';
+        state.jail.startedAt = now;
+        // Show the dialogue overlay + start jail loops.
+        showJailOverlay();
+        startLoop('jailed');
+        startLoop('policejail');
+      }
+    }
+  }
+
+  function showJailOverlay() {
+    var ov = document.getElementById('overlay-jail');
+    if (!ov) return;
+    ov.classList.remove('hidden');
+    // Update bail-self button label with the current price.
+    var payBtn = document.getElementById('jail-pay');
+    if (payBtn) {
+      var price = jailBailPrice();
+      var canAfford = state.coins >= price;
+      payBtn.textContent = 'PAY ' + price + ' Cx';
+      payBtn.disabled = !canAfford;
+      payBtn.classList.toggle('is-disabled', !canAfford);
+    }
+  }
+
+  function hideJailOverlay() {
+    var ov = document.getElementById('overlay-jail');
+    if (ov) ov.classList.add('hidden');
+  }
+
+  // PAY ___ Cx — self-bail. Deducts coins, increments bail counter
+  // (so next jail is 2x more expensive), resets cop touches, rolls
+  // distance back ~150m, plays bailed-out.mp3, fades back to gameplay.
+  function jailBailSelf() {
+    var price = jailBailPrice();
+    if (state.coins < price) return;          // shouldn't happen — UI gates
+    state.coins -= price;
+    state.bailCount += 1;
+    state.copTouches = 0;
+    // Soft penalty: roll the distance back so the bail isn't a free
+    // skip past whatever cop was about to hit Mike. Per user spec.
+    state.distance = Math.max(0, state.distance - JAIL_RESUME_ROLLBACK_M);
+    state.distancePx = Math.max(0, state.distancePx - JAIL_RESUME_ROLLBACK_M * 10);
+    state.player.lane = state.jail.checkpointLane;
+    state.player.targetLane = state.jail.checkpointLane;
+    state.player.lerpX = 1;
+    state.player.jumpStart = 0;
+    // Wipe whatever was on screen at jail-entry — they don't survive.
+    state.obstacles = [];
+    state.coinsArr = [];
+    state.pickups = [];
+    state.crossCars = [];
+    state.fauna = [];
+    state.chaseOfficers = [];
+    state.coinParticles = [];
+    // Pickups (per spec: don't survive jail)
+    state.effects.hamFreezeUntil = 0;
+    state.effects.hamBonusUntil = 0;
+    state.effects.weedDebuffUntil = 0;
+    state.effects.horseBoostUntil = 0;
+    state.effects.controlsReversedUntil = 0;
+    state.effects.textShownUntil = 0;
+    state.invulnUntil = performance.now() + 1500; // brief grace on resume
+    finishJailExit();
+  }
+
+  // QUIT TO TITLE — bypass the bail entirely.
+  function jailQuitToTitle() {
+    hideJailOverlay();
+    stopLoop('jailed');
+    stopLoop('policejail');
+    state.jail.phase = 'none';
+    // endRun then explicitly close the gameover overlay so the player
+    // lands on the title screen, not the post-death summary.
+    endRun();
+    var go = document.getElementById('overlay-gameover');
+    if (go) go.classList.add('hidden');
+    var st = document.getElementById('overlay-start');
+    if (st) st.classList.remove('hidden');
+    state.phase = 'menu';
+    syncChromeForPhase();
+  }
+
+  // Common bail-out tail — used by both self-bail and (later in
+  // phase C) the bail-Xena flow. Plays bailed-out.mp3, stops jail
+  // loops, restarts the gameplay music + ambient, returns the player
+  // to the running state. Phase 'bailing' just gates input briefly.
+  function finishJailExit() {
+    state.jail.phase = 'bailing';
+    state.jail.startedAt = performance.now();
+    hideJailOverlay();
+    stopLoop('jailed');
+    stopLoop('policejail');
+    playSfx('bailed-out');
+    // Resume the music + mob ambient that were playing pre-jail.
+    if (currentMusicKey) {
+      var inst = audioInstances[currentMusicKey];
+      if (inst) inst.play().catch(function () {});
+    }
+    if (state.water.phase === 'none') startLoop('mob-angry');
+    // After a brief fade, drop back to normal play.
+    setTimeout(function () {
+      state.jail.phase = 'none';
+      state.invulnUntil = performance.now() + 1500;
+    }, JAIL_BAIL_FADE_MS);
+  }
+
   function triggerCoinRewardFlash(amount) {
     state.coinRewardFlash = {
       amount: amount,
@@ -2635,6 +2830,17 @@
             });
             continue;
           }
+          // JAIL FEATURE — cop-car collisions count toward the 2-touch
+          // jail trigger. Cars use jumpOnly so the only obstacle type
+          // that reaches this branch with id === 'cop-car' is a cop
+          // car. We hand off to handleCopHit; if it returns true, jail
+          // was triggered and we skip the regular life-loss path.
+          var isCop = o.type && o.type.id === 'cop-car';
+          if (isCop && handleCopHit(now)) {
+            // Jail entered — short-circuit out of the obstacle loop.
+            // No damage SFX (sirens already played in enterJail).
+            return;
+          }
           if (!state.godMode) state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
           ga('obstacle_hit', {
@@ -2679,6 +2885,8 @@
         }
         cc.hit = true;
         if (now > state.invulnUntil) {
+          // JAIL — cross-traffic cop cars also count as cop touches.
+          if (handleCopHit(now)) return;
           if (!state.godMode) state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
           ga('cross_car_hit', {
@@ -3245,6 +3453,41 @@
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = 'rgba(255,90,170,.85)';
       ctx.fillRect(0, 0, w * rRem, 6);
+    }
+
+    // BUSTED FLASH OVERLAY (v0.18.52) — drawn DEAD LAST so it covers
+    // everything else during the brief siren / freeze sequence before
+    // the jail HTML overlay slides in. Big "BUSTED" text alternating
+    // red and blue (police-light cycling), full-screen tinted veil
+    // also alternating red/blue. Lasts JAIL_BUSTED_FLASH_MS, then the
+    // jail dialogue overlay takes over.
+    if (state.jail.phase === 'busted') {
+      var jb = now - state.jail.startedAt;
+      // Alternate red/blue every 200ms (police bar at ~5 Hz)
+      var blueFrame = Math.floor(jb / 200) % 2 === 0;
+      ctx.fillStyle = blueFrame
+        ? 'rgba(20, 80, 220, 0.55)'
+        : 'rgba(220, 30, 40, 0.55)';
+      ctx.fillRect(0, 0, w, h);
+      // BUSTED text — pulses scale + flips color the opposite of the bg
+      var bScale = 0.7 + (jb % 400 < 200 ? 0.1 : 0); // tiny punch
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(bScale, bScale);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold ' + Math.floor(h * 0.22) + 'px "VT323", monospace';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 6;
+      ctx.fillStyle = blueFrame ? '#FFFFFF' : '#FFE176';
+      ctx.fillText('BUSTED', 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.font = Math.floor(h * 0.04) + 'px "VT323", monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText('caught by the cops', 0, h * 0.16);
+      ctx.restore();
     }
   }
 
@@ -4064,6 +4307,13 @@
     state.water.shoovyTriggered = false;
     state.water.completed = false;
     state.gameOverDeathKey = null;
+    // JAIL feature reset (v0.18.52)
+    state.copTouches = 0;
+    state.bailCount = 0;
+    state.jail.phase = 'none';
+    state.jail.startedAt = 0;
+    state.jail.checkpointDistance = 0;
+    state.jail.checkpointLane = 0;
     // ====================================================
     // NEW-RECORD CELEBRATION (v0.18.51)
     // Cache the leaderboard's current top score at run start.
@@ -4449,9 +4699,15 @@
   function loop(now) {
     var dt = Math.min(0.05, (now - lastTime) / 1000); // clamp dt to avoid huge jumps after tab switch
     lastTime = now;
-    if (state.phase === 'playing' && !state.paused) update(dt);
+    // JAIL: world is frozen while jailed. update() is skipped, but
+    // tickJail still runs (drives the BUSTED → cell phase transition).
+    var inJail = state.jail && state.jail.phase !== 'none';
+    if (state.phase === 'playing' && !state.paused && !inJail) update(dt);
+    if (inJail) tickJail(now);
     var renderNow;
-    if (state.paused) {
+    if (state.paused || inJail) {
+      // Same trick as pause — freeze render's time source so sprite
+      // walk-cycles don't tick during the jail freeze.
       if (!pauseFrozenRenderNow) pauseFrozenRenderNow = now;
       renderNow = pauseFrozenRenderNow;
     } else {
@@ -4666,6 +4922,39 @@
       e.target.blur();
       quitToTitle();
     });
+    // ============================================================
+    // JAIL overlay buttons (v0.18.52)
+    // ============================================================
+    var jailPay = document.getElementById('jail-pay');
+    if (jailPay) jailPay.addEventListener('click', function (e) {
+      e.target.blur();
+      if (state.jail.phase !== 'cell') return;
+      jailBailSelf();
+    });
+    var jailQuit = document.getElementById('jail-quit');
+    if (jailQuit) jailQuit.addEventListener('click', function (e) {
+      e.target.blur();
+      if (state.jail.phase !== 'cell') return;
+      jailQuitToTitle();
+    });
+    // jail-bail-xena button stays disabled until phase C ships.
+    // ============================================================
+    // JAIL bg eye-blink loop — swaps src between open/closed every
+    // JAIL_BG_BLINK_MS while the cell is shown. Cheap setInterval is
+    // fine; runs forever in the background but only does work while
+    // overlay is visible (image src writes are cheap when same
+    // value).
+    // ============================================================
+    var jailBgBlink = (function () {
+      var bg = document.getElementById('jail-bg');
+      var open = true;
+      return setInterval(function () {
+        if (!bg) return;
+        if (state.jail.phase !== 'cell') return;
+        open = !open;
+        bg.src = open ? 'img/jail-bg-open.png' : 'img/jail-bg-closed.png';
+      }, JAIL_BG_BLINK_MS);
+    })();
     // SHARE-PNG button on game-over screen — generates a 1080x1080
     // composite (title art bg + score panel + streamer credit) and
     // triggers download. Hint shows status feedback.

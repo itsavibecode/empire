@@ -17,6 +17,41 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.52 — 2026-04-27 — JAIL FEATURE phase B (self-bail)
+
+NEW MECHANIC: Mike gets jailed on his **2nd cumulative cop touch** in a single run. Cop cars (lane spawns) AND cross-traffic cop cars both count. The 1st touch behaves as before (lose a heart). The 2nd touch fires the jail sequence INSTEAD of life loss.
+
+**Sequence:**
+
+1. **BUSTED flash** (~2.4s, canvas overlay). Big "BUSTED" text alternating red/blue police-light tint over a full-screen veil that flips colors every 200ms. `sirencops.mp3` plays. World is fully frozen — `update()` skipped, all looping audio paused.
+
+2. **Jail screen** (HTML overlay). Shows `jail-bg-open.png` / `jail-bg-closed.png` swapped every 600ms for an eye-blink effect on Mike. `jailed.mp3` plays as music; `policejail.mp3` loops as ambient station-chatter SFX. Dialogue at the bottom offers three buttons:
+
+   - **PAY 75 Cx** — self-bail. Price doubles each subsequent self-bail in the same run (75 → 150 → 300 → 600...). Greyed out + disabled if Mike can't afford it.
+   - **BAIL XENA INSTEAD** — stub button, disabled in this commit. Phase C wires it.
+   - **QUIT TO TITLE** — bail out of the run entirely.
+
+3. **Self-bail outcome** (`jailBailSelf()`):
+   - Deduct the bail price from `state.coins`
+   - Increment `state.bailCount` (drives next price doubling)
+   - Reset `state.copTouches` to 0
+   - **Soft penalty**: roll `state.distance` back 150m so the bail isn't a free skip past whatever cop was about to hit
+   - Restore Mike to the saved `checkpointLane` from jail-entry
+   - Wipe all in-flight obstacles, pickups, fauna, chase-officers, cross-cars (per spec — pickups don't survive jail)
+   - Clear all active effects (ham bonus, weed debuff, horse boost, controls reversed)
+   - 1.5s of post-bail invulnerability so respawn doesn't immediately re-hit
+   - Play `bailed-out.mp3`, restart pre-jail music + mob ambient
+
+4. **Quit outcome** (`jailQuitToTitle()`): closes jail loops, calls `endRun()`, kicks the player back to the title screen instead of the game-over summary.
+
+**State additions:** `state.copTouches`, `state.bailCount`, `state.jail = { phase, startedAt, checkpointDistance, checkpointLane }` with phases `'none' | 'busted' | 'cell' | 'bailing'`. All reset on every fresh `startRun`.
+
+**Input is fully gated during jail** — keyboard lane-shift + jump are blocked while `state.jail.phase !== 'none'` so a stuck key from before the bust can't activate during the BUSTED flash or dialogue. The render-loop also freezes its `now` value during jail so sprite walk-cycles stop animating.
+
+**God mode (`?god=1`)** never gets jailed — `handleCopHit` early-returns false in dev mode so playtest cop hits behave as before.
+
+**Phase C still pending**: bail-Xena flow + Xena anti-sidekick follower. The 3 dialogue panels (`cutscene-xena-*.png`), 36 Xena sprite frames, and `xena-bailed-out.mp3` / `xena-coin-pickup.mp3` audio are already shipped in v0.18.52 phase A (commit `5b9d1b1`); phase C wires them into a runtime flow.
+
 ### Run v0.18.51 — 2026-04-27
 
 Visual + UX polish pass — eleven fixes from a single playthrough review session.

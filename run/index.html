@@ -16,7 +16,7 @@
   <meta name="description" content="On Baby! — Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins, survive the storm, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.51">
+  <meta name="version" content="0.18.52">
   <!-- Mobile chrome theme color (matches the game's purple palette) -->
   <meta name="theme-color" content="#8E5CCB">
   <title>On Baby! — EmpireX Runner</title>
@@ -216,6 +216,28 @@
     <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
+  <!-- JAIL overlay (v0.18.52). Mike + Xena behind bars. Mike's eyes
+       blink (open ↔ closed) via JS swapping the bg src on a timer.
+       Dialogue box at the bottom offers PAY (self-bail), BAIL XENA
+       (only enabled when Mike can't afford self-bail — phase C), or
+       QUIT TO TITLE. Sirens + BUSTED flash play on the canvas BEFORE
+       this overlay shows; this overlay is for the dialogue phase. -->
+  <div class="overlay overlay-jail hidden" id="overlay-jail">
+    <img class="jail-bg" id="jail-bg" src="img/jail-bg-open.png" alt="">
+    <div class="jail-dialogue">
+      <div class="jail-name">BUSTED IN CHILE</div>
+      <p class="jail-text" id="jail-text">
+        Cops busted Mike. He&rsquo;s sharing a cell with Xena The Witch.
+        Post bail to get back out there, or rot in here.
+      </p>
+      <div class="jail-choices">
+        <button type="button" id="jail-pay">PAY 75 Cx</button>
+        <button type="button" id="jail-bail-xena" class="is-disabled" disabled>BAIL XENA INSTEAD</button>
+        <button type="button" id="jail-quit">QUIT TO TITLE</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Game-over overlay — shown when lives hit 0. Random death-pose
        sprite gets swapped into #gameover-death-img on endRun(). -->
   <div class="overlay hidden" id="overlay-gameover">
@@ -250,7 +272,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.51</div>
+  <div class="game-version">Run v0.18.52</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
