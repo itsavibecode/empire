@@ -49,8 +49,17 @@
   //   WATER    (~10s):  alternating sea tiles + lightning + rain +
   //                     Mike on his mattress; NO obstacles or pickups
   //   EXITING  (~2.5s): boat-ramp tile scrolls up; back to street
-  // Triggered by distance: first at ~1200m, then every ~3500m after.
-  var WATER_FIRST_DISTANCE_M = 1200;
+  //
+  // FIRST DISTANCE BUMPED 1200 -> 4500 per playtest so the established
+  // Ice arc plays out FIRST, then the water cutscene serves as the
+  // narrative resolution where Mike finally escapes Ice into the storm:
+  //   600m:  first-meet      (Ice joins)
+  //   2000m: mike-tells-off  (Ice leaves)
+  //   3800m: ice-returns     (Ice rejoins trailing)
+  //   4500m: before-water    (Ice asks weird question -> Mike floats off alone)
+  //   8000m: water (no cutscene, Ice already gone)
+  //   ... every 3500m after
+  var WATER_FIRST_DISTANCE_M = 4500;
   var WATER_INTERVAL_M = 3500;
   var WATER_ENTER_MS = 2500;
   var WATER_BODY_MS = 10000;
@@ -1024,6 +1033,28 @@
         state.coinParticles[i].spawnedAt += delta;
       }
     }
+    // Hurricane / water phase wall-clock timestamps. Without these
+    // shifts, pausing during the water phase would let the wall-clock
+    // advance while startedAt stayed put — on resume, tickWater would
+    // see elapsed > WATER_TOTAL_MS and IMMEDIATELY exit the phase,
+    // dropping Mike back on the street mid-segment.
+    if (state.water && state.water.phase !== 'none') {
+      state.water.startedAt += delta;
+      if (state.water.nextLightningAt > 0) state.water.nextLightningAt += delta;
+      if (state.water.lightningUntil > 0)  state.water.lightningUntil += delta;
+    }
+    // Cross-traffic cop cars — swerveStartedAt is wall-clock-anchored
+    // for the feint envelope. Spawn timestamps too.
+    if (state.crossCars) {
+      for (var ci = 0; ci < state.crossCars.length; ci++) {
+        var c = state.crossCars[ci];
+        if (c.spawnedAt > 0) c.spawnedAt += delta;
+        if (c.swerveStartedAt > 0) c.swerveStartedAt += delta;
+      }
+    }
+    // Cross-car spawn cadence is dt-based (state.crossCarSpawnTimer
+    // is an accumulator), so it's already pause-safe — no shift needed.
+    // Same for fauna spawnTimer.
   }
 
   // ============================================================

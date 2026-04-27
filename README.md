@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.36 — 2026-04-27
+
+Three fixes for the hurricane segment from playtest:
+
+- **Water trigger pushed 1200m → 4500m** so the established Ice arc plays out FIRST. Order is now: 600m first-meet (Ice joins) → 2000m mike-tells-off (Ice leaves) → 3800m ice-returns (Ice rejoins trailing) → 4500m before-water (Ice asks the North Pole question, Mike snaps, Mike floats off alone). The water cutscene now serves as the narrative resolution where Mike finally escapes Ice into the storm. Subsequent water segments still every 3500m, no cutscene.
+- **Mike-on-mattress sprite white-square fix.** Source Gemini sheet had solid white background (alpha=255 everywhere), so the sprite drew a white box around Mike. Updated `extract-water-hurricane.py` with a new `flood_remove_corner_color()` helper that flood-fills white from the sheet corners + each cell corner, removing only the EDGE-CONNECTED white. The mattress's interior white cushion is preserved (not connected to the edge), the surrounding box is gone. All 12 mattress sprites re-extracted.
+- **Pause-during-water bug fixed.** Pausing mid-water made Mike teleport back to the street on resume. Cause: `state.water.startedAt` is a wall-clock `performance.now()` timestamp; while paused, wall-clock kept advancing while `startedAt` stayed put → on resume `tickWater` saw `elapsed > WATER_TOTAL_MS` and immediately exited the phase. Fix: extended `shiftEffectTimers(delta)` to also advance `state.water.startedAt`, `nextLightningAt`, `lightningUntil`, plus per-cross-car `spawnedAt` + `swerveStartedAt`. Same pattern as the existing pause-aware shift for ham/weed/horse timers.
+
 ### Run v0.18.35 — 2026-04-27
 
 Patch — wire up the water/rain/thunder audio that just dropped into `/run/audio/`.

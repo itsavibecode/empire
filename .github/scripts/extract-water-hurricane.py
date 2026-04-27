@@ -44,6 +44,47 @@ MATTRESS_ROWS = 4
 MATTRESS_PREFIX = "mike-mattress-"
 
 
+def flood_remove_corner_color(im: Image.Image, target=(255, 255, 255), tolerance=15) -> Image.Image:
+    """Flood-fill from each corner, removing pixels close to `target`
+    color (default white). Stops at boundaries where pixels diverge
+    from target by more than `tolerance` per channel.
+
+    Use this when a sprite has a solid background color that ALSO
+    appears INSIDE the sprite (e.g. the mattress pad is white AND the
+    background is white). A simple chroma-key would erase the interior;
+    flood-fill from corners only erases the EDGE-CONNECTED region."""
+    im = im.convert("RGBA")
+    w, h = im.size
+    px = im.load()
+    tr, tg, tb = target
+    visited = [[False] * h for _ in range(w)]
+
+    def matches(x, y):
+        r, g, b, a = px[x, y]
+        if a == 0:  # already transparent
+            return False
+        return (abs(r - tr) <= tolerance
+                and abs(g - tg) <= tolerance
+                and abs(b - tb) <= tolerance)
+
+    starts = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+    queue = deque()
+    for sx, sy in starts:
+        if not visited[sx][sy] and matches(sx, sy):
+            queue.append((sx, sy))
+            visited[sx][sy] = True
+    while queue:
+        x, y = queue.popleft()
+        r, g, b, _ = px[x, y]
+        px[x, y] = (r, g, b, 0)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < w and 0 <= ny < h and not visited[nx][ny] and matches(nx, ny):
+                visited[nx][ny] = True
+                queue.append((nx, ny))
+    return im
+
+
 def keep_largest_blob(im, alpha_threshold=30):
     w, h = im.size
     px = im.load()
@@ -108,6 +149,11 @@ def main():
         print(f"SKIP missing mattress sheet: {msrc}")
         return
     sheet = Image.open(msrc).convert("RGBA")
+    # Flood-fill white from the SHEET corners FIRST so the inter-cell
+    # white gutters get keyed BEFORE we slice. This way each cell starts
+    # with a clean transparent border + the mattress's interior white
+    # cushion is preserved (it's not connected to the sheet edges).
+    sheet = flood_remove_corner_color(sheet, target=(255, 255, 255), tolerance=12)
     w, h = sheet.size
     cw = w // MATTRESS_COLS
     ch = h // MATTRESS_ROWS
@@ -116,6 +162,11 @@ def main():
         for col in range(MATTRESS_COLS):
             box = (col * cw, row * ch, (col + 1) * cw, (row + 1) * ch)
             cell = sheet.crop(box).copy()
+            # Per-cell flood-fill again from the cell corners — handles
+            # stray white blobs that weren't connected to the sheet edge
+            # (e.g. between mattresses where the sheet's main flood
+            # didn't reach).
+            cell = flood_remove_corner_color(cell, target=(255, 255, 255), tolerance=12)
             cell = keep_largest_blob(cell)
             cell = trim_transparent(cell)
             name = f"{MATTRESS_PREFIX}{idx:02d}.png"
