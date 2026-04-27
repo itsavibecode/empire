@@ -52,9 +52,20 @@
   var STONED_CHASE_MAX_OFFICERS = 4;
   var STONED_CHASE_OFFICER_HEIGHT_FRAC = 0.16;  // sprite height as frac of viewport
   var STONED_CHASE_FRAME_MS = 140;             // walk-cycle frame swap cadence
-  // Officer walking frames from the source sheet's middle row — cleanest
-  // profile-walking poses, used as a 4-frame chase cycle.
-  var COP_OFFICER_WALK_FRAMES = ['cop-officer-06', 'cop-officer-07', 'cop-officer-08', 'cop-officer-09'];
+  // Pool of distinct officer "characters" each defined by 2 frames
+  // alternated for a walk cycle. Picked across the source sheet rows
+  // so different officers have different poses, body shapes, and
+  // facing directions — avoids the "army of clones" look when 4
+  // officers all spawn at once. Each spawned chase officer randomly
+  // picks one entry from this pool and stays on it for its lifetime.
+  var COP_OFFICER_VARIANTS = [
+    ['cop-officer-06', 'cop-officer-07'],   // row 2 char A — profile walk
+    ['cop-officer-08', 'cop-officer-09'],   // row 2 char B — profile walk
+    ['cop-officer-02', 'cop-officer-04'],   // row 1 — different chars/poses
+    ['cop-officer-01', 'cop-officer-05'],   // row 1 — narrower frames (front?)
+    ['cop-officer-11', 'cop-officer-13'],   // row 3 — smaller body (chibi)
+    ['cop-officer-12', 'cop-officer-15'],   // row 3 — more chibi variety
+  ];
 
   // HURRICANE / WATER SEGMENT — periodically the road ENDS at a cliff
   // and Mike is washed onto the open sea on a mattress raft. Lasts a
@@ -619,8 +630,28 @@
       ],
       onComplete: function () {
         // Ice splits before the water — Mike's solo on the mattress.
+        // After Ice's North Pole bit, ADIN ROSS pops in to offer Mike
+        // the $70k incentive to brave the hurricane. That cutscene's
+        // onComplete is what actually starts the water phase.
         state.iceSidekickJoined = false;
         state.iceTrailing = false;
+        startCutscene('adin-ross');
+      },
+    },
+    // ADIN ROSS — appears between ice-leaves and the hurricane to bait
+    // Mike outside with $70k. Always plays right before the water
+    // phase: chained from before-water's onComplete if Ice was around,
+    // otherwise fired directly from maybeTriggerWater.
+    'adin-ross': {
+      manualOnly: true,
+      panels: [
+        {
+          speaker: 'ADIN ROSS',
+          bgPrefix: 'cutscene-adin-', bgExt: '.png',
+          line: "Bro, come on. Bro, don't listen to Ice, I got $70,000 if you go outside and survive the hurricane. It'll be fun.",
+        },
+      ],
+      onComplete: function () {
         startWaterPhase();
       },
     },
@@ -1448,13 +1479,19 @@
       ? WATER_FIRST_DISTANCE_M
       : WATER_INTERVAL_M;
     if (distSinceLast < threshold) return;
-    // First-water + Ice still with Mike → fire the "Mike, you ever
-    // been to the North Pole?" cutscene first; its onComplete starts
-    // the water phase. Otherwise just dive straight in.
+    // First-water cutscene chain:
+    //   - Ice still with Mike → before-water (North Pole) → adin-ross → water
+    //   - Ice already gone    → adin-ross → water
+    // Subsequent waters skip the cutscene chain and dive straight in.
     var firstWater = state.water.lastTriggeredAt === 0;
     if (firstWater && state.iceSidekickJoined && !state.cutscenesTriggered['before-water']) {
       state.cutscenesTriggered['before-water'] = true;
+      // before-water's onComplete chains to adin-ross, whose onComplete
+      // starts the water phase.
       startCutscene('before-water');
+    } else if (firstWater && !state.cutscenesTriggered['adin-ross']) {
+      state.cutscenesTriggered['adin-ross'] = true;
+      startCutscene('adin-ross');
     } else {
       startWaterPhase();
     }
@@ -1570,25 +1607,36 @@
     if (state.distance < STONED_CHASE_START_DISTANCE_M) return;
     var count = STONED_CHASE_MIN_OFFICERS
       + Math.floor(Math.random() * (STONED_CHASE_MAX_OFFICERS - STONED_CHASE_MIN_OFFICERS + 1));
-    var size = scaledSize('cop-officer-06', STONED_CHASE_OFFICER_HEIGHT_FRAC);
-    if (!size.w || !size.h) return;
     var now = performance.now();
-    // Spread officers across lanes + a little Y stagger so they don't
-    // clump perfectly on top of each other. Spawn a hair below view
-    // so they appear to walk in from off-screen.
+    // Pick variants WITHOUT replacement so a posse of 4 officers
+    // shows 4 distinct characters (until we run out of variants —
+    // then we wrap and start repeating, which is fine).
+    var variantPool = COP_OFFICER_VARIANTS.slice();
+    // Shuffle in place
+    for (var s = variantPool.length - 1; s > 0; s--) {
+      var sj = Math.floor(Math.random() * (s + 1));
+      var tmp = variantPool[s]; variantPool[s] = variantPool[sj]; variantPool[sj] = tmp;
+    }
     for (var i = 0; i < count; i++) {
+      var variant = variantPool[i % variantPool.length];
+      // Each officer's sprite has its own size (different chars =
+      // different dimensions). Compute per-officer instead of using a
+      // single shared `size` from one reference frame.
+      var size = scaledSize(variant[0], STONED_CHASE_OFFICER_HEIGHT_FRAC);
+      if (!size.w || !size.h) continue;
       var lane = Math.floor(Math.random() * LANES);
-      var yJitter = Math.random() * size.h * 0.8;  // stagger up to ~one body
+      var yJitter = Math.random() * size.h * 0.8;
       state.chaseOfficers.push({
         lane: lane,
         y: viewH() + size.h + yJitter,
         w: size.w,
         h: size.h,
+        sprites: variant,                    // 2-frame walk cycle for this officer
         spawnedAt: now,
         bobPhase: Math.random() * Math.PI * 2,
-        // Each officer cycles its walk frames at a slight offset so
-        // they don't all step in lockstep.
-        frameOffset: Math.floor(Math.random() * 4) * STONED_CHASE_FRAME_MS,
+        // Per-officer frame offset so two officers using the same
+        // variant still don't step in lockstep.
+        frameOffset: Math.floor(Math.random() * variant.length) * STONED_CHASE_FRAME_MS,
       });
     }
     ga('stoned_chase_spawned', { at_distance: Math.floor(state.distance), count: count });
@@ -2402,15 +2450,13 @@
   // but Mike still occludes any officer who scrolls under his Y.
   function drawChaseOfficers(now) {
     if (state.chaseOfficers.length === 0) return;
-    var fc = COP_OFFICER_WALK_FRAMES.length;
     for (var i = 0; i < state.chaseOfficers.length; i++) {
       var o = state.chaseOfficers[i];
-      var fIdx = Math.floor((now + o.frameOffset) / STONED_CHASE_FRAME_MS) % fc;
-      var key = COP_OFFICER_WALK_FRAMES[fIdx];
+      // Each officer has its own 2-frame walk cycle from its variant
+      // pool, so 4 officers spawned together show 4 distinct chars.
+      var fIdx = Math.floor((now + o.frameOffset) / STONED_CHASE_FRAME_MS) % o.sprites.length;
+      var key = o.sprites[fIdx];
       var bob = Math.sin((now - o.spawnedAt) / 120 + o.bobPhase) * 6;
-      // drawAtCropped centers x on the supplied X. laneX gives the
-      // center of the lane. Trim 5% off the bottom to hide the stub
-      // shadow baked into the source.
       drawAtCropped(key, laneX(o.lane), o.y + bob, o.w, o.h, 0.05);
     }
   }

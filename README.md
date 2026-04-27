@@ -17,6 +17,28 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.40 — 2026-04-27
+
+Two things:
+
+**1. NEW Adin Ross cutscene** — fires right before the hurricane to bait Mike outside with a $70k offer.
+
+- Source art: 3 panels (`adin ross (1).png` mouth-closed, `(3).png` mid, `(2).png` mouth-open) on neon-green chroma-key bg in `/run/concept/`. New `extract-adin-cutscene.py` (same chroma-key pipeline as `extract-ice-cutscene.py` — target rgb 7/223/33, tolerance 90, 30-px feather) outputs `cutscene-adin-{closed,mid,open}.png` in `/run/img/`.
+- New `adin-ross` cutscene def (`manualOnly: true`) with one panel:
+  > **ADIN ROSS:** *"Bro, come on. Bro, don't listen to Ice, I got $70,000 if you go outside and survive the hurricane. It'll be fun."*
+- Trigger chain reworked. First-water cutscene flow is now:
+  - Ice still with Mike → `before-water` (North Pole) → `adin-ross` ($70k bait) → water phase
+  - Ice already gone → `adin-ross` → water phase
+  - Subsequent water segments: no cutscene, dive straight in
+- Wired via `before-water.onComplete` → `startCutscene('adin-ross')` (chained), and `maybeTriggerWater` directly fires `adin-ross` when Ice isn't around. Both paths' `adin-ross.onComplete` calls `startWaterPhase()`.
+
+**2. Stoned-chase cops now visually varied** — was 4 identical clone officers walking in lockstep; now each one picks a different character variant.
+
+- New `COP_OFFICER_VARIANTS` pool: 6 distinct 2-frame walk cycles built across the source sheet's 3 rows (profile-walking row 2, front-facing row 1, smaller chibi row 3) — 6 different body shapes / facing directions.
+- `spawnStonedChase` shuffles the pool and assigns a unique variant to each spawned officer (without replacement, so a posse of 4 shows 4 distinct chars). Each officer carries its own `sprites` array + per-officer `frameOffset` so two officers using the same variant still don't step in lockstep.
+- Each officer's `w`/`h` is computed from ITS variant's first frame instead of a single shared reference, since different chars have different sprite dimensions.
+- `drawChaseOfficers` reads the per-officer `sprites` array instead of the old global `COP_OFFICER_WALK_FRAMES` constant. No more uniform marching army.
+
 ### Run v0.18.39 — 2026-04-27
 
 Polish — replaced static-pose NPCs with **proper 6-frame run cycles**, no shadows. Per playtest the cardboard-cutout protesters/chibis felt fake even with the bobPx fakery. New sprites have actual animated leg movement.
