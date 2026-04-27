@@ -99,6 +99,15 @@ html, body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 170, .55); }
   50%      { box-shadow: 0 0 0 5px rgba(255, 90, 170, 0); }
 }
+/* DEV-only god-mode badge — shows when ?god=1 is in the URL. Bright
+   gold + outline so it's visually obvious the run is testing-only. */
+.eff-god {
+  color: #FFD566;
+  border-color: rgba(255, 213, 102, .85);
+  background: rgba(255, 213, 102, .12);
+  font-weight: 700;
+  letter-spacing: .15em;
+}
 @keyframes eff-pulse-ham {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 102, .55); }
   50%      { box-shadow: 0 0 0 6px rgba(255, 213, 102, 0); }

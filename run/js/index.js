@@ -94,6 +94,14 @@
   var WATER_LIGHTNING_INTERVAL_JITTER_MS = 1100;
   var WATER_LIGHTNING_FLASH_MS = 110;      // duration of each white flash
   var WATER_RAIN_DROPS = 220;              // active raindrops on screen
+  // Shoovy mid-water sequence: boat approaches Mike from screen bottom
+  // halfway through the water body, triggers a cutscene when close.
+  var SHOOVY_BOAT_SPAWN_MS = 4500;          // ms after water phase start (early in the body)
+  var SHOOVY_BOAT_HEIGHT_FRAC = 0.32;       // sprite height as frac of viewport (boat is BIG)
+  var SHOOVY_BOAT_VY = 100;                  // px/sec UP toward Mike (slower than world scroll)
+  var SHOOVY_BOAT_TRIGGER_Y_FRAC = 0.45;    // when boat top reaches this Y frac, fire cutscene
+  var SHOOVY_BOAT_FRAMES = ['shoovy-sail-01', 'shoovy-sail-05', 'shoovy-sail-09', 'shoovy-sail-13'];
+  var SHOOVY_BOAT_FRAME_MS = 280;
 
   // BACKGROUND FAUNA — pigeons/cats/dogs/goats walking the sidewalks.
   // Pure ambient visuals, no collision. Spawn on the LEFT or RIGHT
@@ -279,6 +287,17 @@
     var mmk = 'mike-mattress-' + (mm < 10 ? '0' + mm : mm);
     SPRITE_PATHS[mmk] = 'img/sprites/' + mmk + '.png';
   }
+  // Shoovy on his sailboat — used by the mid-water cutscene approach
+  // animation. Preload the 4 specific frames the boat cycles through
+  // (already extracted as shoovy-sail-XX.png). The full 32-frame set
+  // is on disk; only the active subset gets cached on first paint.
+  SHOOVY_BOAT_FRAMES.forEach(function (k) {
+    SPRITE_PATHS[k] = 'img/sprites/' + k + '.png';
+  });
+  // Shoovy's cutscene panels (4 frames including bonus blink)
+  ['closed', 'mid', 'open', 'blink'].forEach(function (m) {
+    SPRITE_PATHS['cutscene-shoovy-' + m] = 'img/cutscene-shoovy-' + m + '.png';
+  });
   // Title-screen background art (Mike + Ice on Chilean street). Stored
   // as a JPEG (800 KB) instead of the 7 MB source PNG since it's a
   // photographic-style image that compresses fine without quality loss.
@@ -636,6 +655,35 @@
         state.iceSidekickJoined = false;
         state.iceTrailing = false;
         startCutscene('adin-ross');
+      },
+    },
+    // SHOOVY MID-WATER — fires HALFWAY through the water phase, after
+    // Shoovy's sailboat has approached Mike from the bottom of the
+    // screen. Triggered manually by tickWater when the boat reaches
+    // Mike's Y line. onComplete cuts the rest of the water-body short
+    // (jumps straight to exit) so the segment length stays sane.
+    'shoovy-meeting': {
+      manualOnly: true,
+      panels: [
+        {
+          speaker: 'SHOOVY',
+          bgPrefix: 'cutscene-shoovy-', bgExt: '.png',
+          line: "i dough knot uh know, why you would be out here with your life so importantly meaning, but i uh am too and need land fastly.",
+        },
+      ],
+      onComplete: function () {
+        // Skip the rest of the water body — go straight to the exit
+        // transition so the player isn't stuck in storm for another 5s
+        // after Shoovy disappears.
+        if (state.water.phase === 'water') {
+          state.water.phase = 'exiting';
+          // Anchor exiting elapsed at 0 by setting startedAt to "now -
+          // (WATER_ENTER_MS + WATER_BODY_MS)" so the wall-clock math in
+          // tickWater's exit check counts correctly.
+          state.water.startedAt = performance.now() - (WATER_ENTER_MS + WATER_BODY_MS);
+        }
+        // Boat exits with the segment.
+        state.water.shoovyBoat = null;
       },
     },
     // ADIN ROSS — appears between ice-leaves and the hurricane to bait
@@ -1232,10 +1280,19 @@
       nextLightningAt: 0,
       lightningUntil: 0,    // wall-clock ms until current flash ends
       raindrops: [],        // [{x, y, vy, len}]
+      // Shoovy's sailboat that approaches Mike from screen bottom mid-
+      // water and triggers the meeting cutscene. {x, y, w, h, spawnedAt}
+      // or null when not active.
+      shoovyBoat: null,
+      shoovyTriggered: false, // true once the cutscene has fired this segment
     },
     // Random death-pose sprite picked at endRun. Rendered on the road
     // (drawPlayer) AND in the gameover overlay panel so they match.
     gameOverDeathKey: null,
+    // Dev god mode — set from ?god=1 URL param. While true, Mike's
+    // lives never decrement, attempt counter increment is skipped, and
+    // score-submit dialog is suppressed. HUD shows a small badge.
+    godMode: false,
   };
 
   // ============================================================
@@ -1561,6 +1618,8 @@
     // Schedule first lightning flash a bit into the segment
     state.water.nextLightningAt = now + 800 + Math.random() * 1200;
     state.water.lightningUntil = 0;
+    state.water.shoovyBoat = null;
+    state.water.shoovyTriggered = false;
     ga('water_segment_started', { at_distance: Math.floor(state.distance) });
   }
 
@@ -1602,6 +1661,47 @@
         + Math.random() * WATER_LIGHTNING_INTERVAL_JITTER_MS;
       var thunderKey = THUNDER_VARIANTS[Math.floor(Math.random() * THUNDER_VARIANTS.length)];
       playSfx(thunderKey);
+    }
+
+    // SHOOVY MID-WATER — only relevant during the water body. Spawns
+    // boat at SHOOVY_BOAT_SPAWN_MS into the phase, scrolls it up at
+    // SHOOVY_BOAT_VY (slower than world so it visibly approaches Mike),
+    // fires the meeting cutscene when boat reaches the trigger Y.
+    if (state.water.phase === 'water' && !state.water.shoovyTriggered) {
+      var bodyElapsed = elapsed - WATER_ENTER_MS;
+      if (bodyElapsed >= SHOOVY_BOAT_SPAWN_MS && !state.water.shoovyBoat) {
+        // Spawn boat at the bottom of the screen, centered horizontally.
+        var bSize = scaledSize('shoovy-sail-01', SHOOVY_BOAT_HEIGHT_FRAC);
+        if (bSize.w && bSize.h) {
+          state.water.shoovyBoat = {
+            x: viewW() / 2,           // centered (boat will draw centered on this)
+            y: viewH() + bSize.h / 2, // start fully off-screen at the bottom
+            w: bSize.w,
+            h: bSize.h,
+            spawnedAt: now,
+          };
+        }
+      }
+      if (state.water.shoovyBoat) {
+        // Use a per-frame dt accumulator (we're in tickWater which runs
+        // once per frame). Approximate dt ~16ms; safer is the wall-clock
+        // delta since spawn.
+        var b = state.water.shoovyBoat;
+        // Move up slowly — vy is per-second so multiply by ~16ms/1000.
+        // Actually for stable framerate-independent motion, use the
+        // last-frame dt. Since tickWater is called from update() which
+        // already has dt in scope, use a simple wall-clock delta here.
+        if (!b.lastTickAt) b.lastTickAt = now;
+        var bdt = (now - b.lastTickAt) / 1000;
+        b.lastTickAt = now;
+        b.y -= SHOOVY_BOAT_VY * bdt;
+        // Trigger cutscene when boat top reaches the threshold Y.
+        var triggerY = viewH() * SHOOVY_BOAT_TRIGGER_Y_FRAC;
+        if ((b.y - b.h / 2) <= triggerY) {
+          state.water.shoovyTriggered = true;
+          startCutscene('shoovy-meeting');
+        }
+      }
     }
 
     // Raindrops — physics tick. Reset to top when off-screen bottom
@@ -2227,7 +2327,7 @@
             });
             continue;
           }
-          state.lives--;
+          if (!state.godMode) state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
           ga('obstacle_hit', {
             at_distance: Math.floor(state.distance),
@@ -2271,7 +2371,7 @@
         }
         cc.hit = true;
         if (now > state.invulnUntil) {
-          state.lives--;
+          if (!state.godMode) state.lives--;
           state.invulnUntil = now + INVULN_TIME * 1000;
           ga('cross_car_hit', {
             at_distance: Math.floor(state.distance),
@@ -2368,6 +2468,12 @@
         var revRem = ((state.effects.controlsReversedUntil - nowMs) / 1000).toFixed(1);
         // Reversed-arrow emoji signals "your input is flipped right now"
         html += '<span class="eff eff-reversed">🔄 ' + revRem + 's</span>';
+      }
+      // GOD MODE badge — shows whenever ?god=1 was set on the URL.
+      // Sits alongside the active-effect badges so it's visually obvious
+      // you're in dev mode + scores won't count.
+      if (state.godMode) {
+        html += '<span class="eff eff-god">👁 GOD MODE</span>';
       }
       effEl.innerHTML = html;
     }
@@ -2473,6 +2579,12 @@
       drawIce(now);
     }
 
+    // Shoovy's sailboat (mid-water approach). Drawn AFTER Mike so the
+    // boat is visibly closer to camera than Mike (it's coming toward
+    // him). Only shows during the water phase + when state.water.shoovyBoat
+    // exists. drawShoovyBoat early-returns if the boat is null.
+    drawShoovyBoat(now);
+
     // Phone-thief coin particles — drawn AFTER the player so the burst
     // visually originates from in front of Mike's chest. Each coin
     // spins (frame cycles using its own offset) and fades out as its
@@ -2556,6 +2668,30 @@
   }
 
   // Render the in-flight coin particles spawned by triggerPhoneThief.
+  // Render Shoovy's sailboat approaching Mike during the water body.
+  // Cycles 4 frames at SHOOVY_BOAT_FRAME_MS for a "actively sailing"
+  // animation. Drawn after the water tiles but before Mike so the
+  // boat can pass behind him visually as it scrolls up.
+  function drawShoovyBoat(now) {
+    if (!state.water || !state.water.shoovyBoat) return;
+    var b = state.water.shoovyBoat;
+    var fIdx = Math.floor((now - b.spawnedAt) / SHOOVY_BOAT_FRAME_MS) % SHOOVY_BOAT_FRAMES.length;
+    var key = SHOOVY_BOAT_FRAMES[fIdx];
+    var img = sprites[key];
+    if (!img) return;
+    // Re-derive size from the current frame's dimensions so different
+    // frames render at consistent visual scale (some frames are wider
+    // than others depending on sail position).
+    var refImg = sprites['shoovy-sail-01'] || img;
+    var pxPerSrc = (viewH() * SHOOVY_BOAT_HEIGHT_FRAC) / refImg.height;
+    var dw = img.width * pxPerSrc;
+    var dh = img.height * pxPerSrc;
+    // Subtle Y-bob on top of the steady upward scroll, so the boat
+    // looks like it's rocking on the waves.
+    var bob = Math.sin((now - b.spawnedAt) / 240) * (viewH() * 0.012);
+    ctx.drawImage(img, b.x - dw / 2, b.y - dh / 2 + bob, dw, dh);
+  }
+
   function drawCoinParticles(now) {
     if (state.coinParticles.length === 0) return;
     for (var i = 0; i < state.coinParticles.length; i++) {
@@ -3461,6 +3597,8 @@
     state.water.nextLightningAt = 0;
     state.water.lightningUntil = 0;
     state.water.raindrops = [];
+    state.water.shoovyBoat = null;
+    state.water.shoovyTriggered = false;
     state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;
@@ -3501,9 +3639,43 @@
     startBackgroundMusic();
     startLoop('mob-angry');
     ga('game_started');
+
+    // ============================================================
+    // DEV PARAM application (only fires if URL contains the params).
+    // ============================================================
+    state.godMode = !!devParams.god;
+    if (devParams.dist > 0) {
+      state.distance = devParams.dist;
+      state.distancePx = devParams.dist * 10;  // px/m fudge factor matches update()
+      console.log('[dev] startRun seeded distance to', devParams.dist, 'm');
+    }
+    if (devParams.water) {
+      // Skip directly into the water phase. Pretend Ice already left
+      // (no cutscene chain), then start water immediately.
+      state.iceSidekickJoined = false;
+      state.iceTrailing = false;
+      state.cutscenesTriggered['before-water'] = true;
+      state.cutscenesTriggered['adin-ross'] = true;
+      console.log('[dev] startRun jumping straight into water phase');
+      // Defer one frame so the rest of startRun finishes setting state
+      setTimeout(function () { startWaterPhase(); }, 0);
+    }
+    if (devParams.cut) {
+      // Defer to next tick so the rest of startRun completes first.
+      // Validate against CUTSCENE_DEFS so a typo doesn't crash.
+      var cutId = devParams.cut;
+      if (CUTSCENE_DEFS[cutId]) {
+        console.log('[dev] startRun firing cutscene:', cutId);
+        setTimeout(function () { startCutscene(cutId); }, 50);
+      } else {
+        console.warn('[dev] unknown ?cut= name:', cutId, '(valid:', Object.keys(CUTSCENE_DEFS).join(', '), ')');
+      }
+    }
+
     // Bump the global attempts counter (Firebase). Best-effort —
     // failures swallow silently so they don't block the run start.
-    if (window.RunnerLeaderboard && window.RunnerLeaderboard.incrementAttemptCount) {
+    // GOD MODE: skip the increment so dev runs don't pollute stats.
+    if (!state.godMode && window.RunnerLeaderboard && window.RunnerLeaderboard.incrementAttemptCount) {
       window.RunnerLeaderboard.incrementAttemptCount();
     }
   }
@@ -3868,6 +4040,48 @@
   }
 
   // ============================================================
+  // DEV PARAMS — gated behind a localStorage flag so even someone
+  // who reads the JS source can't unlock these via URL alone. To
+  // enable dev mode in YOUR browser, open DevTools console (F12) on
+  // /run/ and run:
+  //
+  //   localStorage.setItem('empirex_runner_dev_2026', 'unlock');
+  //
+  // After that, the URL params below work IN YOUR BROWSER ONLY.
+  // Other visitors hitting the same URL with params still get
+  // normal play (params silently ignored without the flag).
+  //
+  //   ?god=1     — Mike doesn't lose lives, doesn't count toward
+  //                 leaderboard or attempt counter. HUD shows GOD MODE.
+  //   ?dist=NNN  — start at this distance (meters) instead of 0.
+  //   ?cut=NAME  — fire a specific cutscene on game start. Names:
+  //                 first-meet, mike-tells-off, ice-returns,
+  //                 before-water, adin-ross, shoovy-meeting.
+  //   ?water=1   — jump directly to the water phase on start.
+  //
+  // To DISABLE dev mode again: localStorage.removeItem('empirex_runner_dev_2026')
+  // ============================================================
+  var DEV_UNLOCK_KEY = 'empirex_runner_dev_2026';
+  var DEV_UNLOCK_VAL = 'unlock';
+  var devParams = (function () {
+    var p = { enabled: false, god: false, dist: 0, cut: '', water: false };
+    try {
+      // Gate: only honor URL params if localStorage flag is set.
+      if (localStorage.getItem(DEV_UNLOCK_KEY) !== DEV_UNLOCK_VAL) {
+        return p;
+      }
+      p.enabled = true;
+      var sp = new URLSearchParams(location.search);
+      p.god = sp.get('god') === '1';
+      p.dist = parseFloat(sp.get('dist')) || 0;
+      p.cut = sp.get('cut') || '';
+      p.water = sp.get('water') === '1';
+      console.log('[dev] DEV MODE UNLOCKED. Params:', p);
+    } catch (e) { /* SSR or non-browser env — ignore */ }
+    return p;
+  })();
+
+  // ============================================================
   // Boot.
   // ============================================================
   function init() {
@@ -3910,6 +4124,11 @@
     if (subBtn) subBtn.addEventListener('click', function (e) {
       e.target.blur();
       if (!window.RunnerLeaderboard) return;
+      // GOD MODE: refuse submit so dev runs don't pollute the leaderboard.
+      if (state.godMode) {
+        alert('GOD MODE active — score submit disabled.');
+        return;
+      }
       window.RunnerLeaderboard.openSubmitDialog({
         distance: state.distance,
         coins: state.coins,

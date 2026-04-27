@@ -17,6 +17,42 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.44 — 2026-04-27
+
+Big — **Shoovy mid-water encounter** + **dev URL params** for testing.
+
+**Shoovy interrupts the water phase.** ~4.5s into the water body, Shoovy's sailboat spawns at the bottom of the screen and slowly scrolls up toward Mike at 100 px/sec (slower than world scroll, so it visibly *approaches*). When the boat top reaches viewport-Y 45%, the new `shoovy-meeting` cutscene fires:
+
+> **SHOOVY:** *"i dough knot uh know, why you would be out here with your life so importantly meaning, but i uh am too and need land fastly."*
+
+`onComplete` cuts the rest of the water-body short — jumps straight to the exit transition so the player isn't stuck in storm for another 5s after Shoovy disappears. Boat sprite cycles 4 sailboat frames at 280ms (`shoovy-sail-01/05/09/13` — Shoovy actively rowing/adjusting sails) with a subtle Y-bob for wave rocking. New `cutscene-shoovy-{closed,mid,open,blink}` panels are preloaded.
+
+**DEV URL PARAMS** for testing — **gated behind a `localStorage` unlock flag** so even someone reading the JS source can't activate them via URL alone. Anyone else visiting the same URL with params still gets normal play (params silently ignored).
+
+To enable dev mode IN YOUR BROWSER ONLY, open DevTools console (F12) on `/run/` and run:
+
+```js
+localStorage.setItem('empirex_runner_dev_2026', 'unlock');
+```
+
+To disable again: `localStorage.removeItem('empirex_runner_dev_2026')`.
+
+Once unlocked, these URL params work:
+
+| Param | Effect |
+|---|---|
+| `?god=1` | God mode — Mike doesn't lose lives, attempt counter doesn't increment, score submit blocked. HUD shows a gold `👁 GOD MODE` badge so it's obvious. |
+| `?dist=NNN` | Start at distance NNN meters. Useful for testing late-game features without playing through 4500m. |
+| `?cut=NAME` | Fire a specific cutscene immediately on game start. Names: `first-meet`, `mike-tells-off`, `ice-returns`, `before-water`, `adin-ross`, `shoovy-meeting`. |
+| `?water=1` | Jump straight into the water phase on start (skips the cutscene chain). |
+
+Examples for testing (only work after the localStorage unlock):
+- `https://ourempirex.com/run/?god=1&water=1` — god mode + drop into the storm immediately
+- `https://ourempirex.com/run/?god=1&cut=shoovy-meeting` — preview Shoovy's panel in isolation
+- `https://ourempirex.com/run/?dist=3500` — start at 3500m so the next ice-returns + adin-ross + water sequence triggers in ~10 seconds of running
+
+Unknown `?cut=` names log a warning to console listing the valid ones.
+
 ### Run v0.18.43 — 2026-04-27
 
 Polish — the OG share preview was broken at launch and never noticed. Fixed.
