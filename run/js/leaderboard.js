@@ -26,7 +26,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import {
   getDatabase, ref, push, query, orderByChild,
-  limitToLast, get
+  limitToLast, get, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 
 // ============================================================
@@ -133,6 +133,40 @@ async function fetchTop(limit = 100) {
   return rows;
 }
 
+// Atomic increment of the global attempts counter. Called from startRun
+// in index.js. Uses runTransaction so two players starting simultaneously
+// don't lose a count to a race condition. Best-effort — fail silently if
+// Firebase is unreachable so a flaky network doesn't block the game.
+async function incrementAttemptCount() {
+  try {
+    await runTransaction(ref(db, 'stats/attempts'), (current) => {
+      return (current || 0) + 1;
+    });
+  } catch (e) {
+    // swallow — title-screen stats degrade gracefully
+    console.warn('[leaderboard] attempt counter increment failed:', e);
+  }
+}
+
+// Fetch combined title-screen stats: total attempts + top entry. One
+// call so the title overlay can populate both numbers in a single
+// promise. Falls back to nulls on any Firebase error.
+async function fetchTitleStats() {
+  try {
+    const [attemptsSnap, topRows] = await Promise.all([
+      get(ref(db, 'stats/attempts')),
+      fetchTop(1),
+    ]);
+    return {
+      attempts: attemptsSnap.exists() ? attemptsSnap.val() : 0,
+      top: topRows.length ? topRows[0] : null,
+    };
+  } catch (e) {
+    console.warn('[leaderboard] title-stats fetch failed:', e);
+    return { attempts: 0, top: null };
+  }
+}
+
 // ============================================================
 // UI — submit dialog + leaderboard view.
 // ============================================================
@@ -215,12 +249,23 @@ async function openLeaderboard() {
       wrap.innerHTML = '<p class="empty">No scores yet. Be the first.</p>';
       return;
     }
+    // Inline SVG platform icons — replaces the verbose "kick.com/" /
+    // "twitch.tv/" prefixes. URL still points to the right place when
+    // clicked. Kept inline so there's no extra asset to ship + the
+    // colors stay crisp at any size.
+    const KICK_ICON = '<svg class="lb-platform-icon" viewBox="0 0 24 24" aria-hidden="true">'
+      + '<rect width="24" height="24" rx="4" fill="#53fc18"/>'
+      + '<path fill="#000" d="M5 4h3v6l5-6h4l-6 7 6 9h-4l-5-7v7H5z"/>'
+      + '</svg>';
+    const TWITCH_ICON = '<svg class="lb-platform-icon" viewBox="0 0 24 24" aria-hidden="true">'
+      + '<path fill="#9146ff" d="M3.5 3l-1 4v13h4v3h3l3-3h4l5-5V3zM6 5h14v9l-3 3h-4l-3 3v-3H6zm5 8h2V8h-2zm5 0h2V8h-2z"/>'
+      + '</svg>';
     wrap.innerHTML = rows.map((r, i) => {
       let ident;
       if (r.identityType === 'kick') {
-        ident = `<a href="https://kick.com/${r.identity}" target="_blank" rel="noopener">kick.com/${r.identity}</a>`;
+        ident = `<a href="https://kick.com/${r.identity}" target="_blank" rel="noopener" title="kick.com/${r.identity}">${KICK_ICON}<span class="lb-handle">${r.identity}</span></a>`;
       } else if (r.identityType === 'twitch') {
-        ident = `<a href="https://twitch.tv/${r.identity}" target="_blank" rel="noopener">twitch.tv/${r.identity}</a>`;
+        ident = `<a href="https://twitch.tv/${r.identity}" target="_blank" rel="noopener" title="twitch.tv/${r.identity}">${TWITCH_ICON}<span class="lb-handle">${r.identity}</span></a>`;
       } else {
         // Legacy entries from v0.17.2 days (display name / arcade tag) — render plain
         ident = `<span class="display-name">${r.identity}</span>`;
@@ -243,4 +288,6 @@ window.RunnerLeaderboard = {
   fetchTop,
   openSubmitDialog,
   openLeaderboard,
+  incrementAttemptCount,
+  fetchTitleStats,
 };

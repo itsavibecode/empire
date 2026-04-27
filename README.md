@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.27 — 2026-04-26
+
+Patch — three things from playtest stream:
+
+- **Cutscene bird now flies off-screen + returns from the opposite side**, mirroring the title-screen behavior. Previous behavior was "fly to upper-right of frame, hover, return same direction." New 5-phase loop: `perch (5.5s) → takeoff (350ms in place) → flyout (1.5s, +1100% transform off the right edge) → offscreen (800ms, visibility hidden + teleport to -1100% on the left) → flyin (1.7s, transform back to base)`. Teleport phase disables CSS transition + force-flushes layout so the bird doesn't visibly slide across the screen during the off-screen pause.
+- **Leaderboard rows show platform icons instead of "kick.com/" / "twitch.tv/" prefixes.** Saves horizontal space + visually clearer at a glance. Inline SVG (Kick = green square with K, Twitch = purple speech bubble) so there's no extra asset to ship and they stay crisp at any size. URL still resolves correctly when clicked + appears in the tooltip.
+- **Title screen now shows global stats** — total runs (atomic Firebase counter incremented on every `startRun` via `runTransaction`) + current high score WITH the streamer who holds it (queried from the same `/scores` collection the leaderboard uses, top 1). Refreshes on boot AND on quit-to-title so the numbers update after a successful submit. Two side-by-side blocks below the START / LEADERBOARD buttons in their own backing card.
+
 ### Run v0.18.26 — 2026-04-26
 
 Heavy patch — 6 things from playtest stream:

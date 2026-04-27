@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.26">
+  <meta name="version" content="0.18.27">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -136,6 +136,19 @@
       <button type="button" id="btn-start">START</button>
       <button type="button" id="btn-title-leaderboard">LEADERBOARD</button>
     </div>
+    <!-- Global stats row populated from Firebase on boot + after every
+         score submit. Falls back to "—" if Firebase is unreachable. -->
+    <div class="title-stats" id="title-stats">
+      <div class="ts-block">
+        <div class="ts-label">Total Runs</div>
+        <div class="ts-value" id="ts-attempts">—</div>
+      </div>
+      <div class="ts-block">
+        <div class="ts-label">High Score</div>
+        <div class="ts-value" id="ts-top-score">—</div>
+        <div class="ts-meta" id="ts-top-by"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Cut scene overlay — Pokemon-style first-encounter dialogue
@@ -217,7 +230,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.26</div>
+  <div class="game-version">Run v0.18.27</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

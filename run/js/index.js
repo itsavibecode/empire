@@ -537,11 +537,15 @@
   var BIRD_FLAP_FRAME_MS  = 90;      // fast wing flap during flight
   var BIRD_PERCH_SETTLE_MS = 5500;   // how long bird sits before taking off
   var BIRD_TAKEOFF_MS = 350;         // wings up before transform starts
-  var BIRD_FLIGHT_MS = 1600;         // matches CSS .flying transition
-  var BIRD_HOVER_MS = 600;           // pause at far point before returning
-  var BIRD_RETURN_MS = 1400;         // matches CSS default transition
+  // New off-screen flight cycle (mirrors the title-screen bird):
+  // takeoff -> flyout RIGHT off-screen -> offscreen pause (hidden) ->
+  // flyin from LEFT off-screen back to perch.
+  var BIRD_FLYOUT_MS = 1500;         // matches CSS .flying transition
+  var BIRD_OFFSCREEN_MS = 800;       // hidden between exit and re-entry
+  var BIRD_FLYIN_MS = 1700;          // matches CSS .flying transition
   var bird = {
-    phase: 'perch',     // 'perch' | 'takeoff' | 'flying' | 'hover' | 'return'
+    // 'perch' | 'takeoff' | 'flyout' | 'offscreen' | 'flyin'
+    phase: 'perch',
     nextPhaseAt: 0,
   };
 
@@ -551,7 +555,9 @@
     var el = document.getElementById('cutscene-bird');
     if (el) {
       el.classList.remove('flying');
+      el.style.transition = '';
       el.style.transform = '';
+      el.style.visibility = '';
     }
     setBirdFrame(BIRD_PERCH_FRAMES[0]);
   }
@@ -571,8 +577,9 @@
     if (bird.phase === 'perch') {
       var pi = Math.floor(now / BIRD_PERCH_FRAME_MS) % BIRD_PERCH_FRAMES.length;
       setBirdFrame(BIRD_PERCH_FRAMES[pi]);
-    } else {
-      // takeoff / flying / hover / return all use the wing-flap cycle
+    } else if (bird.phase !== 'offscreen') {
+      // takeoff / flyout / flyin all use the wing-flap cycle. offscreen
+      // skips frame swaps entirely since the bird is hidden.
       var fi = Math.floor(now / BIRD_FLAP_FRAME_MS) % BIRD_FLAP_FRAMES.length;
       setBirdFrame(BIRD_FLAP_FRAMES[fi]);
     }
@@ -584,32 +591,42 @@
       bird.phase = 'takeoff';
       bird.nextPhaseAt = now + BIRD_TAKEOFF_MS;
     } else if (bird.phase === 'takeoff') {
-      // Launch — translate to upper-right of frame with the slower
-      // .flying transition for a graceful arc-feel. Random Y so the
-      // flight path varies a bit each loop.
-      bird.phase = 'flying';
-      bird.nextPhaseAt = now + BIRD_FLIGHT_MS;
+      // FLYOUT — translate well off-screen to the RIGHT. The .flying
+      // class swaps to a slower easing so the path feels graceful.
+      // 1100% relative to bird width (9% of canvas) clears the right
+      // edge with margin to spare.
+      bird.phase = 'flyout';
+      bird.nextPhaseAt = now + BIRD_FLYOUT_MS;
       el.classList.add('flying');
-      // Move +480% right, -160% up (relative to bird's own size).
-      // With bird width = 9% of canvas, that lands the bird around
-      // 60-65% across the frame, well above Mike's head.
-      var jitterY = -120 - Math.random() * 80;
-      var jitterX = 460 + Math.random() * 80;
-      el.style.transform = 'translate(' + jitterX + '%, ' + jitterY + '%)';
-    } else if (bird.phase === 'flying') {
-      // Reached far point — hover briefly before turning back
-      bird.phase = 'hover';
-      bird.nextPhaseAt = now + BIRD_HOVER_MS;
-    } else if (bird.phase === 'hover') {
-      // Return to shoulder — switch back to default transition speed
-      bird.phase = 'return';
-      bird.nextPhaseAt = now + BIRD_RETURN_MS;
-      el.classList.remove('flying');
-      el.style.transform = '';  // back to original perched position
-    } else if (bird.phase === 'return') {
+      el.style.transition = '';
+      el.style.transform = 'translate(1100%, -100%)';
+    } else if (bird.phase === 'flyout') {
+      // OFFSCREEN — hide the bird and TELEPORT it to the off-screen
+      // LEFT side ready to fly back in. Disable the CSS transition for
+      // the teleport so it doesn't visibly slide across the screen,
+      // then the next phase re-enables transitions for the fly-in.
+      bird.phase = 'offscreen';
+      bird.nextPhaseAt = now + BIRD_OFFSCREEN_MS;
+      el.style.visibility = 'hidden';
+      el.style.transition = 'none';
+      el.style.transform = 'translate(-1100%, -100%)';
+      // Force layout flush so the no-transition teleport commits before
+      // the next paint kicks the transition back in.
+      void el.offsetWidth;
+    } else if (bird.phase === 'offscreen') {
+      // FLYIN — re-enable transition + clear transform so the bird
+      // smoothly flies back from the LEFT off-screen position to the
+      // perch on the dialogue box edge.
+      bird.phase = 'flyin';
+      bird.nextPhaseAt = now + BIRD_FLYIN_MS;
+      el.style.transition = '';
+      el.style.visibility = '';
+      el.style.transform = '';  // back to anchored perch position
+    } else if (bird.phase === 'flyin') {
       // Landed — back to perch idle until next takeoff
       bird.phase = 'perch';
       bird.nextPhaseAt = now + BIRD_PERCH_SETTLE_MS;
+      el.classList.remove('flying');
     }
   }
 
@@ -2404,6 +2421,11 @@
     startBackgroundMusic();
     startLoop('mob-angry');
     ga('game_started');
+    // Bump the global attempts counter (Firebase). Best-effort —
+    // failures swallow silently so they don't block the run start.
+    if (window.RunnerLeaderboard && window.RunnerLeaderboard.incrementAttemptCount) {
+      window.RunnerLeaderboard.incrementAttemptCount();
+    }
   }
 
   function quitToTitle() {
@@ -2424,6 +2446,9 @@
     document.getElementById('overlay-pause').classList.add('hidden');
     document.getElementById('overlay-gameover').classList.add('hidden');
     syncChromeForPhase();
+    // Refresh stats — if the player just submitted a score, the
+    // numbers should reflect that on return to title.
+    refreshTitleStats();
   }
 
   // Show/hide chrome based on game phase. Pause button only relevant
@@ -2683,7 +2708,41 @@
       // and retries on the first click/tap/keypress.
       startBackgroundMusic();
       bindAutoplayUnlock();
+      // Fetch + render the global title-screen stats (total runs +
+      // current high score). Best-effort; failures leave the "—"
+      // placeholders in place.
+      refreshTitleStats();
       requestAnimationFrame(function (t) { lastTime = t; loop(t); });
+    });
+  }
+
+  // Fetch global stats from Firebase + populate the title-screen
+  // counter row. Called on boot AND on quitToTitle so the numbers
+  // refresh after a successful score submission.
+  function refreshTitleStats() {
+    if (!window.RunnerLeaderboard || !window.RunnerLeaderboard.fetchTitleStats) return;
+    window.RunnerLeaderboard.fetchTitleStats().then(function (stats) {
+      var attEl = document.getElementById('ts-attempts');
+      var topEl = document.getElementById('ts-top-score');
+      var byEl  = document.getElementById('ts-top-by');
+      if (attEl) attEl.textContent = stats.attempts ? stats.attempts.toLocaleString() : '—';
+      if (topEl) topEl.textContent = stats.top ? stats.top.score.toLocaleString() : '—';
+      if (byEl) {
+        if (stats.top && stats.top.identity) {
+          var url = stats.top.identityType === 'twitch'
+            ? 'https://twitch.tv/' + stats.top.identity
+            : 'https://kick.com/' + stats.top.identity;
+          var icon = stats.top.identityType === 'twitch'
+            ? '<svg class="lb-platform-icon" viewBox="0 0 24 24" aria-hidden="true">'
+              + '<path fill="#9146ff" d="M3.5 3l-1 4v13h4v3h3l3-3h4l5-5V3zM6 5h14v9l-3 3h-4l-3 3v-3H6zm5 8h2V8h-2zm5 0h2V8h-2z"/></svg>'
+            : '<svg class="lb-platform-icon" viewBox="0 0 24 24" aria-hidden="true">'
+              + '<rect width="24" height="24" rx="4" fill="#53fc18"/>'
+              + '<path fill="#000" d="M5 4h3v6l5-6h4l-6 7 6 9h-4l-5-7v7H5z"/></svg>';
+          byEl.innerHTML = 'by ' + icon + '<a href="' + url + '" target="_blank" rel="noopener" style="color:#fff;text-decoration:none;">' + stats.top.identity + '</a>';
+        } else {
+          byEl.textContent = '';
+        }
+      }
     });
   }
 

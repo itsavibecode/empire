@@ -154,6 +154,59 @@ html, body {
 #overlay-start .title-buttons {
   margin-top: .4rem;
 }
+/* Global stats row at the bottom of the title screen. Two side-by-side
+   blocks: total attempts + current high score (with the streamer who
+   holds it). Sits inside the same .42 overlay so the title art still
+   shows around it. Has its own backing card for legibility. */
+.title-stats {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: stretch;
+  margin: .8rem auto 0;
+  padding: .8rem 1.4rem;
+  background: rgba(14, 10, 28, .72);
+  border: 1px solid rgba(201, 164, 255, .25);
+  border-radius: 14px;
+  max-width: min(640px, 92vw);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+  font-family: 'VT323', monospace;
+}
+.title-stats .ts-block {
+  flex: 1;
+  text-align: center;
+  padding: 0 .8rem;
+}
+.title-stats .ts-block + .ts-block {
+  border-left: 1px solid rgba(201, 164, 255, .2);
+}
+.title-stats .ts-label {
+  font-size: .85rem;
+  color: rgba(201, 164, 255, .7);
+  letter-spacing: .25em;
+  text-transform: uppercase;
+}
+.title-stats .ts-value {
+  font-size: 1.8rem;
+  color: #FFD566;
+  letter-spacing: .08em;
+  margin-top: .15rem;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, .55);
+}
+.title-stats .ts-meta {
+  font-size: .9rem;
+  color: rgba(245, 245, 245, .7);
+  margin-top: .1rem;
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+}
+.title-stats .ts-meta .lb-platform-icon {
+  width: 1em;
+  height: 1em;
+}
 .overlay h1 {
   font-size: 5rem;
   letter-spacing: .15em;
@@ -1000,8 +1053,25 @@ html, body {
 .lb-row.top3 { background: rgba(142, 92, 203, .15); }
 .lb-rank { grid-area: rank; font-size: 1.6rem; color: #C9A4FF; }
 .lb-ident { grid-area: ident; }
-.lb-ident a { color: #C9A4FF; text-decoration: none; }
-.lb-ident a:hover { text-decoration: underline; }
+.lb-ident a {
+  color: #C9A4FF;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.lb-ident a:hover .lb-handle { text-decoration: underline; }
+/* Inline platform icon (kick / twitch) replacing the verbose
+   "kick.com/" "twitch.tv/" prefix. Sized to match the line height of
+   the surrounding text. */
+.lb-platform-icon {
+  width: 1.2em;
+  height: 1.2em;
+  flex-shrink: 0;
+  vertical-align: middle;
+  display: inline-block;
+}
+.lb-handle { color: #C9A4FF; }
 .lb-ident .plat {
   font-size: .9rem;
   color: rgba(255,255,255,.4);
