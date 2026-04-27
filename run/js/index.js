@@ -42,6 +42,20 @@
   var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  // BACKGROUND FAUNA — pigeons/cats/dogs/goats walking the sidewalks.
+  // Pure ambient visuals, no collision. Spawn on the LEFT or RIGHT
+  // sidewalk strip (the 7% margin outside the 5 driving lanes), scroll
+  // up with the world at the same speed as obstacles. Each spawn picks
+  // a random sprite from the type's frame pool for visual variety.
+  var FAUNA_SPAWN_MIN_MS = 2200;
+  var FAUNA_SPAWN_MAX_MS = 5500;
+  var FAUNA_TYPES = [
+    // weight = relative spawn frequency
+    { kind: 'pigeon', framePrefix: 'pigeon-', frameCount: 12, heightFrac: 0.06, weight: 4, bobAmp: 4 },
+    { kind: 'cat',    framePrefix: 'cat-',    frameCount: 16, heightFrac: 0.09, weight: 3, bobAmp: 3 },
+    { kind: 'dog',    framePrefix: 'dog-',    frameCount: 16, heightFrac: 0.10, weight: 3, bobAmp: 5 },
+    { kind: 'goat',   framePrefix: 'goat-',   frameCount: 16, heightFrac: 0.11, weight: 1, bobAmp: 4 },
+  ];
   // CROSS TRAFFIC — overhead-view cop cars that drive across the screen
   // perpendicular to Mike's lane. Per playtest: should be RARE
   // (telegraphed event, not constant pressure) and READABLE — the car
@@ -249,6 +263,15 @@
     var dkk = 'mike-death-' + (dk < 10 ? '0' + dk : dk);
     SPRITE_PATHS[dkk] = 'img/sprites/' + dkk + '.png';
   }
+  // Background fauna — preload all frames for each species so the
+  // random-frame picker can pull instantly without a missing-sprite
+  // flash. FAUNA_TYPES drives this list to keep the two in sync.
+  FAUNA_TYPES.forEach(function (ft) {
+    for (var fi = 1; fi <= ft.frameCount; fi++) {
+      var fk = ft.framePrefix + (fi < 10 ? '0' + fi : fi);
+      SPRITE_PATHS[fk] = 'img/sprites/' + fk + '.png';
+    }
+  });
   // Budgie sprites — perched on Mike's shoulder during cutscenes (DOM
   // overlay) AND on the title screen (canvas-rendered). Preload all 16
   // so both render paths can pick frames without flicker.
@@ -987,6 +1010,11 @@
     crossCars: [],
     crossCarSpawnTimer: 0,
     crossCarNextSpawnMs: 0,
+    // Background fauna — sidewalk-walking pigeons/cats/dogs/goats.
+    // Each: {x, y, w, h, sprite, bobPhase, bobAmp, spawnedAt}
+    fauna: [],
+    faunaSpawnTimer: 0,
+    faunaNextSpawnMs: 0,
     // Random death-pose sprite picked at endRun. Rendered on the road
     // (drawPlayer) AND in the gameover overlay panel so they match.
     gameOverDeathKey: null,
@@ -1256,6 +1284,52 @@
       hit: false,
     });
     return lane; // so coin spawner can avoid the same lane
+  }
+
+  // Background fauna — pick a random species (weighted), random frame
+  // from that species' pool, and a sidewalk side. Spawn just below
+  // visible area; will scroll up with effSpeed.
+  function pickWeightedFaunaType() {
+    var totalW = FAUNA_TYPES.reduce(function (a, t) { return a + t.weight; }, 0);
+    var r = Math.random() * totalW;
+    for (var i = 0; i < FAUNA_TYPES.length; i++) {
+      r -= FAUNA_TYPES[i].weight;
+      if (r <= 0) return FAUNA_TYPES[i];
+    }
+    return FAUNA_TYPES[0];
+  }
+
+  function spawnFauna() {
+    var t = pickWeightedFaunaType();
+    var frameIdx = Math.floor(Math.random() * t.frameCount) + 1;
+    var spriteKey = t.framePrefix + (frameIdx < 10 ? '0' + frameIdx : frameIdx);
+    var size = scaledSize(spriteKey, t.heightFrac);
+    if (!size.w || !size.h) return; // sprite not loaded yet, skip
+    var w = viewW();
+    // Sidewalk strip is the 7% margin outside the 5 driving lanes
+    // (matches laneXOnRoad's `sidewalkW = w * 0.07`). Pick a random
+    // X within that strip on either side, with a small inset so
+    // creatures don't render half-clipped at the viewport edge.
+    var sidewalkW = w * 0.07;
+    var inset = Math.min(sidewalkW * 0.2, size.w * 0.3);
+    var side = Math.random() < 0.5 ? 'L' : 'R';
+    var x;
+    if (side === 'L') {
+      // x is the LEFT edge of the sprite within left sidewalk
+      x = inset + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+    } else {
+      x = (w - sidewalkW) + Math.random() * Math.max(0, sidewalkW - size.w - inset);
+    }
+    state.fauna.push({
+      x: x,
+      y: viewH() + size.h + 60,
+      w: size.w,
+      h: size.h,
+      sprite: spriteKey,
+      bobPhase: Math.random() * Math.PI * 2,
+      bobAmp: t.bobAmp,
+      spawnedAt: performance.now(),
+    });
   }
 
   // Cross-traffic cop car — spawns from off-screen left or right and
@@ -1601,6 +1675,25 @@
       }
     }
 
+    // Background fauna — pigeons/cats/dogs/goats walking the sidewalks.
+    // Pure ambient; no collision, no gameplay impact. Spawn cadence is
+    // random in the FAUNA_SPAWN_MIN..MAX range so the street feels
+    // populated without becoming a parade.
+    state.faunaSpawnTimer += dt * 1000;
+    if (state.faunaSpawnTimer >= state.faunaNextSpawnMs) {
+      state.faunaSpawnTimer = 0;
+      state.faunaNextSpawnMs = FAUNA_SPAWN_MIN_MS
+        + Math.random() * (FAUNA_SPAWN_MAX_MS - FAUNA_SPAWN_MIN_MS);
+      spawnFauna();
+    }
+    // Move + cull fauna (scroll up with effSpeed, like obstacles)
+    for (i = 0; i < state.fauna.length; i++) {
+      state.fauna[i].y -= effSpeed * dt;
+    }
+    state.fauna = state.fauna.filter(function (f) {
+      return f.y > -f.h - 40;
+    });
+
     // Cross-traffic cop car spawning + movement. Spawns kick in at
     // CROSS_CAR_START_DISTANCE_M and accelerate (shorter intervals)
     // as distance grows.
@@ -1884,6 +1977,12 @@
     // covers, shops on the edges).
     drawRoad(0, h);
 
+    // Background fauna (sidewalk-walking pigeons/cats/dogs/goats).
+    // Drawn AFTER the road but BEFORE obstacles so passing vehicles
+    // can occlude them in the depth pass — they're meant to be
+    // ambient set-dressing, not foreground.
+    drawFauna(now);
+
     // Obstacles + coins + pickups, sorted so closer (lower-Y) ones
     // draw on top. Tag each item with its category so we know which
     // sprite-source to use.
@@ -1949,6 +2048,24 @@
 
     // Effect overlays
     drawEffects(now);
+  }
+
+  // Render background fauna walking the sidewalks. Each creature gets
+  // a small sin-wave Y-bob for "alive" feel even though most species
+  // here aren't true walk-cycle animations (sprite frames are visual
+  // variants, not stride sequences). drawAtCropped trims the small
+  // ground-shadow ellipse baked into the source art.
+  function drawFauna(now) {
+    if (state.fauna.length === 0) return;
+    for (var i = 0; i < state.fauna.length; i++) {
+      var f = state.fauna[i];
+      var bob = Math.sin((now - f.spawnedAt) / 220 + f.bobPhase) * f.bobAmp;
+      // f.x is the LEFT edge of the sprite (not center) since fauna
+      // sit on a sidewalk strip not a lane center. drawAt centers
+      // horizontally on the supplied x, so add half-width to the LEFT
+      // edge to get the center.
+      drawAtCropped(f.sprite, f.x + f.w / 2, f.y + bob, f.w, f.h, 0.05);
+    }
   }
 
   // Render the cross-traffic cop cars. Sprite is overhead-view so
@@ -2670,6 +2787,9 @@
     state.crossCars = [];
     state.crossCarSpawnTimer = 0;
     state.crossCarNextSpawnMs = CROSS_CAR_SPAWN_MS_FAR;
+    state.fauna = [];
+    state.faunaSpawnTimer = 0;
+    state.faunaNextSpawnMs = FAUNA_SPAWN_MIN_MS;
     state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;

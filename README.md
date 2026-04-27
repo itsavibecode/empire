@@ -17,6 +17,21 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.33 — 2026-04-27
+
+Polish — background fauna walking the sidewalks. Pigeons, cats, dogs, and goats now appear ambient on the 7%-margin sidewalk strips outside the 5 driving lanes. Pure visual layer — no collision, no gameplay impact.
+
+- New `FAUNA_TYPES` config drives spawn weights + sizing + frame counts:
+  - **Pigeons** — 6% viewH, weight 4 (most common), 12 sprite variants
+  - **Cats** — 9% viewH, weight 3, 16 variants
+  - **Dogs** — 10% viewH, weight 3, 16 variants
+  - **Goats** — 11% viewH, weight 1 (rare flavor), 16 variants
+- Spawn cadence: random in 2.2-5.5 sec range so the street feels populated without becoming a parade. Random side (L or R sidewalk), random sprite from the species' frame pool, random sin-wave bob phase per spawn so multiple creatures don't bob in lockstep.
+- Scroll up with the world at the same `effSpeed` as obstacles; cull off-screen at top.
+- Each renders with a small Y-bob (3-5px amplitude) for "alive" feel — most species' sprite frames are visual variants not true walk cycles, so the bob is what sells motion.
+- Drawn AFTER the road but BEFORE obstacles in the depth pass — set-dressing layer that vehicles can occlude when overlapping.
+- Sprites preloaded driven by `FAUNA_TYPES` config (no path-list duplication).
+
 ### Run v0.18.32 — 2026-04-26
 
 Patch — cross-traffic cop car gets a feint-swerve telegraph + jump avoidance + much rarer spawns. Per playtest: was too frequent and too unforgiving, with no way to read the threat before it hit.
