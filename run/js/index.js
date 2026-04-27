@@ -178,7 +178,10 @@
   // instead of a giantess looming over him.
   var XENA_HEIGHT_FRAC     = 0.20;
   var XENA_FRAME_MS        = 110;    // walk-cycle frame duration
-  var XENA_GRAB_FLASH_MS   = 350;    // brief gold flash on her body when she snipes
+  // Per user feedback (v0.18.58) — bumped from 350 to 700ms so the
+  // celebration reads more clearly. drawXena pulses the shadowBlur
+  // over this window for a "twinkle" instead of a static halo.
+  var XENA_GRAB_FLASH_MS   = 700;
 
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
@@ -1714,7 +1717,22 @@
       if (e.repeat) return;
       var key = e.key;
       if (state.phase === 'menu' || state.phase === 'gameover') {
-        if (key === ' ' || key === 'Enter') startRun();
+        // v0.18.58 — don't fire the Enter / Space restart shortcut if
+        // the user is typing in a form control. Submit-score dialog
+        // input + kick-username input both use Enter to mean "submit
+        // this form"; pre-fix the global listener fired startRun()
+        // simultaneously, so a player typing their handle after a
+        // death and pressing Enter to submit would restart the game
+        // mid-submit. Now we ignore Enter/Space when an input/textarea/
+        // select/contenteditable has focus.
+        var active = document.activeElement;
+        var typingInForm = active && (
+          active.tagName === 'INPUT' ||
+          active.tagName === 'TEXTAREA' ||
+          active.tagName === 'SELECT' ||
+          active.isContentEditable
+        );
+        if (!typingInForm && (key === ' ' || key === 'Enter')) startRun();
         return;
       }
       // Cut scene — keyboard navigation for choice buttons. Arrow up/down
@@ -4535,12 +4553,25 @@
     var y = playerY() - h + bob;
 
     ctx.save();
-    // Brief gold-tint flash when she snipes a coin/weed
+    // GRAB FLASH — bigger / brighter / pulsing per user feedback.
+    // Pulses both shadowBlur and color over the flash window so the
+    // halo "twinkles" rather than sitting at a fixed brightness.
     var flashing = now < state.xena.grabFlashUntil;
     if (flashing) {
-      // Pulse alpha slightly while flashed
-      ctx.shadowColor = 'rgba(255, 213, 102, 0.85)';
-      ctx.shadowBlur = 18;
+      var flashRem = (state.xena.grabFlashUntil - now) / XENA_GRAB_FLASH_MS;
+      // Sine pulse so the halo throbs through the flash duration
+      var pulseT = Math.sin(now / 70) * 0.5 + 0.5;            // 0..1
+      var blurPx = 24 + pulseT * 22;                          // 24..46 px
+      var colorAlpha = 0.7 + pulseT * 0.3;                    // 0.7..1.0
+      ctx.shadowColor = 'rgba(255, 220, 120, ' + colorAlpha + ')';
+      ctx.shadowBlur = blurPx;
+      // Also slight scale punch at the start of the flash
+      var scalePop = 1 + Math.max(0, (flashRem - 0.6)) * 0.25;  // 1..1.10
+      var dx = x;
+      var dy = y;
+      ctx.translate(dx, dy);
+      ctx.scale(scalePop, scalePop);
+      ctx.translate(-dx, -dy);
     }
     // Mirror horizontally if she's on Mike's left so she faces forward
     if (state.xena.lastSide < 0) {

@@ -17,6 +17,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.58 — 2026-04-27 — Enter-restart bug + brighter Xena grab glow
+
+**1. BUG FIX: Enter restarts game while typing in submit-score / kick-username dialog.** The global keydown listener at `bindInput` had a "press Enter on title or gameover screen to (re)start" shortcut that didn't check if the user was actually typing into a form control. So a player on the gameover screen who opened the SUBMIT SCORE dialog and pressed Enter (intending to submit their handle) was triggering BOTH the form-submit path AND `startRun()` — restarting the game mid-submit. Added a focus-aware guard: if `document.activeElement` is an `INPUT`/`TEXTAREA`/`SELECT`/contenteditable, the global Enter shortcut is suppressed. The form's own Enter handler still works normally.
+
+**2. Xena's grab-flash made more noticeable per user feedback.** Duration `350ms → 700ms`. Replaced the static gold halo with a pulsing one — `shadowBlur` oscillates 24–46 px on a 70ms sine and the color alpha throbs 0.7–1.0 with the same pulse. Plus a subtle scale-punch (1.0 → 1.10) at the start of the flash that decays back over the first 40% of the window.
+
 ### Run v0.18.57 — 2026-04-27 — Leaderboard top 20
 
 `fetchTop(10) → fetchTop(20)` in the open-leaderboard panel. The existing 2-column grid auto-flows the 20 rows into 10-per-column, and the `max-height: 65vh; overflow-y: auto` on the container is a safety net so it never blows out the viewport. Rank cell at 3rem has plenty of room for the new 2-digit rank numbers (10-20).

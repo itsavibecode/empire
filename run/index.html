@@ -16,7 +16,7 @@
   <meta name="description" content="On Baby! — Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins, survive the storm, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.57">
+  <meta name="version" content="0.18.58">
   <!-- Mobile chrome theme color (matches the game's purple palette) -->
   <meta name="theme-color" content="#8E5CCB">
   <title>On Baby! — EmpireX Runner</title>
@@ -47,7 +47,7 @@
 
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323&family=Pacifico&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=0.18.57">
+  <link rel="stylesheet" href="css/style.css?v=0.18.58">
 </head>
 <body>
   <!-- Game canvas. Resized to viewport via JS on load + resize. -->
@@ -135,7 +135,7 @@
     </div>
   </div>
 
-  <!-- KICK USERNAME PROMPT (v0.18.57). Modal shown on START click if
+  <!-- KICK USERNAME PROMPT (v0.18.58). Modal shown on START click if
        no kick username is yet in sessionStorage. Once entered, the
        game auto-submits the player's score to the leaderboard at run
        end without a separate submit dialog. Username persists for
@@ -237,7 +237,7 @@
     <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
-  <!-- JAIL overlay (v0.18.57). Mike + Xena behind bars. Mike's eyes
+  <!-- JAIL overlay (v0.18.58). Mike + Xena behind bars. Mike's eyes
        blink (open ↔ closed) via JS swapping the bg src on a timer.
        Dialogue box at the bottom offers PAY (self-bail), BAIL XENA
        (only enabled when Mike can't afford self-bail — phase C), or
@@ -293,16 +293,16 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.57</div>
+  <div class="game-version">Run v0.18.58</div>
 
   <!-- Cache-bust query string follows the meta version above. Bumped
        on every release so browsers/Cloudflare can't serve a stale JS
-       against a fresh HTML — that mismatch caused v0.18.57 to ship
+       against a fresh HTML — that mismatch caused v0.18.58 to ship
        new HTML but old JS to many players (Xena giant + pause broken
        + chile-police bg missing all visible symptoms). -->
-  <script src="js/index.js?v=0.18.57"></script>
+  <script src="js/index.js?v=0.18.58"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
        imports from the gstatic CDN). Exposes window.RunnerLeaderboard. -->
-  <script type="module" src="js/leaderboard.js?v=0.18.57"></script>
+  <script type="module" src="js/leaderboard.js?v=0.18.58"></script>
 </body>
 </html>
