@@ -239,6 +239,10 @@
     { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22, bottomCropFrac: 0.06 },
     // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
     { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
+    // PHONE THIEF (flipped) — same mechanic, mirrored sprite reaching
+    // from the OPPOSITE side. Spawn pool now has phone-snatchers
+    // attacking from BOTH directions.
+    { id: 'walk-reaching-flipped', frames: ['npc-pedestrian-flipped-09','npc-pedestrian-flipped-10','npc-pedestrian-flipped-11','npc-pedestrian-flipped-12'], frameMs: 130, bobPx: 14, phoneThief: true, bottomCropFrac: 0.06 },
     // RUNNING NPCs — proper 6-frame forward-facing run cycles. These
     // replaced the earlier static-protester + static-chibi entries
     // which were single-frame poses that needed bobPx fakery to look
@@ -1347,6 +1351,7 @@
       // or null when not active.
       shoovyBoat: null,
       shoovyTriggered: false, // true once the cutscene has fired this segment
+      completed: false,       // true once the segment fully ended; blocks repeats
     },
     // Random death-pose sprite picked at endRun. Rendered on the road
     // (drawPlayer) AND in the gameover overlay panel so they match.
@@ -1626,6 +1631,36 @@
     return lane; // so coin spawner can avoid the same lane
   }
 
+  // Bonus phone-thief spawn for the post-water difficulty ramp. Picks
+  // one of the two reaching-pedestrian variants (left-handed grab vs
+  // right-handed grab via the flipped sheet) and drops it in a lane
+  // OTHER than avoidLane so the player has to track two threats at
+  // once. Otherwise both spawns can land in the same lane and the
+  // second snatcher is functionally invisible behind the first.
+  function spawnExtraPhoneThief(avoidLane) {
+    var thiefIds = ['walk-reaching', 'walk-reaching-flipped'];
+    var pickId = thiefIds[Math.floor(Math.random() * thiefIds.length)];
+    var type = null;
+    for (var i = 0; i < OBSTACLE_TYPES.length; i++) {
+      if (OBSTACLE_TYPES[i].id === pickId) { type = OBSTACLE_TYPES[i]; break; }
+    }
+    if (!type) return; // defensive — shouldn't happen but no-op if so
+    var size = scaledSize(type.frames[0], OBSTACLE_TARGET_HEIGHT_FRAC);
+    // Pick a lane that isn't avoidLane. With LANES=3 we just shift by
+    // a random non-zero offset so the result is guaranteed different.
+    var lane = (avoidLane + 1 + Math.floor(Math.random() * (LANES - 1))) % LANES;
+    state.obstacles.push({
+      lane: lane,
+      y: viewH() + size.h,
+      type: type,
+      spawnedAt: performance.now(),
+      bobPhase: Math.random() * Math.PI * 2,
+      w: size.w,
+      h: size.h,
+      hit: false,
+    });
+  }
+
   // ============================================================
   // HURRICANE / WATER SEGMENT
   // ============================================================
@@ -1637,6 +1672,11 @@
   function maybeTriggerWater() {
     if (state.water.phase !== 'none') return;
     if (cutscene.active) return;
+    // SINGLE-SHOT POLICY: water now fires ONCE per run unless dev
+    // explicitly opts back into recurrence. After the first segment
+    // exits, lastTriggeredAt is non-zero AND state.water.completed
+    // is true; this gate blocks subsequent triggers.
+    if (state.water.completed) return;
     var distSinceLast = state.distance - state.water.lastTriggeredAt;
     var threshold = state.water.lastTriggeredAt === 0
       ? WATER_FIRST_DISTANCE_M
@@ -1711,6 +1751,7 @@
       // street resumes in clean silence (apart from mob ambient).
       var hadShoovyEncounter = state.water.shoovyTriggered;
       state.water.phase = 'none';
+      state.water.completed = true;     // SINGLE-SHOT: blocks repeat triggers
       state.water.raindrops = [];
       state.water.lightningUntil = 0;
       stopLoop('water-loop');
@@ -2254,6 +2295,19 @@
       SPAWN_INTERVAL_MIN,
       SPAWN_INTERVAL_INITIAL - t * 0.05
     );
+    // POST-HURRICANE difficulty ramp — once Mike's back on land after
+    // the storm, the city gets MEAN. More frequent pickups (which now
+    // includes more weed/ham/horse), more frequent spawns of the
+    // phone-thief obstacle (handled via OBSTACLE_TYPES weighting since
+    // both walk-reaching variants are in the pool). Distance-based
+    // ramp: 1.0× at water exit, scales up to 2.5× over the next 5000m.
+    var dangerMul = 1.0;
+    if (state.water.completed) {
+      var distSinceWater = state.distance - state.water.lastTriggeredAt;
+      var k = Math.min(1, distSinceWater / 5000);  // 0 -> 1 over 5km
+      dangerMul = 1.0 + k * 1.5;                   // 1.0 -> 2.5
+    }
+
     if (!inWater && state.spawnTimer >= spawnInterval) {
       state.spawnTimer = 0;
       var obstLane = spawnObstacle();
@@ -2269,18 +2323,24 @@
         spawnCoin(obstLane);
       }
       if (hamActive) {
-        // Burst of extra coins. Spread across lanes so the player
-        // doesn't have to thread one specific lane to grab them all —
-        // the bonus is supposed to feel like a shower.
         var extraCount = 3 + Math.floor(Math.random() * 3); // 3-5 extras
         for (var ec = 0; ec < extraCount; ec++) {
-          // null avoidLane = pick anywhere; gives lane variety
           spawnCoin(null);
         }
       }
-      // Special pickup spawn (rare)
-      if (Math.random() < PICKUP_SPAWN_PROBABILITY) {
+      // Pickup spawn — base 0.06, scales up to 0.15 post-water (capped).
+      // More pickups means more weed/ham/phone-thief opportunities for
+      // Mike to mess up under pressure.
+      var pickupChance = Math.min(0.15, PICKUP_SPAWN_PROBABILITY * dangerMul);
+      if (Math.random() < pickupChance) {
         spawnPickup(obstLane);
+      }
+      // Bonus phone-thief spawn (post-water only) — extra chance to
+      // also spawn a snatcher in a different lane on the same tick,
+      // giving the player two threats to track. 0% pre-water → up to
+      // ~25% at danger 2.5×.
+      if (state.water.completed && Math.random() < (dangerMul - 1.0) * 0.16) {
+        spawnExtraPhoneThief(obstLane);
       }
     }
 
@@ -3781,6 +3841,7 @@
     state.water.raindrops = [];
     state.water.shoovyBoat = null;
     state.water.shoovyTriggered = false;
+    state.water.completed = false;
     state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;

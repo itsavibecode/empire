@@ -17,6 +17,28 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.50 — 2026-04-27
+
+Three connected changes — turning the storm into a one-time event and making the city after it noticeably nastier.
+
+**1. Water is now single-shot.** Previously the storm re-fired every 3500m forever. The user wants it to feel like a story beat, not a recurring weather pattern. Added `state.water.completed` flag — set to `true` when the exit transition finishes and the phase returns to `'none'`. `maybeTriggerWater` early-returns if `completed` is true. Reset to `false` in `startRun` (so a fresh game can fire it again) and in `startWaterPhase` (defensive — should never be true at start of a new water phase). Flag still leaves room for the dev to opt back into recurrence later if we want a v2 second-storm bit.
+
+**2. Post-water difficulty ramp.** Once Mike's back on land after the hurricane, the city gets MEAN. New `dangerMul` factor in the obstacle/pickup spawn block:
+
+- `dangerMul` = 1.0 pre-water (no change to existing balance)
+- After water exit, scales linearly from 1.0 → **2.5×** over 5000m of post-storm distance
+- Pickup spawn chance scales with `dangerMul` (capped at 0.15 per spawn tick) — more weed, more ham, more phone-thief variants in the rotation
+- Bonus phone-thief spawn: at peak danger (~2.5×), there's a ~24% chance per regular spawn tick to also drop a SECOND phone-snatcher in a different lane on the same tick. Two threats to track, harder to dodge clean
+
+The ramp is gated on `state.water.completed` so pre-water gameplay stays at the existing baseline. User feedback was that the run gets boring once you've survived the storm — this gives the back half real teeth.
+
+**3. Flipped phone-snatcher (snatches from BOTH sides).** Added `npc-pedestrian-flipped-01..12.png` from `/run/concept/npcs-pedestrians-flipped.png`. New `extract-pedestrians-flipped.py` handles two quirks the original extractor didn't:
+
+- The source sheet has a checkerboard grey/white background (each cell is its own bg color), so per-cell auto-detection beats a global flood-fill. Added `detect_corner_bg` helper that votes on the most common corner color per cell.
+- Gemini didn't actually mirror the poses — they came out facing the same direction as the original sheet. So the script now `Image.FLIP_LEFT_RIGHT`s every cell after extraction to guarantee a true mirror. The phone-snatcher in row 3 then reaches from the OPPOSITE side, which is the entire reason this second sheet exists.
+
+Wired into `OBSTACLE_TYPES` as `walk-reaching-flipped` (frames 9-12), same `phoneThief: true` collision behavior as the original. Both variants now in the spawn pool — random distribution means snatches come from either side. The new `spawnExtraPhoneThief(avoidLane)` helper used by the difficulty ramp picks one of the two thief variants at random and drops it in a non-`avoidLane` lane.
+
 ### Run v0.18.49 — 2026-04-27
 
 Two fixes + new feature:
