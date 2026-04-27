@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.53 — 2026-04-27 — Jail-feature follow-ups + auto-submit to leaderboard
+
+Five fixes / tweaks based on first-playtest feedback:
+
+**1. CRITICAL FIX — cutscenes were broken (incl. BAIL XENA flow).** The "freeze gate" I added in v0.18.52 to stop distance/elapsedMs from ticking during dialogue accidentally also gated `update()` entirely — but `update()` contains `tickCutscene()` at the top, which drives the typewriter + bird animation + panel transitions. So once a cutscene started (Ice / Adin / Shoovy / Xena), the panel showed but the dialogue never typed and the CONTINUE button never appeared, looking frozen. This is why the user reported "BAIL XENA does nothing" — it WAS firing the cutscene, but the cutscene was paralyzed. Refactored: tick* helpers now run at the top of `update()` BEFORE the freeze short-circuit. Distance + spawning still freeze during cutscenes per the original v0.18.52 spec; only the timer-based animations + cutscene state machine keep ticking.
+
+**2. BUSTED flash dialed up.** Per user feedback ("kind of sits on blue, could be more dramatic + longer"). Duration 2.4s → 3.6s. Police-light strobe 5 Hz → 7 Hz. Bg veil opacity 0.55 → 0.72 with full-saturation R + B (was muted blue). Added scrolling diagonal "siren bar" stripes overlaid via `screen` blend mode for extra urgency. Text scale gets a 7 Hz throb and color flips with the strobe so it never sits on one shade.
+
+**3. Render-time freeze now skipped during BUSTED phase.** Pre-fix, sprite walk-cycles + the BUSTED text animation itself were paused during the BUSTED freeze (because `pauseFrozenRenderNow` was set). The animation needed real-time advance to actually animate. Now the loop only freezes render-time during pause / cell / bailing / cutscene — the BUSTED phase passes real `now` to render so its strobe animates at the intended 7 Hz.
+
+**4. NEW — `bg-chile-police.png` behind the Xena bail cutscene.** The Carabineros de Chile police station backdrop now appears behind the xena-bail dialogue so the scene reads as "right outside the station after Mike got her out". Wired via a new `.is-jail-bg` CSS class on `.overlay-cutscene` toggled in `startCutscene` for `defId === 'xena-bail'` and stripped on cutscene end.
+
+**5. NEW — KICK USERNAME PROMPT on START + auto-submit on game-over.** First click on START now opens a small modal asking for the player's kick.com username. Once entered (saved to `sessionStorage` for the tab session, cleared on refresh per spec), every game-over auto-submits the score to the leaderboard via `RunnerLeaderboard.submit()` — no separate SUBMIT SCORE click needed. The manual button remains as a fallback if auto-submit fails (network, Firebase rules, etc.) and switches to "SUBMITTED ✓" disabled state on success. Players can also "SKIP (no leaderboard)" to play without binding to a name. God-mode runs (`?god=1`) skip auto-submit so dev runs don't pollute the board. Saved username persists across runs in the same tab session — no re-prompting on RUN AGAIN. Refreshing the page asks again, by design.
+
 ### Run v0.18.52 — 2026-04-27 — JAIL FEATURE complete (phases A + B + C)
 
 PHASE C: BAIL-XENA flow + Xena anti-sidekick + two unrelated bug fixes that surfaced during phase C work.

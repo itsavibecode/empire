@@ -1020,6 +1020,14 @@
       // non-Shoovy cutscene.
       if (ov) ov.classList.remove('is-stormy');
     }
+    // v0.18.53 — Xena bail-out cutscene plays in front of the
+    // Carabineros de Chile police station bg so the scene reads as
+    // "just outside the station after Mike got her out".
+    if (defId === 'xena-bail') {
+      if (ov) ov.classList.add('is-jail-bg');
+    } else {
+      if (ov) ov.classList.remove('is-jail-bg');
+    }
     transitionToPanel(0);
   }
 
@@ -1238,9 +1246,10 @@
       var ov = document.getElementById('overlay-cutscene');
       if (ov) {
         ov.classList.add('hidden');
-        // Always strip is-stormy on cutscene end so the next non-Shoovy
-        // panel doesn't inherit the rain overlay.
+        // Always strip is-stormy + is-jail-bg on cutscene end so the
+        // next panel doesn't inherit the previous one's bg/overlay.
         ov.classList.remove('is-stormy');
+        ov.classList.remove('is-jail-bg');
       }
       // Resume the mob-yelling ambient loop now that dialogue is over,
       // unless the onComplete started the water phase (in which case
@@ -2256,7 +2265,7 @@
 
   // Constants
   var JAIL_BAIL_PRICE_BASE   = 75;     // 1st jail bail cost
-  var JAIL_BUSTED_FLASH_MS   = 2400;   // BUSTED text flash duration
+  var JAIL_BUSTED_FLASH_MS   = 3600;   // BUSTED text flash duration (bumped 2400 -> 3600 per user)
   var JAIL_RESUME_ROLLBACK_M = 150;    // soft penalty on self-bail
   var JAIL_BAIL_FADE_MS      = 1400;   // fade-back duration to gameplay
   var JAIL_BG_BLINK_MS       = 600;    // eye-blink loop on jail bg
@@ -2645,7 +2654,31 @@
   // Update — physics, spawning, collisions.
   // ============================================================
   function update(dt) {
-    // Speed ramps up over time, capped.
+    // ALWAYS-RUN TICKS (regardless of pause/jail/cutscene/ham-freeze).
+    // These advance time-based effect expiries, the cutscene typewriter,
+    // and the water-phase state machine — none of which should pause
+    // when the player pauses or a cutscene is up. Tick ordering matters:
+    // tickCutscene must run BEFORE the freeze short-circuits below so
+    // dialogue can keep advancing.
+    var nowMs = performance.now();
+    tickEffects(nowMs);
+    tickCutscene(nowMs);
+    tickWater(nowMs);
+
+    // FREEZE SHORT-CIRCUITS — block distance/elapsedMs accumulation +
+    // spawning + collisions when:
+    //   - cutscene active (per user spec — distance must NOT tick during
+    //     dialogue or back-to-back triggers fire)
+    //   - jailed (BUSTED flash, cell, bailing all freeze the world)
+    //   - ham-freeze active (Mario-style 1UP pause)
+    // Pause is handled at the loop level by skipping update() entirely.
+    if (cutscene.active) return;
+    if (state.jail && state.jail.phase !== 'none') return;
+    if (nowMs < state.effects.hamFreezeUntil) return;
+
+    // ============================================================
+    // ADVANCING WORLD — distance, lerp, spawning, collisions.
+    // ============================================================
     state.speed = Math.min(SPEED_MAX, state.speed + SPEED_GROWTH * dt);
     var pxThisFrame = state.speed * dt;
     state.distance += pxThisFrame * 0.1; // 0.1 = px-to-meters fudge
@@ -2668,15 +2701,12 @@
     // Lane lerp — smoothly interpolate Mike's X over a short duration.
     state.player.lerpX = Math.min(1, state.player.lerpX + dt * 8);
 
-    // FREEZE check: during the Mario-1UP ham-pickup freeze OR during
-    // the Mike-meets-Ice cut scene, don't move the world or run spawn
-    // timers. Effects still tick so the freeze itself can expire.
+    // (FREEZE check + tickEffects/tickCutscene/tickWater moved to the
+    // TOP of update() in v0.18.53 so they run regardless of frozen
+    // state. The short-circuits above already returned by now if
+    // we're paused/jailed/in-cutscene, so the rest of update() is
+    // running on a free-flowing frame.)
     var nowMs = performance.now();
-    tickEffects(nowMs);
-    tickCutscene(nowMs);
-    tickWater(nowMs);
-    if (cutscene.active) return;
-    if (nowMs < state.effects.hamFreezeUntil) return;
     // Distance-triggered cut scene (first encounter only)
     maybeTriggerCutscene();
     // Distance-triggered hurricane segment (clean street between cut scenes)
@@ -3631,30 +3661,54 @@
     // jail dialogue overlay takes over.
     if (state.jail.phase === 'busted') {
       var jb = now - state.jail.startedAt;
-      // Alternate red/blue every 200ms (police bar at ~5 Hz)
-      var blueFrame = Math.floor(jb / 200) % 2 === 0;
-      ctx.fillStyle = blueFrame
-        ? 'rgba(20, 80, 220, 0.55)'
-        : 'rgba(220, 30, 40, 0.55)';
+      // POLICE-LIGHT BAR — faster alternation (140ms, ~7 Hz) + heavier
+      // saturation on both colors so neither dominates visually. Pre-tune
+      // (200ms, opacity 0.55) read as "stuck on blue" because the human
+      // eye smears at 5 Hz; bumping to 7 Hz with full-saturation R+B
+      // pops the strobe.
+      var redFrame = Math.floor(jb / 140) % 2 === 0;
+      ctx.fillStyle = redFrame
+        ? 'rgba(255, 25, 35, 0.72)'
+        : 'rgba(35, 100, 255, 0.72)';
       ctx.fillRect(0, 0, w, h);
-      // BUSTED text — pulses scale + flips color the opposite of the bg
-      var bScale = 0.7 + (jb % 400 < 200 ? 0.1 : 0); // tiny punch
+      // Diagonal "siren bar" stripes scrolling across the screen for
+      // extra urgency — same R/B colors offset so they overlap the
+      // veil with sharper contrast.
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      var stripeOffset = (jb / 8) % 80;
+      for (var bs = -200; bs < w + 200; bs += 80) {
+        ctx.fillStyle = (Math.floor((bs + stripeOffset) / 80) % 2 === 0)
+          ? 'rgba(255, 50, 80, 0.45)'
+          : 'rgba(60, 130, 255, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(bs + stripeOffset, 0);
+        ctx.lineTo(bs + stripeOffset + 50, 0);
+        ctx.lineTo(bs + stripeOffset + 50 - 200, h);
+        ctx.lineTo(bs + stripeOffset - 200, h);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      // BUSTED text — punchy scale pulse + color flip with the strobe
+      var pulse = (jb % 280 < 140) ? 1 : 0.9;     // 7 Hz throb
       ctx.save();
       ctx.translate(w / 2, h / 2);
-      ctx.scale(bScale, bScale);
+      ctx.scale(pulse, pulse);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold ' + Math.floor(h * 0.22) + 'px "VT323", monospace';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-      ctx.shadowBlur = 30;
+      ctx.font = 'bold ' + Math.floor(h * 0.26) + 'px "VT323", monospace';
+      // Strong dark drop-shadow so text reads on either color
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      ctx.shadowBlur = 36;
       ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 6;
-      ctx.fillStyle = blueFrame ? '#FFFFFF' : '#FFE176';
+      ctx.shadowOffsetY = 8;
+      ctx.fillStyle = redFrame ? '#FFE176' : '#FFFFFF';
       ctx.fillText('BUSTED', 0, 0);
       ctx.shadowBlur = 0;
-      ctx.font = Math.floor(h * 0.04) + 'px "VT323", monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText('caught by the cops', 0, h * 0.16);
+      ctx.font = Math.floor(h * 0.045) + 'px "VT323", monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillText('caught by the cops', 0, h * 0.18);
       ctx.restore();
     }
   }
@@ -4970,6 +5024,39 @@
       final_score: Math.floor(state.distance) + totalCoinScore,
       duration_sec: Math.floor(state.elapsedMs / 1000),
     });
+
+    // v0.18.53 — AUTO-SUBMIT to leaderboard if a kick username is in
+    // sessionStorage. Skip in god mode (dev runs shouldn't pollute
+    // the board), skip if the user explicitly chose SKIP at start
+    // (empty-string sentinel), skip if RunnerLeaderboard isn't loaded.
+    var kickUser = '';
+    try { kickUser = sessionStorage.getItem('kick_username_v1') || ''; }
+    catch (e) {}
+    if (!state.godMode && kickUser
+        && window.RunnerLeaderboard
+        && window.RunnerLeaderboard.submit) {
+      var finalScore = Math.floor(state.distance) + totalCoinScore;
+      window.RunnerLeaderboard.submit({
+        identity: kickUser,
+        identityType: 'kick',
+        distance: Math.floor(state.distance),
+        coins: state.coins,
+        multiplier: state.multiplier,
+        score: finalScore,
+      }).then(function () {
+        console.log('[run] auto-submitted score for', kickUser);
+        // Hide the manual SUBMIT button — score is already in.
+        var sb = document.getElementById('btn-submit-score');
+        if (sb) {
+          sb.textContent = 'SUBMITTED ✓';
+          sb.disabled = true;
+          sb.style.opacity = '.55';
+        }
+      }).catch(function (err) {
+        console.warn('[run] auto-submit failed:', err);
+        // Manual button stays available as a fallback.
+      });
+    }
   }
 
   // ============================================================
@@ -4985,25 +5072,25 @@
   function loop(now) {
     var dt = Math.min(0.05, (now - lastTime) / 1000); // clamp dt to avoid huge jumps after tab switch
     lastTime = now;
-    // FREEZE STATES — update() is skipped (no distance/elapsedMs/spawn
-    // advancement) for any of these:
-    //   - paused (player pressed P/ESC)
-    //   - jailed (BUSTED flash + cell + bailing phases)
-    //   - cutscene active (Ice/Mike/Adin/Shoovy/Xena dialogue panel up)
-    // The cutscene gate is critical — pre-v0.18.52 distance kept ticking
-    // during cutscenes, so a slow reader could blow past the next
-    // cutscene's trigger distance during the current one and queue
-    // back-to-back dialogue. With the gate, cutscenes are truly
-    // pause-equivalent for distance + time + spawning.
+    // update() is ALWAYS called when playing — its internal short-circuit
+    // (after the tick* calls) handles freezing distance/spawning when
+    // paused/jailed/cutscene. The pre-v0.18.53 attempt to gate update()
+    // entirely on `frozen` broke tickCutscene (typewriter never advanced
+    // during dialogue) and tickJail's busted→cell transition. Pre-tick
+    // calls inside update() must run unconditionally.
+    if (state.phase === 'playing') update(dt);
     var inJail = state.jail && state.jail.phase !== 'none';
     var inCutscene = (typeof cutscene !== 'undefined') && cutscene.active;
-    var frozen = state.paused || inJail || inCutscene;
-    if (state.phase === 'playing' && !frozen) update(dt);
     if (inJail) tickJail(now);
+    // Render-time freeze for sprite walk-cycles. Skipped during the
+    // BUSTED flash so its police-light alternation animates; everything
+    // else (cell, bailing, paused, cutscene) freezes sprite time.
+    var frozenRender =
+      state.paused
+      || (inJail && state.jail.phase !== 'busted')
+      || inCutscene;
     var renderNow;
-    if (frozen) {
-      // Same trick as pause — freeze render's time source so sprite
-      // walk-cycles don't tick during the freeze.
+    if (frozenRender) {
       if (!pauseFrozenRenderNow) pauseFrozenRenderNow = now;
       renderNow = pauseFrozenRenderNow;
     } else {
@@ -5164,10 +5251,87 @@
     // game from scratch instead of doing nothing (or jumping in v0.17).
     function startAndBlur(e) {
       if (e && e.currentTarget && e.currentTarget.blur) e.currentTarget.blur();
+      // v0.18.53 — KICK USERNAME PROMPT. If we don't have a session
+      // username yet, intercept the START click and show the prompt
+      // modal first. The modal's GO button calls startRun() after
+      // saving the username; SKIP starts without leaderboard binding.
+      var saved = '';
+      try { saved = sessionStorage.getItem('kick_username_v1') || ''; }
+      catch (err) { /* private mode / quota — proceed without prompt */ }
+      if (!saved) {
+        showUsernamePrompt();
+        return;
+      }
       startRun();
     }
     document.getElementById('btn-start').addEventListener('click', startAndBlur);
     document.getElementById('btn-restart').addEventListener('click', startAndBlur);
+
+    // ============================================================
+    // KICK USERNAME PROMPT wiring (v0.18.53)
+    // ============================================================
+    function showUsernamePrompt() {
+      var modal = document.getElementById('overlay-username');
+      var input = document.getElementById('username-input');
+      if (!modal || !input) {
+        // DOM missing for some reason — fall back to running unbranded
+        startRun();
+        return;
+      }
+      modal.classList.remove('hidden');
+      // Defer focus by a tick so the show transition + browser focus
+      // shift cooperate (otherwise the input can lose focus on Safari).
+      setTimeout(function () { input.focus(); }, 50);
+    }
+    function hideUsernamePrompt() {
+      var modal = document.getElementById('overlay-username');
+      if (modal) modal.classList.add('hidden');
+    }
+    function commitUsername(name) {
+      var clean = (name || '').trim().replace(/^@/, '').toLowerCase();
+      if (!clean) return false;
+      // Lite slug validation — kick usernames are alphanumerics +
+      // underscore + hyphen typically. Strip everything else.
+      clean = clean.replace(/[^a-z0-9_\-]/g, '');
+      if (!clean) return false;
+      try { sessionStorage.setItem('kick_username_v1', clean); }
+      catch (err) { /* ignore — game still runs without persistence */ }
+      return clean;
+    }
+    var unGo = document.getElementById('btn-username-go');
+    if (unGo) unGo.addEventListener('click', function () {
+      var input = document.getElementById('username-input');
+      var name = input ? input.value : '';
+      if (commitUsername(name)) {
+        hideUsernamePrompt();
+        startRun();
+      } else {
+        if (input) {
+          input.style.borderColor = '#ff3b3b';
+          input.focus();
+          setTimeout(function () { input.style.borderColor = ''; }, 800);
+        }
+      }
+    });
+    var unSkip = document.getElementById('btn-username-skip');
+    if (unSkip) unSkip.addEventListener('click', function () {
+      // Skip — record an empty marker so we don't re-prompt this
+      // session, but the auto-submit at game-over checks for a
+      // non-empty value before firing.
+      try { sessionStorage.setItem('kick_username_v1', ''); }
+      catch (err) {}
+      try { sessionStorage.setItem('kick_username_skipped_v1', '1'); }
+      catch (err) {}
+      hideUsernamePrompt();
+      startRun();
+    });
+    var unInput = document.getElementById('username-input');
+    if (unInput) unInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (unGo) unGo.click();
+      }
+    });
 
     // Mirror the bottom-of-screen version label inside the audio
     // settings panel so it's also visible there (handy for bug reports).

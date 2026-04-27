@@ -16,7 +16,7 @@
   <meta name="description" content="On Baby! — Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins, survive the storm, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.52">
+  <meta name="version" content="0.18.53">
   <!-- Mobile chrome theme color (matches the game's purple palette) -->
   <meta name="theme-color" content="#8E5CCB">
   <title>On Baby! — EmpireX Runner</title>
@@ -135,6 +135,27 @@
     </div>
   </div>
 
+  <!-- KICK USERNAME PROMPT (v0.18.53). Modal shown on START click if
+       no kick username is yet in sessionStorage. Once entered, the
+       game auto-submits the player's score to the leaderboard at run
+       end without a separate submit dialog. Username persists for
+       the tab session (cleared on refresh / tab close). -->
+  <div class="overlay overlay-username hidden" id="overlay-username">
+    <div class="username-modal">
+      <h2>Who's running?</h2>
+      <p class="username-blurb">Enter your <span class="kick-tag">Kick</span> username so we can auto-add your score to the leaderboard when this run ends.</p>
+      <div class="username-input-wrap">
+        <span class="username-prefix">kick.com/</span>
+        <input type="text" id="username-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32" placeholder="yourkickname">
+      </div>
+      <p class="username-hint">No tracking — only your score + this name go to the public leaderboard. Cleared when you refresh.</p>
+      <div class="username-buttons">
+        <button type="button" id="btn-username-go">START THE RUN</button>
+        <button type="button" id="btn-username-skip">SKIP (no leaderboard)</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Start overlay — shown until "START" tapped (assets must be loaded first) -->
   <div class="overlay" id="overlay-start">
     <h1 class="title-cursive"><span class="big">O</span>n <span class="big">B</span>aby!</h1>
@@ -216,7 +237,7 @@
     <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
-  <!-- JAIL overlay (v0.18.52). Mike + Xena behind bars. Mike's eyes
+  <!-- JAIL overlay (v0.18.53). Mike + Xena behind bars. Mike's eyes
        blink (open ↔ closed) via JS swapping the bg src on a timer.
        Dialogue box at the bottom offers PAY (self-bail), BAIL XENA
        (only enabled when Mike can't afford self-bail — phase C), or
@@ -272,7 +293,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.52</div>
+  <div class="game-version">Run v0.18.53</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
