@@ -17,6 +17,10 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.57 — 2026-04-27 — Leaderboard top 20
+
+`fetchTop(10) → fetchTop(20)` in the open-leaderboard panel. The existing 2-column grid auto-flows the 20 rows into 10-per-column, and the `max-height: 65vh; overflow-y: auto` on the container is a safety net so it never blows out the viewport. Rank cell at 3rem has plenty of room for the new 2-digit rank numbers (10-20).
+
 ### Run v0.18.56 — 2026-04-27 — Jail-flow continuity + weed-cops + Ice's "I'll call you"
 
 **1. NEW: "Ice bails on Mike" cutscene chains BEFORE the jail dialogue when Ice was tagging along at the moment of arrest.** Single-panel Ice line: *"uhhh, so yeah, I'll call you."* Fires between the BUSTED flash and the cell-screen if `state.iceSidekickJoined` was true at jail entry. New `state.jail.phase === 'ice-leaving'` interstitial keeps the world frozen while it plays. The cutscene's `onComplete` drops the Ice sidekick relationship + clears the `ice-returns` cutscene flag (so Ice can re-meet Mike at the 3800m beat) + transitions to the jail cell + starts the jail audio loops. Provides story justification for why Ice isn't with Mike when he walks out post-bail (he wasn't in jail).

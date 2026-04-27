@@ -300,9 +300,11 @@ async function openLeaderboard() {
   document.body.appendChild(overlay);
   overlay.querySelector('.leaderboard-close').addEventListener('click', () => overlay.remove());
   try {
-    // Top 10 only, rendered in a 2-column grid (5 per column).
-    // Tighter than the old top-100 single column — easier to scan.
-    const rows = await fetchTop(10);
+    // Top 20 — rendered in the existing 2-column grid (10 per column).
+    // Bumped from 10 in v0.18.56 per user ask. The old 100-row single
+    // column was overwhelming; 20 still fits cleanly in two columns of
+    // 10 without scrolling on standard viewports.
+    const rows = await fetchTop(20);
     const wrap = overlay.querySelector('.leaderboard-rows');
     wrap.hidden = false;
     overlay.querySelector('.leaderboard-loading').hidden = true;

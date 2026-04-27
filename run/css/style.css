@@ -1373,8 +1373,9 @@ html, body {
 }
 
 /* ---- Leaderboard rows ---- */
-/* Top 10 in a 2-column grid (5 per column). Wider container to fit
-   both columns side-by-side; mobile fallback collapses to one. */
+/* Top 20 in a 2-column grid (10 per column post v0.18.56 — was top-10).
+   max-height + overflow-y is a safety net so rows always fit. Mobile
+   collapses to one column at <=720px. */
 .overlay-leaderboard .leaderboard-rows {
   width: min(1080px, 95vw);
   max-height: 65vh;
