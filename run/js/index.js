@@ -42,6 +42,20 @@
   var HORSE_BOOST_MS = 8000;        // 8 sec horse-ride speed boost
   var HORSE_SPEED_MULT = 1.7;       // world scroll multiplier during horse ride
   var INVULN_TIME = 1.2;           // seconds of i-frames after a hit (flashes Mike)
+  // STONED CHASE — when Mike grabs a weed pickup AND distance is past
+  // the threshold, 2-4 cop officers spawn behind him and trail upward
+  // for the duration of the weed debuff. Pure visual flavor (no
+  // collision — the weed already debuffs Mike enough). Reads as the
+  // city catching up on Mike for being high in public.
+  var STONED_CHASE_START_DISTANCE_M = 1500;  // first stoned chase eligible at this distance
+  var STONED_CHASE_MIN_OFFICERS = 2;
+  var STONED_CHASE_MAX_OFFICERS = 4;
+  var STONED_CHASE_OFFICER_HEIGHT_FRAC = 0.16;  // sprite height as frac of viewport
+  var STONED_CHASE_FRAME_MS = 140;             // walk-cycle frame swap cadence
+  // Officer walking frames from the source sheet's middle row — cleanest
+  // profile-walking poses, used as a 4-frame chase cycle.
+  var COP_OFFICER_WALK_FRAMES = ['cop-officer-06', 'cop-officer-07', 'cop-officer-08', 'cop-officer-09'];
+
   // HURRICANE / WATER SEGMENT — periodically the road ENDS at a cliff
   // and Mike is washed onto the open sea on a mattress raft. Lasts a
   // total of ~15 seconds split into:
@@ -313,6 +327,13 @@
       SPRITE_PATHS[fk] = 'img/sprites/' + fk + '.png';
     }
   });
+  // Cop officer sprites — used by the stoned-chase mechanic. Preload
+  // all 15 frames (extracted from the 5x3 source sheet) so the chase
+  // walk-cycle picker has them ready the moment Mike grabs weed.
+  for (var co = 1; co <= 15; co++) {
+    var cok = 'cop-officer-' + (co < 10 ? '0' + co : co);
+    SPRITE_PATHS[cok] = 'img/sprites/' + cok + '.png';
+  }
   // Budgie sprites — perched on Mike's shoulder during cutscenes (DOM
   // overlay) AND on the title screen (canvas-rendered). Preload all 16
   // so both render paths can pick frames without flicker.
@@ -1119,6 +1140,10 @@
     fauna: [],
     faunaSpawnTimer: 0,
     faunaNextSpawnMs: 0,
+    // Stoned-chase officers — spawned when Mike grabs weed, despawn
+    // when the debuff ends. Each: {x, y, w, h, lane, sprite, spawnedAt,
+    // bobPhase}. Pure ambient (no collision).
+    chaseOfficers: [],
     // Hurricane / water segment state machine.
     water: {
       phase: 'none',        // 'none' | 'entering' | 'water' | 'exiting'
@@ -1441,6 +1466,7 @@
     state.pickups = [];
     state.crossCars = [];
     state.fauna = [];
+    state.chaseOfficers = [];
     // Audio swap: stop street ambient, start water + rain bed
     stopLoop('mob-angry');
     startLoop('water-loop');
@@ -1526,6 +1552,39 @@
         len: len,
       });
     }
+  }
+
+  // STONED CHASE — spawn a posse of officers behind Mike that walk
+  // upward toward him for the duration of the weed debuff. They never
+  // catch up (their effective speed is slightly less than the world
+  // scroll) but their presence on screen reads as "the city is onto
+  // you while you're high in public."
+  function spawnStonedChase() {
+    if (state.distance < STONED_CHASE_START_DISTANCE_M) return;
+    var count = STONED_CHASE_MIN_OFFICERS
+      + Math.floor(Math.random() * (STONED_CHASE_MAX_OFFICERS - STONED_CHASE_MIN_OFFICERS + 1));
+    var size = scaledSize('cop-officer-06', STONED_CHASE_OFFICER_HEIGHT_FRAC);
+    if (!size.w || !size.h) return;
+    var now = performance.now();
+    // Spread officers across lanes + a little Y stagger so they don't
+    // clump perfectly on top of each other. Spawn a hair below view
+    // so they appear to walk in from off-screen.
+    for (var i = 0; i < count; i++) {
+      var lane = Math.floor(Math.random() * LANES);
+      var yJitter = Math.random() * size.h * 0.8;  // stagger up to ~one body
+      state.chaseOfficers.push({
+        lane: lane,
+        y: viewH() + size.h + yJitter,
+        w: size.w,
+        h: size.h,
+        spawnedAt: now,
+        bobPhase: Math.random() * Math.PI * 2,
+        // Each officer cycles its walk frames at a slight offset so
+        // they don't all step in lockstep.
+        frameOffset: Math.floor(Math.random() * 4) * STONED_CHASE_FRAME_MS,
+      });
+    }
+    ga('stoned_chase_spawned', { at_distance: Math.floor(state.distance), count: count });
   }
 
   // Background fauna — pick a random species (weighted), random frame
@@ -1723,6 +1782,12 @@
       // Green — weed-themed; debuff vibe via shaky text
       showPickupText(weedStacking ? 'STONED +' : 'STONED', '#90EE90', 900);
       playSfx('damage');
+      // STONED CHASE — at higher distances, weed grabs summon a posse
+      // of cops who chase Mike on foot for the duration of the debuff.
+      // Pure visual flavor (the weed already debuffs Mike enough);
+      // the chase reads as the city catching up on Mike for being
+      // high in public.
+      spawnStonedChase();
     } else if (kind === 'horse') {
       // STACKING: extend horse boost the same way ham/weed stack.
       if (state.effects.horseBoostUntil > now) {
@@ -1941,6 +2006,24 @@
     state.fauna = state.fauna.filter(function (f) {
       return f.y > -f.h - 40;
     });
+
+    // Stoned-chase officers — scroll up at slightly LESS than world
+    // speed so they appear to slowly catch up on Mike (but never
+    // actually overtake him). Despawn when the weed debuff ends OR
+    // when they scroll off-screen (e.g., player picks up another weed
+    // mid-chase, distance grows past their cull point).
+    if (state.chaseOfficers.length > 0) {
+      var chaseSpeed = effSpeed * 0.92;  // 8% slower = always trailing
+      for (i = 0; i < state.chaseOfficers.length; i++) {
+        state.chaseOfficers[i].y -= chaseSpeed * dt;
+      }
+      // Cull: off-screen at top OR weed debuff has ended
+      var weedActive = nowMs < state.effects.weedDebuffUntil;
+      state.chaseOfficers = state.chaseOfficers.filter(function (o) {
+        if (!weedActive) return false;            // debuff over → all officers despawn
+        return o.y > -o.h - 40;                   // still on screen
+      });
+    }
 
     // Cross-traffic cop car spawning + movement. Spawns kick in at
     // CROSS_CAR_START_DISTANCE_M and accelerate (shorter intervals)
@@ -2267,6 +2350,12 @@
       }
     }
 
+    // Stoned-chase officers — trail Mike on foot during weed debuff.
+    // Drawn after the lane-spawn obstacles (so they layer naturally
+    // among pedestrians) but before Mike + cross cars so faster
+    // foreground elements still occlude them.
+    drawChaseOfficers(now);
+
     // Cross-traffic cop cars — drawn AFTER obstacles but BEFORE Mike
     // so they can occlude lane-spawned NPCs (depth) but Mike still
     // appears in front when they overlap. Mirror sprite horizontally
@@ -2296,6 +2385,27 @@
 
     // Effect overlays
     drawEffects(now);
+  }
+
+  // Render the stoned-chase officer posse trailing Mike. Each officer
+  // cycles through a 4-frame walk animation (their own frameOffset so
+  // they don't all march in lockstep) with a small Y-bob for stride
+  // bounce. Drawn AFTER obstacles + fauna but BEFORE Mike — they're
+  // gameplay-adjacent enough to read as "characters" not bg dressing,
+  // but Mike still occludes any officer who scrolls under his Y.
+  function drawChaseOfficers(now) {
+    if (state.chaseOfficers.length === 0) return;
+    var fc = COP_OFFICER_WALK_FRAMES.length;
+    for (var i = 0; i < state.chaseOfficers.length; i++) {
+      var o = state.chaseOfficers[i];
+      var fIdx = Math.floor((now + o.frameOffset) / STONED_CHASE_FRAME_MS) % fc;
+      var key = COP_OFFICER_WALK_FRAMES[fIdx];
+      var bob = Math.sin((now - o.spawnedAt) / 120 + o.bobPhase) * 6;
+      // drawAtCropped centers x on the supplied X. laneX gives the
+      // center of the lane. Trim 5% off the bottom to hide the stub
+      // shadow baked into the source.
+      drawAtCropped(key, laneX(o.lane), o.y + bob, o.w, o.h, 0.05);
+    }
   }
 
   // Render background fauna walking the sidewalks. Each creature gets
@@ -3217,6 +3327,7 @@
     state.fauna = [];
     state.faunaSpawnTimer = 0;
     state.faunaNextSpawnMs = FAUNA_SPAWN_MIN_MS;
+    state.chaseOfficers = [];
     state.water.phase = 'none';
     state.water.startedAt = 0;
     state.water.lastTriggeredAt = 0;

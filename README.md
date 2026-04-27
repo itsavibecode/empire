@@ -17,6 +17,23 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.38 — 2026-04-27
+
+Minor — **STONED CHASE**. When Mike grabs a weed pickup past 1500m, 2-4 cop officers now spawn at the bottom of the screen and walk upward toward him for the duration of the debuff. Reads as "the city is onto you for being high in public."
+
+**Asset pipeline:**
+
+- New `extract-cop-officer.py` slices the source officer sheet (`/run/concept/ChatGPT Image Apr 26, 2026, 01_50_20 PM.png`, 5×3 grid, white background) into 15 individual `cop-officer-XX.png` sprites. Same `flood_remove_corner_color` pattern as the mattress extraction — flood-fill white from sheet corners + each cell corner so the officer's blue uniform interior is preserved while the surrounding box is gone. All 15 frames preloaded.
+
+**Mechanic:**
+
+- Spawn fires from inside `applyPickup` when `kind === 'weed'` AND `state.distance >= STONED_CHASE_START_DISTANCE_M (1500m)`. Random 2-4 officers (`STONED_CHASE_MIN_OFFICERS`/`MAX`), random lane assignment, small Y-stagger so they don't clump.
+- Officers scroll UP at 92% of `effSpeed` — visibly trailing Mike but never quite catching him. Each cycles through frames `cop-officer-06..09` (the cleanest profile-walking poses from row 2 of the source sheet) at 140ms/frame, with a per-officer `frameOffset` so they don't all step in lockstep + a sin-wave Y-bob (~6px) for stride bounce.
+- Cull on ANY of: weed debuff ends (`now >= weedDebuffUntil`), officer scrolls off screen top, OR water phase starts (`startWaterPhase` clears the array along with cars/people).
+- Pure visual — no collision. The weed debuff's slowdown + screen tint + reversed-multiplier impact is already the gameplay punishment; the chase is flavor.
+
+**Render order:** `drawChaseOfficers` runs after lane obstacles + fauna but before Mike + cross cars, so officers layer naturally with pedestrians and Mike correctly occludes any officer who scrolls under his Y line.
+
 ### Run v0.18.37 — 2026-04-27
 
 Fix — water → street EXIT transition now actually shows street being revealed instead of flickering back to sea before the snap.
