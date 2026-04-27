@@ -531,7 +531,13 @@ html, body {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Was object-fit: cover — that scaled the 3:2 source art to fill
+     widescreen viewports and CROPPED the left/right edges, cutting
+     off the gold dialogue-box corner brackets baked into the art.
+     `contain` makes the whole composition visible; the chile-runner
+     bg behind fills the letterbox margins where the cutscene art
+     doesn't reach. */
+  object-fit: contain;
   z-index: 0;
   pointer-events: none;
 }

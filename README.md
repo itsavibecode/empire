@@ -16,6 +16,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.15 — 2026-04-26
+
+Patch — cut scene image no longer cropped on widescreen.
+
+- The `.cutscene-bg` was using `object-fit: cover` which scaled the 3:2 source art to fill widescreen viewports and cropped the left/right edges. The gold corner brackets baked into the bottom dialogue-box art were getting cut off on the right side (visible in the screenshot — left brackets show, right brackets gone).
+- Switched to `object-fit: contain` so the whole composition stays visible. The `bg-chile-runner-01.png` backdrop already loaded behind the cutscene art now fills the letterbox margins where the cutscene image doesn't reach the viewport edges.
+
 ### OBS overlay — 2026-04-26
 
 Performance — first paint went from **3-5 minutes worst case → ~1 second** when the cache is warm, ~5-10 sec from cold start.
