@@ -567,10 +567,10 @@ html, body {
 }
 .game-guide .guide-row {
   display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: .55rem;
-  align-items: start;
-  padding: .15rem 0;
+  grid-template-columns: 44px 1fr;
+  gap: .65rem;
+  align-items: center;
+  padding: .25rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, .06);
 }
 .game-guide .guide-row:last-child { border-bottom: none; }
@@ -580,28 +580,31 @@ html, body {
   line-height: 1.4;
   color: #FFD566;
   font-family: 'VT323', monospace;
+  /* When the icon is an actual sprite (img child), the wrapper sizes
+     to it; when it's a text/emoji fallback the inline-block keeps the
+     grid column width consistent. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
 }
-.game-guide .g-icon.coin {
-  background: linear-gradient(180deg, #f4cf6f 0%, #c79a3e 100%);
-  color: #1c1408;
-  font-weight: 700;
-  font-size: .8rem;
-  border-radius: 50%;
-  width: 24px; height: 24px;
-  line-height: 24px;
-  margin-top: .15rem;
-  letter-spacing: -0.05em;
+/* Real sprite icons inside the guide. Constrained to fit the 28px
+   icon column with object-fit: contain so wide sprites (cop car,
+   horse) don't blow out the layout. drop-shadow gives a subtle pop
+   against the dark panel background. */
+.game-guide .g-icon img {
+  max-width: 100%;
+  max-height: 28px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55));
+  image-rendering: -webkit-optimize-contrast;
 }
-.game-guide .g-icon.ice {
-  background: rgba(99, 213, 255, .25);
-  color: #b6e8ff;
-  border: 1px solid rgba(99, 213, 255, .6);
-  font-size: .75rem;
-  font-weight: 700;
-  border-radius: 4px;
-  padding: 1px 0;
-  margin-top: .2rem;
-}
+/* Pause-panel variant has more vertical room — let the sprites
+   render a bit larger so they're easier to scan. */
+.pause-guide-wrap .game-guide .g-icon { min-height: 38px; }
+.pause-guide-wrap .game-guide .g-icon img { max-height: 38px; }
 .game-guide .g-body {
   line-height: 1.35;
   color: rgba(245, 245, 245, .85);

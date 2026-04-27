@@ -201,8 +201,10 @@
     var mihk = 'mike-ice-horse-' + (mih < 10 ? '0' + mih : mih);
     SPRITE_PATHS[mihk] = 'img/sprites/' + mihk + '.png';
   }
-  // Horse pickup item icon — use the same horse-overhead frame as the item sprite
-  SPRITE_PATHS['horse-icon'] = 'img/sprites/mike-horse-05.png';
+  // Horse pickup item icon — standalone horse (no rider) since the
+  // player hasn't redeemed it yet. Was using mike-horse-05.png which
+  // already showed Mike riding, breaking the "before pickup" fiction.
+  SPRITE_PATHS['horse-icon'] = 'img/sprites/horse-pickup.png';
   // Ice Poseidon side-kick frames — preload all 29 from the source sheet
   // so the run cycle + neck-stretch animations have everything they need.
   for (var ic = 1; ic <= 29; ic++) {
@@ -929,6 +931,9 @@
     // Coin particles spawned by the phone-thief snatch animation.
     // Each: {x, y, vx, vy, spawnedAt, life, frameOffset}
     coinParticles: [],
+    // Random death-pose sprite picked at endRun. Rendered on the road
+    // (drawPlayer) AND in the gameover overlay panel so they match.
+    gameOverDeathKey: null,
   };
 
   // ============================================================
@@ -1421,7 +1426,9 @@
 
     // Effective speed — modified by active bonus/debuff effects
     var effSpeed = state.speed;
-    if (nowMs < state.effects.weedDebuffUntil) effSpeed *= 0.55;
+    // STONED — slow Mike + the world to a noticeable crawl. Bumped
+    // from 0.55 -> 0.38 per playtest ("slow down more when stoned").
+    if (nowMs < state.effects.weedDebuffUntil) effSpeed *= 0.38;
     // HAM bonus: world scroll also speeds up to match the chipmunk-music
     // tempo, so the visual pace matches the audio pace
     if (nowMs > state.effects.hamFreezeUntil && nowMs < state.effects.hamBonusUntil) {
@@ -1478,14 +1485,26 @@
     if (state.spawnTimer >= spawnInterval) {
       state.spawnTimer = 0;
       var obstLane = spawnObstacle();
-      // Coin shower during ham bonus — guaranteed coin + extras
+      // Coin shower during ham bonus — much heavier than before. Was
+      // ~1.6 coins per obstacle spawn (1 guaranteed + 60% extra). Now
+      // 3-5 coins spread across multiple lanes, with each one biased
+      // toward landing AHEAD of the player so they actually rake them
+      // in instead of feeling like the shower is happening behind them.
       var coinChance = COIN_SPAWN_PROBABILITY;
-      if (nowMs < state.effects.hamBonusUntil) coinChance = 1.0;
+      var hamActive = nowMs < state.effects.hamBonusUntil;
+      if (hamActive) coinChance = 1.0;
       if (Math.random() < coinChance) {
         spawnCoin(obstLane);
       }
-      if (nowMs < state.effects.hamBonusUntil && Math.random() < 0.6) {
-        spawnCoin(obstLane);
+      if (hamActive) {
+        // Burst of extra coins. Spread across lanes so the player
+        // doesn't have to thread one specific lane to grab them all —
+        // the bonus is supposed to feel like a shower.
+        var extraCount = 3 + Math.floor(Math.random() * 3); // 3-5 extras
+        for (var ec = 0; ec < extraCount; ec++) {
+          // null avoidLane = pick anywhere; gives lane variety
+          spawnCoin(null);
+        }
       }
       // Special pickup spawn (rare)
       if (Math.random() < PICKUP_SPAWN_PROBABILITY) {
@@ -2249,6 +2268,25 @@
     var x = laneX(fromLane) + (laneX(toLane) - laneX(fromLane)) * t;
     if (t >= 1) state.player.lane = toLane;
 
+    // GAME OVER — render the random death-pose sprite at Mike's last
+    // position instead of the running animation. The death image stays
+    // on the road behind the gameover overlay panel so the cause-of-
+    // death visually matches what the player sees in the panel above.
+    if (state.phase === 'gameover' && state.gameOverDeathKey) {
+      var dimg = sprites[state.gameOverDeathKey];
+      if (dimg) {
+        // Render at ~1.4x Mike's normal height so the dramatic pose
+        // reads clearly in the open road space.
+        var dHeightFrac = PLAYER_TARGET_HEIGHT_FRAC * 1.4;
+        var dTargetH = viewH() * dHeightFrac;
+        var dScale = dTargetH / dimg.height;
+        var dW = dimg.width * dScale;
+        var dH = dTargetH;
+        ctx.drawImage(dimg, x - dW / 2, playerY() - dH, dW, dH);
+      }
+      return;
+    }
+
     // Determine which sprite-set Mike uses right now:
     // 1. HORSE boost active → horse-riding (solo if Ice hasn't joined,
     //    Mike+Ice duo if Ice has joined post-cutscene)
@@ -2267,12 +2305,24 @@
       key = 'mike-run-03';
       sizingKey = 'mike-run-01';
     } else {
-      var frame = Math.floor(now / RUN_FRAME_MS) % 8 + 1;
+      // STONED — slow the run-cycle frame rate so Mike's legs visibly
+      // animate slower (matches the world-scroll slowdown). Default
+      // RUN_FRAME_MS = 80 -> stoned uses 200ms (2.5x slower).
+      var stonedFrameMs = nowMs < state.effects.weedDebuffUntil ? RUN_FRAME_MS * 2.5 : RUN_FRAME_MS;
+      var frame = Math.floor(now / stonedFrameMs) % 8 + 1;
       key = 'mike-run-' + (frame < 10 ? '0' + frame : frame);
       sizingKey = 'mike-run-01';
     }
     // Horse sprite is taller than the running Mike — bump scale slightly
-    var heightFrac = onHorse ? PLAYER_TARGET_HEIGHT_FRAC * 1.4 : PLAYER_TARGET_HEIGHT_FRAC;
+    // Horse-riding sprite needs a much larger scale than standing-Mike
+    // because the sprite includes BOTH the horse AND the rider stacked
+    // on top. Multiplier 1.4 made the combined silhouette only barely
+    // taller than Mike alone, so the horse part was tiny + felt
+    // inconsistent with the larger horse-pickup sprite (heightFrac
+    // 0.22 just for the horse). Bumped to 2.4 so the horse part of the
+    // ride sprite reads at roughly the same visual height as the
+    // pickup horse before mounting.
+    var heightFrac = onHorse ? PLAYER_TARGET_HEIGHT_FRAC * 2.4 : PLAYER_TARGET_HEIGHT_FRAC;
     var size = scaledSize(sizingKey, heightFrac);
     // Apply jump lift (negative Y offset = up) so Mike arcs over jump-only obstacles
     var y = playerY() - size.h + jumpLiftPx(now);
@@ -2315,6 +2365,7 @@
     state.coinsArr = [];
     state.pickups = [];
     state.coinParticles = [];
+    state.gameOverDeathKey = null;
     state.spawnTimer = 0;
     state.invulnUntil = 0;
     state.effects.hamFreezeUntil = 0;
@@ -2399,12 +2450,16 @@
     ov.classList.remove('hidden');
     // Pick a random death-pose sprite for variety on each game over.
     // 12 poses available (sniped, electrocuted, fire, frozen, anvil,
-    // drowned, R.I.P., etc.).
+    // drowned, R.I.P., etc.). The SAME sprite is shown both on the
+    // gameover overlay panel AND rendered on the road where Mike died,
+    // so the cause-of-death matches between the two views.
+    var di = Math.floor(Math.random() * 12) + 1;
+    var dk = di < 10 ? '0' + di : '' + di;
+    var deathKey = 'mike-death-' + dk;
+    state.gameOverDeathKey = deathKey;
     var deathImg = document.getElementById('gameover-death-img');
     if (deathImg) {
-      var di = Math.floor(Math.random() * 12) + 1;
-      var dk = di < 10 ? '0' + di : '' + di;
-      deathImg.src = 'img/sprites/mike-death-' + dk + '.png';
+      deathImg.src = 'img/sprites/' + deathKey + '.png';
     }
     var fs = ov.querySelector('.final-score');
     var fc = ov.querySelector('.final-coins');

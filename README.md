@@ -17,6 +17,17 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.26 — 2026-04-26
+
+Heavy patch — 6 things from playtest stream:
+
+- **Horse pickup is just a horse now (no rider).** Was using `mike-horse-05.png` which already showed Mike riding it — broke the "before pickup" fiction. New `extract-horse-pickup.py` chroma-keys the standalone `horse_neon.png` source (neon-green bg, target rgb 7/223/33 with 100 tolerance) into `horse-pickup.png`. The `horse-icon` sprite mapping now points at the standalone version.
+- **Mike + Ice on horse rendered 70% bigger.** v0.18.24 bumped the horse PICKUP from 9% to 22% of viewport height, but the in-game ride sprite kept the old `PLAYER_TARGET_HEIGHT_FRAC * 1.4` multiplier — meaning the "after pickup" horse was suddenly tinier than the pickup. Bumped to `* 2.4` so the horse part of the ride sprite reads at roughly the same visual height as the pickup horse before mounting.
+- **Pickup guide uses real game sprites instead of emojis.** Both the settings panel and pause overlay versions now show `<img>` thumbnails of the actual `cx-coin-01`, `ham-spin-01`, `h400-spin-01`, `weed-spin-01`, `horse-pickup`, `npc-pedestrian-09` (phone thief), `cop-car-01`, `npc-pedestrian-01`, `ice-15` sprites. Player can match what they see in the HUD to what's in the guide. Icon column widened from 28px → 44px to fit horizontal sprites (cop car) cleanly.
+- **Death sprite renders on the road too.** The random Mike-death pose picked at `endRun` is now drawn at Mike's last position via `drawPlayer` (sized at 1.4× normal Mike-height for dramatic clarity), not just on the gameover overlay panel. So the cause-of-death visually matches between the road view AND the panel above. New `state.gameOverDeathKey` carries the picked sprite key across both renderers.
+- **Ham bonus spawns way more coins.** Was ~1.6 coins per obstacle spawn (1 guaranteed + 60% extra). Now during the bonus window, every spawn spawns the obstacle-lane coin PLUS 3-5 extra coins spread across random lanes — so the "shower" actually feels like a shower instead of a slightly-better-than-normal coin run. Bumps total coins-per-spawn from ~1.6 to ~4.5 during ham bonus.
+- **Stoned debuff now actually noticeable.** World scroll multiplier bumped from `0.55` (45% slowdown) to `0.38` (62% slowdown). Mike's run-cycle frame rate also slows: default 80ms/frame → 200ms/frame (2.5× slower) while weed timer is active. So his legs visibly drag in sync with the world crawl, instead of him cartoon-running at full pace through molasses.
+
 ### Run v0.18.25 — 2026-04-26
 
 Patch — three fixes from playtest.
