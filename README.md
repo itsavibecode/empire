@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.23 — 2026-04-26
+
+Heavy patch — one ship covering eight playtest items:
+
+- **In-game user guide** — new "Pickups & Friends" section in BOTH the settings (gear) panel and the pause overlay. Lists Cx coins, Ham, +1 Life (400), Weed, Horse, Phone Thief, Cop Car, Pedestrians, AND a paragraph explaining what Ice Poseidon does as a side-kick (auto-grabs nearby coins, 0.5× bonus per grab, with the multi-stage join/leave/return arc). Same template duplicated in both places — JetBrains-styled gold icons + descriptions.
+- **Cutscene keyboard navigation** — `ArrowUp` / `W` / `ArrowDown` / `S` move the highlight between choice buttons, `Enter` or `Space` activates the highlighted choice. First button gets auto-selected when buttons appear. Selected button shows a `▶` prefix + purple glow.
+- **Game-over music stops on RUN AGAIN** — the death-sting + game-over music kept playing on top of the new bg music for ~3 seconds when the player tapped RUN AGAIN before the sting finished. Added explicit `stopLoop('death')` + `stopLoop('death-gameover')` to `startRun()` so the slate is clean.
+- **Static pedestrians + protesters now bob** — the chibi NPCs and protesters all had `bobPx: 0` so they read as cardboard cutouts on the road. Bumped to 10/12 — the existing sin-wave bob now gives them a subtle step-in-place animation that suggests motion even with single-frame sprites.
+- **Cop car flashing-lights animation** — was picking ONE static frame at spawn (cop-car-01 OR -02 OR -05 OR -09) and holding it forever. Most spawned cars looked like the lights were OFF. Now ALL cop cars cycle through all 4 frames at 140ms/frame for the alternating red/blue flashing-lights effect. Real cop-car overhaul (clean re-extract, overhead variant, side-spawn obstacle) still queued for v0.18.24.
+- **Middle mouse button = jump** — parity with `Space` / `ArrowUp` / `W`. Suppresses the browser's middle-click auto-scroll cursor while playing.
+- **Title-screen bird now flies completely off-screen** — instead of the previous "fly to upper-right + come back same direction" loop, the bird now exits frame to the right, pauses off-screen for 900ms, then re-enters from the LEFT side and flies back across to Mike's shoulder. Off-screen targets expressed in image-WIDTH fractions (`+1.0` right edge, `-0.4` left edge) so they actually clear the rendered image regardless of viewport. Render skips entirely during the offscreen-pause phase.
+- **Cutscene bird now perches on the dialogue box edge** instead of pinning to Mike's shoulder — the shoulder position was finicky across panel angles (kept landing on his stomach or in midair). Box edge is the same position for both speaker views and reads like a parrot perched on a railing, fixed at `(8%, 63%)` of the cutscene canvas.
+- **Title-screen overlay made lighter** (alpha .82 → .42) so the title art (Mike + Ice + chile skyline + the budgie) shows through more clearly. Other overlays (pause / gameover / cutscene) keep the heavier .82 alpha for legibility against busy gameplay.
+
 ### Run v0.18.22 — 2026-04-26
 
 Patch — budgie position tuning per playtest.

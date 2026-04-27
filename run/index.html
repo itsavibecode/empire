@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.22">
+  <meta name="version" content="0.18.23">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -106,6 +106,21 @@
         <div><kbd>SPACE</kbd> <kbd>⬆</kbd> <kbd>W</kbd> jump</div>
         <div><kbd>P</kbd> <kbd>ESC</kbd> right-click pause</div>
       </div>
+      <!-- Pickups + characters guide. Same template gets cloned into
+           the pause overlay so the player can read it mid-run too.
+           Update one place — JS injects it into the pause panel on boot. -->
+      <div class="audio-panel-title controls-title">PICKUPS &amp; FRIENDS</div>
+      <div class="game-guide" data-guide="settings">
+        <div class="guide-row"><span class="g-icon coin">Cx</span><span class="g-body"><b>Cx Coins</b> — collect to build your score multiplier (×1 → ×2 at 6 coins → ×3 at 16).</span></div>
+        <div class="guide-row"><span class="g-icon">🍖</span><span class="g-body"><b>Ham</b> — brief freeze, then 6.5s coin shower with chipmunk-tempo music. Stacks: pick up another mid-bonus to extend.</span></div>
+        <div class="guide-row"><span class="g-icon">🅻</span><span class="g-body"><b>+1 Life (400)</b> — gain a heart (capped at 5).</span></div>
+        <div class="guide-row"><span class="g-icon">🍁</span><span class="g-body"><b>Weed</b> — 10s slow + red-tint debuff. Stacks: greedy double-grab extends the slow.</span></div>
+        <div class="guide-row"><span class="g-icon">🐎</span><span class="g-body"><b>Horse</b> — 8s ride at 1.7× scroll speed. Spawns on the sidewalks (edge lanes) only.</span></div>
+        <div class="guide-row"><span class="g-icon">🤳</span><span class="g-body"><b>Phone Thief</b> — the reaching NPC snatches Mike's selfie stick. Costs 10 Cx + reverses controls for 3s. Doesn't take a life.</span></div>
+        <div class="guide-row"><span class="g-icon">🚓</span><span class="g-body"><b>Cop Car</b> — blocks the entire lane. Lane-shift won't help; you must <kbd>JUMP</kbd> over it.</span></div>
+        <div class="guide-row"><span class="g-icon">🚶</span><span class="g-body"><b>Pedestrians / Protesters</b> — dodge to a different lane or you lose a heart.</span></div>
+        <div class="guide-row"><span class="g-icon ice">IP</span><span class="g-body"><b>Ice Poseidon</b> — joins as a side-kick after the first cutscene. Runs alongside Mike and auto-grabs nearby coins (each one adds a 0.5× bonus to your total). Story arc: Ice joins → Mike tells him off (~2000m) → Ice returns (~3800m).</span></div>
+      </div>
       <!-- Version label inside the panel — populated by JS so it stays
            in sync with the visible bottom-of-screen version pill -->
       <div class="audio-panel-version" id="audio-panel-version"></div>
@@ -157,6 +172,23 @@
     <img class="pause-map" src="concept/Mapa Todas las regiones.svg" alt="" aria-hidden="true">
     <h1>PAUSED</h1>
     <p class="hint">P / ESC / right-click or tap PAUSED text to resume</p>
+    <!-- Mid-run pickup + character cheat sheet (same data as the
+         settings-panel guide). Lets the player pause to remind themselves
+         what each item does instead of guessing. -->
+    <div class="pause-guide-wrap">
+      <div class="pause-guide-title">PICKUPS &amp; FRIENDS</div>
+      <div class="game-guide" data-guide="pause">
+        <div class="guide-row"><span class="g-icon coin">Cx</span><span class="g-body"><b>Cx Coins</b> — collect to build your score multiplier (×1 → ×2 at 6 → ×3 at 16).</span></div>
+        <div class="guide-row"><span class="g-icon">🍖</span><span class="g-body"><b>Ham</b> — brief freeze, then 6.5s coin shower with chipmunk-tempo music. Stacks.</span></div>
+        <div class="guide-row"><span class="g-icon">🅻</span><span class="g-body"><b>+1 Life (400)</b> — gain a heart (capped at 5).</span></div>
+        <div class="guide-row"><span class="g-icon">🍁</span><span class="g-body"><b>Weed</b> — 10s slow + red-tint debuff. Stacks.</span></div>
+        <div class="guide-row"><span class="g-icon">🐎</span><span class="g-body"><b>Horse</b> — 8s ride at 1.7× scroll speed. Sidewalks only.</span></div>
+        <div class="guide-row"><span class="g-icon">🤳</span><span class="g-body"><b>Phone Thief</b> — the reaching NPC steals 10 Cx + reverses controls 3s. No life lost.</span></div>
+        <div class="guide-row"><span class="g-icon">🚓</span><span class="g-body"><b>Cop Car</b> — blocks the lane. <kbd>JUMP</kbd> to clear it.</span></div>
+        <div class="guide-row"><span class="g-icon">🚶</span><span class="g-body"><b>Pedestrians</b> — dodge to a different lane or lose a heart.</span></div>
+        <div class="guide-row"><span class="g-icon ice">IP</span><span class="g-body"><b>Ice Poseidon</b> — side-kick that runs alongside Mike and auto-grabs nearby coins (0.5× bonus per coin). Joins / departs / returns through the cutscene arc.</span></div>
+      </div>
+    </div>
     <button type="button" id="btn-pause-quit">QUIT TO TITLE</button>
   </div>
 
@@ -181,7 +213,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.22</div>
+  <div class="game-version">Run v0.18.23</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

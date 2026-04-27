@@ -128,27 +128,30 @@
     // shows a red "-10 COINS" overlay. The 4-frame reach animation
     // sells the snatch motion. Faster cadence than the other walkers.
     { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true },
-    // Static protesters (each holds a parody picket sign)
-    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 0 },
-    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 0 },
-    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 0 },
-    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 0 },
-    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 0 },
-    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 0 },
-    // Static chibi NPCs (street pedestrians from the grid sheet)
-    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 0 },
-    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 0 },
-    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 0 },
-    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 0 },
-    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 0 },
-    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 0 },
+    // Static protesters (each holds a parody picket sign). bobPx: 12
+    // gives a subtle up/down step animation so they don't read as
+    // statues — feels like they're shifting weight on the picket line.
+    { id: 'static-protester', frames: ['npc-protester-01'], frameMs: 0, bobPx: 12 },
+    { id: 'static-protester', frames: ['npc-protester-02'], frameMs: 0, bobPx: 12 },
+    { id: 'static-protester', frames: ['npc-protester-03'], frameMs: 0, bobPx: 12 },
+    { id: 'static-protester', frames: ['npc-protester-04'], frameMs: 0, bobPx: 12 },
+    { id: 'static-protester', frames: ['npc-protester-05'], frameMs: 0, bobPx: 12 },
+    { id: 'static-protester', frames: ['npc-protester-06'], frameMs: 0, bobPx: 12 },
+    // Static chibi NPCs (street pedestrians from the grid sheet).
+    // bobPx: 10 — slight step bob so they look like they're walking
+    // toward the camera even though we only have one frame each.
+    { id: 'static-chibi', frames: ['npc-grid-01'], frameMs: 0, bobPx: 10 },
+    { id: 'static-chibi', frames: ['npc-grid-02'], frameMs: 0, bobPx: 10 },
+    { id: 'static-chibi', frames: ['npc-grid-05'], frameMs: 0, bobPx: 10 },
+    { id: 'static-chibi', frames: ['npc-grid-09'], frameMs: 0, bobPx: 10 },
+    { id: 'static-chibi', frames: ['npc-grid-13'], frameMs: 0, bobPx: 10 },
+    { id: 'static-chibi', frames: ['npc-grid-17'], frameMs: 0, bobPx: 10 },
     // COP CAR — jump-only. Lane shift won't help; you must jump over it.
-    // Multiple paint variants in the cop-car sheet (16 frames showing
-    // different angle/light combos); we pick one at random per spawn.
-    { id: 'cop-car', frames: ['cop-car-01'], frameMs: 0, bobPx: 0, jumpOnly: true },
-    { id: 'cop-car', frames: ['cop-car-02'], frameMs: 0, bobPx: 0, jumpOnly: true },
-    { id: 'cop-car', frames: ['cop-car-05'], frameMs: 0, bobPx: 0, jumpOnly: true },
-    { id: 'cop-car', frames: ['cop-car-09'], frameMs: 0, bobPx: 0, jumpOnly: true },
+    // Animates through 4 light-bar variants at 140ms/frame for the
+    // alternating red/blue flashing-lights effect. Previously each spawn
+    // picked ONE static frame and held it, so only ~25% of cars had any
+    // particular light state — looked broken on screen.
+    { id: 'cop-car', frames: ['cop-car-01','cop-car-02','cop-car-05','cop-car-09'], frameMs: 140, bobPx: 0, jumpOnly: true },
   ];
   // Preload every sprite referenced by any obstacle type
   OBSTACLE_TYPES.forEach(function (t) {
@@ -476,6 +479,7 @@
     startedAt: 0,
     typedChars: 0,
     showingChoices: false,
+    selectionIdx: 0,  // arrow-up/down highlight when picking a choice
   };
 
   function currentDef() { return cutscene.defId ? CUTSCENE_DEFS[cutscene.defId] : null; }
@@ -639,15 +643,15 @@
     // offset from a previous panel
     el.classList.remove('flying');
     el.style.transform = '';
-    var anchor;
-    if (panel.bgPrefix === 'cutscene-mike-') {
-      // Mike facing camera — shoulder higher in the frame, slightly
-      // larger bird since we see his actual shoulder broadside.
-      anchor = { left: '24%', top: '22%', width: '11%' };
-    } else {
-      // Ice panels (Mike from behind) — bird sits on his upper back.
-      anchor = { left: '18%', top: '38%', width: '9%' };
-    }
+    // Per playtest: pinning to Mike's shoulder is finicky (different
+    // angles place his shoulder at different heights and the bird kept
+    // ending up on his stomach or in midair). Easier and more visually
+    // consistent: have the bird perch on the TOP-LEFT EDGE of the
+    // dialogue box. The box position is the same across all panels so
+    // one anchor works for both Ice and Mike speaker views, and the
+    // composition reads like a parrot sitting on a railing while the
+    // characters talk.
+    var anchor = { left: '8%', top: '63%', width: '9%' };
     el.style.left  = anchor.left;
     el.style.top   = anchor.top;
     el.style.width = anchor.width;
@@ -708,6 +712,42 @@
       ch.appendChild(b);
     }
     ch.classList.remove('hidden');
+    // Highlight the first button so arrow-up/down navigation has a
+    // starting point + keyboard users immediately see their position.
+    setCutsceneSelection(0);
+  }
+
+  // Keyboard navigation for cutscene choice buttons. Arrow up/down
+  // moves the highlight, Enter / Space fires the highlighted choice.
+  function setCutsceneSelection(idx) {
+    var ch = document.getElementById('cutscene-choices');
+    if (!ch) return;
+    var btns = ch.querySelectorAll('button[data-choice]');
+    if (btns.length === 0) return;
+    if (idx < 0) idx = btns.length - 1;
+    if (idx >= btns.length) idx = 0;
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('selected', i === idx);
+    }
+    cutscene.selectionIdx = idx;
+  }
+  function moveCutsceneSelection(delta) {
+    var ch = document.getElementById('cutscene-choices');
+    if (!ch) return;
+    var btns = ch.querySelectorAll('button[data-choice]');
+    if (btns.length === 0) return;
+    var cur = cutscene.selectionIdx != null ? cutscene.selectionIdx : 0;
+    setCutsceneSelection(cur + delta);
+  }
+  function activateCutsceneSelection() {
+    var ch = document.getElementById('cutscene-choices');
+    if (!ch) return;
+    var btns = ch.querySelectorAll('button[data-choice]');
+    var idx = cutscene.selectionIdx != null ? cutscene.selectionIdx : 0;
+    if (idx >= btns.length) return;
+    var btn = btns[idx];
+    if (!btn) return;
+    advanceCutscene(parseInt(btn.dataset.choice, 10));
   }
 
   // Called when player clicks a choice/continue button.
@@ -956,8 +996,30 @@
         if (key === ' ' || key === 'Enter') startRun();
         return;
       }
-      // Cut scene blocks all gameplay input (player picks via mouse/tap on the choice buttons)
-      if (cutscene.active) return;
+      // Cut scene — keyboard navigation for choice buttons. Arrow up/down
+      // moves the highlight, Enter / Space activates the highlighted
+      // choice. Only available once the dialogue has finished typing in
+      // and the choice buttons are showing.
+      if (cutscene.active) {
+        if (cutscene.showingChoices) {
+          if (key === 'ArrowUp' || key === 'w' || key === 'W') {
+            moveCutsceneSelection(-1);
+            e.preventDefault();
+            return;
+          }
+          if (key === 'ArrowDown' || key === 's' || key === 'S') {
+            moveCutsceneSelection(+1);
+            e.preventDefault();
+            return;
+          }
+          if (key === 'Enter' || key === ' ') {
+            activateCutsceneSelection();
+            e.preventDefault();
+            return;
+          }
+        }
+        return;
+      }
       // Playing — handle pause + lane shift
       if (key === 'p' || key === 'P' || key === 'Escape') {
         togglePause(); e.preventDefault(); return;
@@ -982,14 +1044,22 @@
       if (state.phase !== 'playing') return;
       if (state.paused) return; // tap-to-resume handled by the pause overlay click
       if (cutscene.active) return; // cut scene UI uses its own button clicks
-      // Mouse: only respond to LEFT button (e.button === 0). Right-click
-      // (e.button === 2) is reserved for pause via the contextmenu listener
-      // — without this guard a right-click would also fire mousedown and
-      // trigger a lane-shift, which is exactly the bug reported in v0.17.3.
-      if (e.type === 'mousedown' && e.button !== 0) return;
       // If the tap came from a button or overlay, let the click bubble.
       if (e.target.closest('button') || e.target.closest('.overlay:not(.hidden)')) {
         return;
+      }
+      // Mouse button routing:
+      //   LEFT  (0) -> lane shift based on tap-x half
+      //   MIDDLE (1) -> JUMP (parity with SPACE / ArrowUp / W)
+      //   RIGHT (2) -> reserved for pause via contextmenu listener
+      if (e.type === 'mousedown') {
+        if (e.button === 1) {
+          // Some browsers open auto-scroll on middle-click; suppress it.
+          e.preventDefault();
+          triggerJump();
+          return;
+        }
+        if (e.button !== 0) return;
       }
       var x;
       if (e.type === 'touchstart') {
@@ -1002,6 +1072,12 @@
     }
     document.addEventListener('touchstart', tapHandler, { passive: false });
     document.addEventListener('mousedown', tapHandler);
+    // Middle-click on some platforms also fires `auxclick` — block its
+    // default (browser auto-scroll cursor) so jumping doesn't leave a
+    // scroll-cursor stuck on screen.
+    document.addEventListener('auxclick', function (e) {
+      if (e.button === 1 && state.phase === 'playing') e.preventDefault();
+    });
 
     // Right-click (contextmenu) toggles pause during play. Suppress the
     // browser context menu either way so it doesn't pop up over the game.
@@ -1661,9 +1737,12 @@
   var TITLE_BIRD_FLAP_FRAME_MS  = 90;
   var TITLE_BIRD_PERCH_SETTLE_MS = 5500;
   var TITLE_BIRD_TAKEOFF_MS = 350;
-  var TITLE_BIRD_FLIGHT_MS = 1800;
-  var TITLE_BIRD_HOVER_MS = 600;
-  var TITLE_BIRD_RETURN_MS = 1500;
+  // Flight to the FAR EDGE off-screen — passes over Mike + Ice
+  var TITLE_BIRD_FLY_OUT_MS = 1800;
+  // Out-of-frame pause before swooping back from the opposite side
+  var TITLE_BIRD_OFFSCREEN_MS = 900;
+  // Flight back IN from the opposite edge to Mike's shoulder
+  var TITLE_BIRD_FLY_IN_MS = 2000;
   // Image-relative anchor for Mike's shoulder on titlescreen.jpg.
   // Tuned per playtest feedback (v0.18.22):
   //   - Y raised from 68% -> 50% so the bird sits near the chain/collar
@@ -1673,10 +1752,16 @@
   var TITLE_BIRD_BASE_X_FRAC = 0.16;
   var TITLE_BIRD_BASE_Y_FRAC = 0.50;
   var TITLE_BIRD_SIZE_FRAC = 0.11;  // bird height as fraction of image height
-  // Flight-target offsets, in fractions of the image height (so the
-  // path scales with the rendered title image, not the canvas).
-  var TITLE_BIRD_FLY_DX_FRAC = 0.30;   // fly to the right
-  var TITLE_BIRD_FLY_DY_FRAC = -0.32;  // and up
+  // Off-screen targets — bird needs to clear the IMAGE bounds entirely.
+  // Base anchor X is 0.16 in image-fraction. Going off-screen RIGHT
+  // means moving +1.0 (to ~1.16, beyond the right edge); going off
+  // LEFT means -0.30 (to ~-0.14, beyond the left edge). Both expressed
+  // as image-WIDTH fractions, then converted in render code.
+  var TITLE_BIRD_OFFSCREEN_RIGHT = 1.00;
+  var TITLE_BIRD_OFFSCREEN_LEFT  = -0.40;
+  // Vertical arc — the bird rises during the flight so it crosses the
+  // image at roughly chest height for Ice (the right character).
+  var TITLE_BIRD_FLY_UP_FRAC = -0.18;
   var titleBird = {
     phase: 'perch',
     nextPhaseAt: 0,
@@ -1692,24 +1777,31 @@
       titleBird.phase = 'takeoff';
       titleBird.nextPhaseAt = now + TITLE_BIRD_TAKEOFF_MS;
     } else if (titleBird.phase === 'takeoff') {
-      titleBird.phase = 'flying';
-      titleBird.nextPhaseAt = now + TITLE_BIRD_FLIGHT_MS;
+      // Fly OUT to the right edge of the title image, exiting frame
+      titleBird.phase = 'flyout';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_FLY_OUT_MS;
       titleBird.transitionStartAt = now;
-      titleBird.transitionDur = TITLE_BIRD_FLIGHT_MS;
+      titleBird.transitionDur = TITLE_BIRD_FLY_OUT_MS;
       titleBird.fromX = 0; titleBird.fromY = 0;
-      titleBird.toX = TITLE_BIRD_FLY_DX_FRAC + (Math.random() * 0.06 - 0.03);
-      titleBird.toY = TITLE_BIRD_FLY_DY_FRAC + (Math.random() * 0.06 - 0.03);
-    } else if (titleBird.phase === 'flying') {
-      titleBird.phase = 'hover';
-      titleBird.nextPhaseAt = now + TITLE_BIRD_HOVER_MS;
-    } else if (titleBird.phase === 'hover') {
-      titleBird.phase = 'return';
-      titleBird.nextPhaseAt = now + TITLE_BIRD_RETURN_MS;
+      // toX uses image-WIDTH fractions; later mapped through aspect
+      // ratio inside drawTitleBird so it scales with viewport.
+      titleBird.toX = TITLE_BIRD_OFFSCREEN_RIGHT;
+      titleBird.toY = TITLE_BIRD_FLY_UP_FRAC;
+    } else if (titleBird.phase === 'flyout') {
+      // Off-screen pause — bird is hidden, then teleports to the
+      // opposite (left) side ready to fly back in.
+      titleBird.phase = 'offscreen';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_OFFSCREEN_MS;
+    } else if (titleBird.phase === 'offscreen') {
+      // Fly BACK IN from the opposite edge to Mike's shoulder
+      titleBird.phase = 'flyin';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_FLY_IN_MS;
       titleBird.transitionStartAt = now;
-      titleBird.transitionDur = TITLE_BIRD_RETURN_MS;
-      titleBird.fromX = titleBird.toX; titleBird.fromY = titleBird.toY;
+      titleBird.transitionDur = TITLE_BIRD_FLY_IN_MS;
+      titleBird.fromX = TITLE_BIRD_OFFSCREEN_LEFT;
+      titleBird.fromY = TITLE_BIRD_FLY_UP_FRAC;
       titleBird.toX = 0; titleBird.toY = 0;
-    } else if (titleBird.phase === 'return') {
+    } else if (titleBird.phase === 'flyin') {
       titleBird.phase = 'perch';
       titleBird.nextPhaseAt = now + TITLE_BIRD_PERCH_SETTLE_MS;
     }
@@ -1723,33 +1815,52 @@
   }
 
   function drawTitleBird(now, imgX, imgY, imgW, imgH) {
+    // Off-screen pause phase: don't render at all.
+    if (titleBird.phase === 'offscreen') return;
     var birdSprite = sprites['budgie-13'];
     if (!birdSprite) return;
-    // Frame swap based on phase
+    // Frame swap based on phase. Mirror the bird sprite when flying
+    // BACK IN from the left side so it visibly faces the direction of
+    // travel (the source budgie sprites face right by default).
+    var flipH = false;
     var key;
     if (titleBird.phase === 'perch') {
       key = TITLE_BIRD_PERCH_FRAMES[Math.floor(now / TITLE_BIRD_PERCH_FRAME_MS) % TITLE_BIRD_PERCH_FRAMES.length];
     } else {
       key = TITLE_BIRD_FLAP_FRAMES[Math.floor(now / TITLE_BIRD_FLAP_FRAME_MS) % TITLE_BIRD_FLAP_FRAMES.length];
+      // During flyin (coming from left), face right -> default orientation.
+      // During flyout (going right), bird is already going its native dir.
+      // No flip needed for either since native sprite faces right; bird
+      // is moving rightward in flyout AND coming from left in flyin (so
+      // its motion vector is also rightward). All good without flip.
     }
     var frame = sprites[key] || birdSprite;
-    // Compute current fractional offset (interpolated during flying/return)
+    // Compute current fractional offset.
+    // For flyout/flyin we interpolate; for perch/takeoff offset stays 0.
     var ox = 0, oy = 0;
-    if ((titleBird.phase === 'flying' || titleBird.phase === 'return') && titleBird.transitionDur > 0) {
+    if ((titleBird.phase === 'flyout' || titleBird.phase === 'flyin') && titleBird.transitionDur > 0) {
       var t = easeInOut((now - titleBird.transitionStartAt) / titleBird.transitionDur);
       ox = titleBird.fromX + (titleBird.toX - titleBird.fromX) * t;
       oy = titleBird.fromY + (titleBird.toY - titleBird.fromY) * t;
-    } else if (titleBird.phase === 'hover') {
-      ox = titleBird.toX; oy = titleBird.toY;
     }
-    // Anchor + offset → canvas coords
+    // Anchor + offset → canvas coords. ox is in image-WIDTH fractions
+    // (so flying off the right edge actually clears the image), oy is
+    // in image-HEIGHT fractions.
     var cx = imgX + (TITLE_BIRD_BASE_X_FRAC + ox) * imgW;
     var cy = imgY + (TITLE_BIRD_BASE_Y_FRAC + oy) * imgH;
     var targetH = imgH * TITLE_BIRD_SIZE_FRAC;
     var scale = targetH / frame.height;
     var drawW = frame.width * scale;
     var drawH = targetH;
-    ctx.drawImage(frame, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    if (flipH) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(frame, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(frame, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    }
   }
 
   function drawTitleScreen(now) {
@@ -2163,6 +2274,12 @@
     document.getElementById('overlay-gameover').classList.add('hidden');
     updateHUD();
     syncChromeForPhase();
+    // Stop any leftover death/gameover audio from the previous run before
+    // kicking off the new bg music. Without this, a quick RUN AGAIN tap
+    // would leave the "meow meow" gameover sting playing on top of the
+    // fresh background music for ~3 seconds.
+    stopLoop('death');
+    stopLoop('death-gameover');
     // Audio: random bg music + ambient mob loop in the distance
     startBackgroundMusic();
     startLoop('mob-angry');

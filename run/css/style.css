@@ -127,6 +127,13 @@ html, body {
   opacity: 0;
   pointer-events: none;
 }
+/* Title screen — lighter overlay so the title art (Mike + Ice + chile
+   skyline + the budgie on Mike's shoulder) shows through more clearly.
+   Other overlays (pause, gameover, cutscene) keep the heavier .82 alpha
+   for legibility against busy gameplay. */
+#overlay-start {
+  background: rgba(10, 10, 20, .42);
+}
 .overlay h1 {
   font-size: 5rem;
   letter-spacing: .15em;
@@ -503,6 +510,108 @@ html, body {
   text-align: center;
 }
 
+/* Pickups + characters guide. Shared template lives in two places:
+   the settings panel (compact, scrollable) and the pause overlay
+   (slightly bigger, gridded for readability mid-run). */
+.game-guide {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  font-family: 'VT323', monospace;
+  font-size: .95rem;
+  color: rgba(245, 245, 245, .92);
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: .25rem;
+}
+.game-guide .guide-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: .55rem;
+  align-items: start;
+  padding: .15rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.game-guide .guide-row:last-child { border-bottom: none; }
+.game-guide .g-icon {
+  font-size: 1.15rem;
+  text-align: center;
+  line-height: 1.4;
+  color: #FFD566;
+  font-family: 'VT323', monospace;
+}
+.game-guide .g-icon.coin {
+  background: linear-gradient(180deg, #f4cf6f 0%, #c79a3e 100%);
+  color: #1c1408;
+  font-weight: 700;
+  font-size: .8rem;
+  border-radius: 50%;
+  width: 24px; height: 24px;
+  line-height: 24px;
+  margin-top: .15rem;
+  letter-spacing: -0.05em;
+}
+.game-guide .g-icon.ice {
+  background: rgba(99, 213, 255, .25);
+  color: #b6e8ff;
+  border: 1px solid rgba(99, 213, 255, .6);
+  font-size: .75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 1px 0;
+  margin-top: .2rem;
+}
+.game-guide .g-body {
+  line-height: 1.35;
+  color: rgba(245, 245, 245, .85);
+}
+.game-guide .g-body b {
+  color: #fff;
+  margin-right: .25em;
+}
+.game-guide .g-body kbd {
+  display: inline-block;
+  font-family: 'VT323', monospace;
+  font-size: .85rem;
+  background: rgba(142, 92, 203, .25);
+  color: #C9A4FF;
+  border: 1px solid rgba(142, 92, 203, .55);
+  border-radius: 4px;
+  padding: 0 .35rem;
+}
+
+/* Pause-panel variant: a bit larger + scrollable + boxed so it
+   visually doesn't compete with the QUIT button. */
+.pause-guide-wrap {
+  width: min(640px, 90vw);
+  max-height: 50vh;
+  margin: 1.2rem auto 1.4rem;
+  padding: .9rem 1.1rem;
+  background: rgba(20, 14, 36, .82);
+  border: 1px solid rgba(201, 164, 255, .35);
+  border-radius: 10px;
+  text-align: left;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pause-guide-title {
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  letter-spacing: .25em;
+  color: #C9A4FF;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: .6rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid rgba(201, 164, 255, .2);
+}
+.pause-guide-wrap .game-guide {
+  font-size: 1rem;
+  max-height: none;
+  flex: 1;
+}
+
 /* Title-screen subtitle ("an EmpireX runner") under the giant ON BABY! */
 .overlay .subtitle {
   margin-top: -.6rem;
@@ -661,10 +770,17 @@ html, body {
           appearance: none;
   transition: all .15s ease;
 }
-.cutscene-choices button:hover {
+.cutscene-choices button:hover,
+.cutscene-choices button.selected {
   background: #8E5CCB;
   border-color: #fff;
   transform: translateX(6px);
+  box-shadow: 0 0 12px rgba(142, 92, 203, .5);
+}
+.cutscene-choices button.selected::before {
+  content: '▶ ';
+  color: #C9A4FF;
+  margin-right: .25em;
 }
 @media (max-width: 700px) {
   .cutscene-text { font-size: 1.3rem; }
