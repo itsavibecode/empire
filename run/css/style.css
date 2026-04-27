@@ -539,24 +539,62 @@ html, body {
   background: #000 url('../img/bg/bg-chile-runner-01.png') center/cover no-repeat;
   padding: 0;
   z-index: 40;
-  /* No flex-centering — children are positioned absolutely */
-  justify-content: flex-start;
-  align-items: stretch;
+  /* Flex-center the canvas wrapper. Dialogue uses position:absolute
+     so it ignores flex layout and still anchors at the bottom. */
+  justify-content: center;
+  align-items: center;
+}
+/* 3:2 wrapper that matches the cutscene art's native aspect ratio.
+   Sized to fit within the overlay (whichever dimension is the binding
+   constraint), centered automatically by .overlay-cutscene's flex.
+   This gives the shoulder bird a stable coordinate frame — the bird's
+   left/top % values track Mike's shoulder across all viewport sizes
+   instead of drifting when the image letterboxes. */
+.cutscene-canvas {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;          /* fall back to container width on tall viewports */
+  pointer-events: none;
 }
 .cutscene-bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  /* Was object-fit: cover — that scaled the 3:2 source art to fill
-     widescreen viewports and CROPPED the left/right edges, cutting
-     off the gold dialogue-box corner brackets baked into the art.
-     `contain` makes the whole composition visible; the chile-runner
-     bg behind fills the letterbox margins where the cutscene art
-     doesn't reach. */
-  object-fit: contain;
+  display: block;
   z-index: 0;
   pointer-events: none;
+}
+/* Animated shoulder bird. Position calibrated to Mike's left shoulder
+   in the cutscene art (he's facing away from camera so this is the
+   shoulder appearing on the LEFT side of the image). JS animates the
+   `transform` for fly-away/return + swaps the inner img.src for
+   wing-flap / perched frame cycling. */
+.cutscene-bird {
+  position: absolute;
+  left: 18%;
+  top: 38%;
+  width: 9%;
+  z-index: 1;
+  pointer-events: none;
+  /* Smooth flight transitions; JS toggles transform values + duration
+     by setting the .flying / .landing modifier classes. */
+  transition: transform 1.4s cubic-bezier(.45,.05,.55,.95);
+  transform-origin: 50% 50%;
+}
+.cutscene-bird img {
+  width: 100%;
+  height: auto;
+  display: block;
+  /* Preserve crisp pixel-art edges since the bird is hand-illustrated
+     and we don't want browser smoothing turning it muddy at small sizes */
+  image-rendering: -webkit-optimize-contrast;
+}
+.cutscene-bird.flying {
+  transition-duration: 1.6s;
+  transition-timing-function: cubic-bezier(.25,.05,.5,.95);
 }
 .cutscene-dialogue {
   position: absolute;

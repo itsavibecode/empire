@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.19">
+  <meta name="version" content="0.18.20">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -128,7 +128,18 @@
        Three player-choice buttons appear after the dialogue finishes
        typing in. All choices funnel to "Ice has joined." -->
   <div class="overlay overlay-cutscene hidden" id="overlay-cutscene">
-    <img class="cutscene-bg" id="cutscene-bg" src="img/cutscene-closed.png" alt="">
+    <!-- Canvas wrapper holds the bg image + the animated shoulder bird,
+         sized to a 3:2 aspect so the bird can be positioned via fixed
+         percentages that track Mike's shoulder regardless of viewport. -->
+    <div class="cutscene-canvas">
+      <img class="cutscene-bg" id="cutscene-bg" src="img/cutscene-closed.png" alt="">
+      <!-- Yellow-green budgie that perches on Mike's shoulder during
+           cutscenes. JS animates it: idle bob -> takeoff flap -> short
+           fly loop -> return + land. Lives only inside cutscenes. -->
+      <div class="cutscene-bird" id="cutscene-bird">
+        <img id="cutscene-bird-img" src="img/sprites/budgie-13.png" alt="">
+      </div>
+    </div>
     <div class="cutscene-dialogue">
       <div class="cutscene-name" id="cutscene-name">ICE POSEIDON</div>
       <p class="cutscene-text" id="cutscene-text"></p>
@@ -170,7 +181,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.19</div>
+  <div class="game-version">Run v0.18.20</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

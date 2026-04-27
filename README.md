@@ -17,6 +17,28 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.20 — 2026-04-26
+
+Minor — animated shoulder budgie during cutscenes. A yellow-green parakeet now perches on Mike's left shoulder during every cutscene, takes off every ~5.5 seconds for a small flight loop, and lands back on the shoulder. Pure DOM/CSS animation layered on top of the cutscene art — no canvas, no perf hit.
+
+**Source art:** ChatGPT-generated 4×4 sprite sheet (`/run/concept/ChatGPT Image Apr 26, 2026, 10_13_13 PM.png`) — row 1 is the wing-flap cycle (4 frames), rows 2-4 are perched poses with different head positions. New `extract-budgie-sprites.py` slices it into 16 individual PNGs (`budgie-01.png` through `budgie-16.png` in `/run/img/sprites/`). Background was already alpha=0 in the source; the script also runs a connected-component filter that keeps only the largest blob per cell so legs/feet bleeding from adjacent rows get erased.
+
+**Layout:** the cutscene `<img>` was wrapped in a new `.cutscene-canvas` div with `aspect-ratio: 3/2; max-width: 100%; max-height: 100%` — same letterbox behavior as the old `object-fit: contain` but provides a stable coordinate frame for the bird. The bird is positioned at `left: 18%; top: 38%; width: 9%` of the canvas, calibrated to Mike's shoulder in the cutscene art. Tracks correctly across all viewport sizes since the canvas matches the image's native aspect.
+
+**Animation state machine** (5 phases):
+
+| Phase | Duration | Frames | What it does |
+|---|---|---|---|
+| `perch` | 5.5s | budgie-13/14/16 | Slow head-bob cycle on shoulder |
+| `takeoff` | 350ms | budgie-01..04 (90ms/frame) | Wing flap before launch |
+| `flying` | 1.6s | budgie-01..04 | CSS transform translates to upper-right of frame |
+| `hover` | 600ms | budgie-01..04 | Brief pause at far point |
+| `return` | 1.4s | budgie-01..04 | Transform back to shoulder |
+
+Then loops. Random jitter on the flight target (X +0..+80%, Y -120..-200%) so each takeoff varies slightly. CSS `transition: transform` does the smooth pathing — JS just toggles target transforms + a `.flying` modifier class for slower easing on the launch leg.
+
+State is reset on every `startCutscene` so a freshly-triggered scene doesn't inherit a half-flown bird from the previous one.
+
 ### Run v0.18.19 — 2026-04-26
 
 Minor — phone-thief mechanic. The "reaching dude" pedestrian (`npc-pedestrian-09..12`, the 4-frame reach pose) is now a *phone thief* — when he collides with Mike he doesn't take a life, he snatches the selfie stick. Cost = 10 Cx coins + 3 seconds of inverted left/right input. Stuns the player without ending the run.

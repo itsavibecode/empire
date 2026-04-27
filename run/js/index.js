@@ -490,6 +490,100 @@
     }
   }
 
+  // ============================================================
+  // Cut scene shoulder bird — yellow-green budgie that perches on
+  // Mike's left shoulder during dialogue, periodically takes off,
+  // flies a small loop, and returns. Pure DOM/CSS animation; no
+  // canvas. State machine has 4 phases:
+  //   PERCH    — sitting on shoulder, slow head-bob via frame swap
+  //   TAKEOFF  — flapping in place ~250ms before launch
+  //   FLYING   — translated to upper-right of frame, flap cycle
+  //   RETURN   — translated back toward shoulder
+  // After RETURN the bird settles back into PERCH and the cycle
+  // repeats every PERCH_SETTLE_MS + flight time.
+  // ============================================================
+  var BIRD_PERCH_FRAMES = ['budgie-13', 'budgie-14', 'budgie-13', 'budgie-16'];
+  var BIRD_FLAP_FRAMES  = ['budgie-01', 'budgie-02', 'budgie-03', 'budgie-04'];
+  var BIRD_PERCH_FRAME_MS = 600;     // slow head-turn cycle while perched
+  var BIRD_FLAP_FRAME_MS  = 90;      // fast wing flap during flight
+  var BIRD_PERCH_SETTLE_MS = 5500;   // how long bird sits before taking off
+  var BIRD_TAKEOFF_MS = 350;         // wings up before transform starts
+  var BIRD_FLIGHT_MS = 1600;         // matches CSS .flying transition
+  var BIRD_HOVER_MS = 600;           // pause at far point before returning
+  var BIRD_RETURN_MS = 1400;         // matches CSS default transition
+  var bird = {
+    phase: 'perch',     // 'perch' | 'takeoff' | 'flying' | 'hover' | 'return'
+    nextPhaseAt: 0,
+  };
+
+  function resetCutsceneBird() {
+    bird.phase = 'perch';
+    bird.nextPhaseAt = performance.now() + BIRD_PERCH_SETTLE_MS;
+    var el = document.getElementById('cutscene-bird');
+    if (el) {
+      el.classList.remove('flying');
+      el.style.transform = '';
+    }
+    setBirdFrame(BIRD_PERCH_FRAMES[0]);
+  }
+
+  function setBirdFrame(key) {
+    var img = document.getElementById('cutscene-bird-img');
+    if (img && img.dataset.frame !== key) {
+      img.dataset.frame = key;
+      img.src = 'img/sprites/' + key + '.png';
+    }
+  }
+
+  function tickBird(now) {
+    var el = document.getElementById('cutscene-bird');
+    if (!el) return;
+    // Frame cycling — different cadence per phase
+    if (bird.phase === 'perch') {
+      var pi = Math.floor(now / BIRD_PERCH_FRAME_MS) % BIRD_PERCH_FRAMES.length;
+      setBirdFrame(BIRD_PERCH_FRAMES[pi]);
+    } else {
+      // takeoff / flying / hover / return all use the wing-flap cycle
+      var fi = Math.floor(now / BIRD_FLAP_FRAME_MS) % BIRD_FLAP_FRAMES.length;
+      setBirdFrame(BIRD_FLAP_FRAMES[fi]);
+    }
+
+    // Phase transitions
+    if (now < bird.nextPhaseAt) return;
+    if (bird.phase === 'perch') {
+      // Time to take off — switch to flap frames in place briefly
+      bird.phase = 'takeoff';
+      bird.nextPhaseAt = now + BIRD_TAKEOFF_MS;
+    } else if (bird.phase === 'takeoff') {
+      // Launch — translate to upper-right of frame with the slower
+      // .flying transition for a graceful arc-feel. Random Y so the
+      // flight path varies a bit each loop.
+      bird.phase = 'flying';
+      bird.nextPhaseAt = now + BIRD_FLIGHT_MS;
+      el.classList.add('flying');
+      // Move +480% right, -160% up (relative to bird's own size).
+      // With bird width = 9% of canvas, that lands the bird around
+      // 60-65% across the frame, well above Mike's head.
+      var jitterY = -120 - Math.random() * 80;
+      var jitterX = 460 + Math.random() * 80;
+      el.style.transform = 'translate(' + jitterX + '%, ' + jitterY + '%)';
+    } else if (bird.phase === 'flying') {
+      // Reached far point — hover briefly before turning back
+      bird.phase = 'hover';
+      bird.nextPhaseAt = now + BIRD_HOVER_MS;
+    } else if (bird.phase === 'hover') {
+      // Return to shoulder — switch back to default transition speed
+      bird.phase = 'return';
+      bird.nextPhaseAt = now + BIRD_RETURN_MS;
+      el.classList.remove('flying');
+      el.style.transform = '';  // back to original perched position
+    } else if (bird.phase === 'return') {
+      // Landed — back to perch idle until next takeoff
+      bird.phase = 'perch';
+      bird.nextPhaseAt = now + BIRD_PERCH_SETTLE_MS;
+    }
+  }
+
   function startCutscene(defId) {
     cutscene.active = true;
     cutscene.defId = defId;
@@ -501,6 +595,9 @@
     // makes the cut scene feel chaotic instead of intimate.
     stopLoop('mob-angry');
     ga('cutscene_played', { def: defId });
+    // Reset the shoulder bird to its idle perch so a fresh cut scene
+    // doesn't inherit a half-flown state from a previous one.
+    resetCutsceneBird();
     transitionToPanel(0);
   }
 
@@ -523,6 +620,9 @@
 
   function tickCutscene(now) {
     if (!cutscene.active) return;
+    // Animate the shoulder budgie even when the dialogue is settled
+    // (showingChoices) so it stays alive while the player reads.
+    tickBird(now);
     var panel = currentPanel();
     if (!panel) return;
     if (cutscene.showingChoices) return; // text done, waiting for input
