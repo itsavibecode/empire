@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.1">
+<meta name="version" content="0.2.2">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -579,28 +579,7 @@
     box-shadow: 0 0 8px rgba(212,169,74,.6);
   }
 
-  /* ---------- VERSION PILL (upper-left)
-     Tiny semver indicator so OBS operators can confirm which build is
-     loading in their browser source. Mirrors the bottom-of-screen
-     version pills used on /run/ + main site. Discreet styling. */
-  .version-pill {
-    position: fixed;
-    left: 14px;
-    top: 10px;
-    z-index: 5;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-    opacity: .55;
-    text-shadow: 0 0 8px rgba(0,0,0,.9);
-    pointer-events: none;
-  }
-  .version-pill .v-prefix { color: var(--ink-dim); opacity: .6; }
-  .version-pill .v-num    { color: var(--gold); font-weight: 600; }
-
-  /* ---------- UPTIME COUNTER (lower-left)
+  /* ---------- UPTIME COUNTER + VERSION (lower-left)
      Lightweight indicator of how long the BRB page has been mounted
      since last refresh — useful for spotting stuck/stale OBS scenes
      without having to F5 the page to find out. Discreet styling so
@@ -637,6 +616,18 @@
     font-weight: 600;
     letter-spacing: .15em;
   }
+  /* Version segment lives inline with the uptime counter, separated by
+     a thin vertical divider. Same dim/gold treatment as the uptime
+     value so the lower-left strip reads as a single status row. */
+  .uptime-counter .uptime-divider {
+    width: 1px;
+    height: 10px;
+    background: var(--rule);
+    margin: 0 4px;
+    opacity: .8;
+  }
+  .uptime-counter .v-prefix { color: var(--ink-dim); opacity: .65; }
+  .uptime-counter .v-num    { color: var(--gold); font-weight: 600; letter-spacing: .15em; }
   @keyframes uptime-pulse {
     0%, 100% { opacity: .35; }
     50%      { opacity: 1; }
@@ -700,12 +691,6 @@
 
 <div class="rotation-progress" id="rotationProgress"></div>
 
-<!-- Version pill (upper-left) — confirms which build of the BRB scene
-     is loading in the OBS browser source. -->
-<div class="version-pill" aria-hidden="true">
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.1</span>
-</div>
-
 <!-- MultiKick escape-hatch button (bottom-center) — links to
      multikick.com with all currently-live slugs in the path so the
      operator can switch to MultiKick's grid in one click if the
@@ -716,13 +701,16 @@
   <span class="mk-label">Failing? Load MultiKick</span>
 </a>
 
-<!-- Uptime counter (lower-left) — ticks every second from page load.
-     Format auto-promotes from MM:SS to HH:MM:SS once the page has been
-     up for an hour or more. -->
+<!-- Uptime counter + version (lower-left). Uptime ticks every second
+     from page load (format MM:SS auto-promotes to HH:MM:SS at 1h).
+     Version sits to the right of the uptime, separated by a thin
+     divider, so OBS operators can confirm which build is loading. -->
 <div class="uptime-counter" aria-hidden="true">
   <span class="uptime-dot"></span>
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
+  <span class="uptime-divider"></span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.2</span>
 </div>
 
 <div class="stage">
