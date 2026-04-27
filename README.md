@@ -17,6 +17,32 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.52 — 2026-04-27 — JAIL FEATURE complete (phases A + B + C)
+
+PHASE C: BAIL-XENA flow + Xena anti-sidekick + two unrelated bug fixes that surfaced during phase C work.
+
+**BAIL XENA INSTEAD button now active.** When clicked from the jail dialogue, `jailBailXena()` runs:
+- Spends 100% of Mike's current Cx (could be 0 — design intent: this option exists exactly so a broke player has SOMETHING to do besides quit)
+- Drops `state.lives` to **min(state.lives, 1)** so a 5-life Mike loses 4 lives but a 1-life Mike loses none
+- Same resume mechanics as self-bail: cop touch counter reset, distance rolled back 150m, all in-flight obstacles/pickups/cars/fauna wiped, all active effects cleared, 1.5s respawn invuln
+- Triggers a **canvas-side screen distortion** for ~1500ms (3-pass chromatic-wave + glitch bars + `xena-bailed-out.mp3` sting) so "her bail-out is happening" reads as a magical/ritual moment
+- After the distortion, the **`xena-bail` cutscene** fires with the line: *"Thanks Mike for bailing me out. Nick White snitched, AGAIN. You a real homie Mike! I'll repay you... later... are you allergic to silicone?"* — uses the 3 chroma-keyed `cutscene-xena-closed/mid/open.png` panels (mouth animates with the typewriter)
+- Cutscene `onComplete` activates `state.xenaFollowing = true` and calls `finishJailExit()` to resume gameplay
+
+**Xena follower (anti-sidekick).** Once active, she runs alongside Mike on the opposite side from Ice (or the side with more room if Ice isn't around). 4-frame walk cycle (`xena-walk-01..04`) at 110ms, height-matched to Ice for visual parity, mirrors horizontally if she's on Mike's left so she always faces forward.
+
+**Steal mechanic** (`tryXenaSnipe`):
+- Detection radius **250 px** around Xena's position
+- 30% probability per item per first-frame-in-radius (then "tagged" — subsequent frames don't re-roll)
+- Tagged items get consumed when their Y line passes Xena's Y line, awarding nothing to Mike + playing `xena-coin-pickup.mp3` + briefly gold-glowing Xena's body
+- **Steals Cx coins AND weed pickups** per spec
+- **Does NOT steal**: ham, +1 life (h400), horse, phone-thief obstacles — those land for Mike normally
+- Hidden during the water phase + during horse rides + during cutscenes (same rules as Ice)
+
+**Bug fix #1 — cutscenes no longer let distance/time tick through.** `loop()` now treats `cutscene.active` as a freeze state alongside pause + jail. Pre-fix: a slow reader during e.g. `first-meet @ 600m` could blow past `mike-tells-off @ 2000m` mid-dialogue and trigger them back-to-back as soon as the first finished. Now distance + elapsedMs + spawning + sprite walk-cycles all freeze during cutscenes.
+
+**Bug fix #2 — leaderboard music swap.** `pickRandomMusic()` was filtering by `channel === 'music'`, which after phase A landed `jailed.mp3` in the random pool — causing fresh runs to roll jail music as their gameplay bg, and clicking the leaderboard surfaced it as the audible track. Fixed by tightening the filter to keys starting with `bg-music-` (the intended ambient pool).
+
 ### Run v0.18.52 — 2026-04-27 — JAIL FEATURE phase B (self-bail)
 
 NEW MECHANIC: Mike gets jailed on his **2nd cumulative cop touch** in a single run. Cop cars (lane spawns) AND cross-traffic cop cars both count. The 1st touch behaves as before (lose a heart). The 2nd touch fires the jail sequence INSTEAD of life loss.

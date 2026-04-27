@@ -162,6 +162,20 @@
   var ICE_COIN_BONUS = 0.5;        // bonus per Ice-collected coin (counts as 0.5x toward total)
   var ICE_HEIGHT_FRAC = 0.27;      // Ice's run-cycle height as fraction of viewH (taller than Mike's 0.17)
 
+  // XENA THE WITCH — anti-sidekick. Activates when Mike picks "BAIL
+  // XENA INSTEAD" in the jail dialogue (v0.18.52 phase C). She trails
+  // Mike like Ice, but instead of GRABBING coins for him, she STEALS
+  // them so Mike can't have them. Same idea applies to Weed pickups
+  // (per spec — her hostility cluster). Detection radius and steal
+  // probability tuned conservatively so she's annoying without being
+  // run-ending. User feedback may push these later.
+  var XENA_OFFSET_X_FRAC   = 0.13;   // mirrors Ice — typically the OPPOSITE side
+  var XENA_REACH_PX        = 250;    // detection + grab radius (per user spec)
+  var XENA_STEAL_PROB      = 0.30;   // 30% chance per pass through her radius
+  var XENA_HEIGHT_FRAC     = 0.27;   // matches Ice for visual parity
+  var XENA_FRAME_MS        = 110;    // walk-cycle frame duration
+  var XENA_GRAB_FLASH_MS   = 350;    // brief gold flash on her body when she snipes
+
   // Sprite drawing — these are scale factors for the source PNGs.
   // Source sprites are ~700px tall (Mike) so scale aggressively for
   // a normal-sized player on screen. With 5 lanes each lane is narrower
@@ -346,6 +360,21 @@
     var ick = 'ice-' + (ic < 10 ? '0' + ic : ic);
     SPRITE_PATHS[ick] = 'img/sprites/' + ick + '.png';
   }
+  // Xena The Witch sprites (v0.18.52 phase C) — anti-sidekick after
+  // jail bail-out. 18 walk frames + 18 pose frames extracted from the
+  // 2 Gemini sheets. We use a small subset for the run cycle.
+  for (var xw = 1; xw <= 18; xw++) {
+    var xwk = 'xena-walk-' + (xw < 10 ? '0' + xw : xw);
+    SPRITE_PATHS[xwk] = 'img/sprites/' + xwk + '.png';
+  }
+  // Cutscene panels for the bail-Xena dialogue (3 mouth states matching
+  // the existing closed/mid/open pattern used by Adin / Shoovy).
+  ['closed', 'mid', 'open'].forEach(function (m) {
+    SPRITE_PATHS['cutscene-xena-' + m] = 'img/cutscene-xena-' + m + '.png';
+  });
+  // Jail bg images (preloaded so the eye-blink swap doesn't flash white)
+  SPRITE_PATHS['jail-bg-open']   = 'img/jail-bg-open.png';
+  SPRITE_PATHS['jail-bg-closed'] = 'img/jail-bg-closed.png';
   // Cop car sprites (referenced by OBSTACLE_TYPES below). Preload
   // frames 01-04 — the cycle uses them in order for R/B/R/B
   // alternating-light animation.
@@ -546,8 +575,17 @@
   }
 
   function pickRandomMusic() {
+    // Filter to the gameplay bg-music POOL only (the 3 ambient tracks).
+    // Pre-fix: this just filtered by channel === 'music', which after
+    // v0.18.52 ALSO included jailed.mp3 — randomly selecting it as
+    // background music when starting a fresh run, causing the user-
+    // reported "leaderboard plays jail music" bug. The leaderboard
+    // overlay itself doesn't touch audio; the bug was that the run's
+    // bg music was already wrong before the player even opened the
+    // leaderboard. Filter by key prefix 'bg-music-' to only ever pick
+    // from the intended ambient pool.
     var keys = Object.keys(AUDIO_DEFS).filter(function (k) {
-      return AUDIO_DEFS[k].channel === 'music';
+      return AUDIO_DEFS[k].channel === 'music' && k.indexOf('bg-music-') === 0;
     });
     return keys[Math.floor(Math.random() * keys.length)];
   }
@@ -755,6 +793,30 @@
         // Big centered "+10 Cx" flash with spinning coin animation.
         triggerCoinRewardFlash(10);
         ga('adin_post_water_reward', { coins: 10 });
+      },
+    },
+    // BAIL-XENA cutscene (v0.18.52 phase C). Fires after the player
+    // chose "BAIL XENA INSTEAD" in the jail dialogue and the screen
+    // distortion + xena-bailed-out.mp3 sting played. Single panel,
+    // long line — Xena's single beat of dialogue per user spec.
+    // onComplete activates state.xenaFollowing and resumes gameplay
+    // via the standard finishJailExit() tail.
+    'xena-bail': {
+      manualOnly: true,
+      panels: [
+        {
+          speaker: 'XENA THE WITCH',
+          bgPrefix: 'cutscene-xena-', bgExt: '.png',
+          line: "Thanks Mike for bailing me out. Nick White snitched, AGAIN. You a real homie Mike! I'll repay you... later... are you allergic to silicone?",
+        },
+      ],
+      onComplete: function () {
+        state.xenaFollowing = true;
+        // Resume gameplay — same tail used by self-bail. Note we
+        // intentionally call this AFTER setting xenaFollowing so the
+        // first frame back has Xena present already.
+        finishJailExit();
+        ga('xena_bailed', { at_distance: Math.floor(state.distance) });
       },
     },
     'ice-returns': {
@@ -1377,6 +1439,17 @@
       lastSide: 1,            // -1 = Mike's left, +1 = Mike's right (Ice mirrors when Mike lane-shifts)
     },
     iceCoinsCollected: 0,     // Ice's running total this run (for HUD if we ever surface it)
+    // XENA THE WITCH — anti-sidekick (v0.18.52 phase C). Activated by
+    // jailBailXena() when player chose "BAIL XENA INSTEAD" in jail.
+    // She follows like Ice but STEALS coins/weed so Mike can't have them.
+    xenaFollowing: false,
+    xena: {
+      lastSide: -1,           // mirrors Ice — typically opposite side
+      grabFlashUntil: 0,      // brief gold-tint flash on her body after a snipe
+    },
+    xenaStolenCount: 0,       // for stats / future HUD
+    // For canvas-side screen-distortion at bail-xena trigger
+    xenaBailDistortUntil: 0,
     effects: {
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
@@ -2306,6 +2379,57 @@
     finishJailExit();
   }
 
+  // BAIL XENA — alternative to self-bail. Costs whatever Cx Mike has
+  // (could be 0). Drops Mike to 1 life (or stays at 1 if already at 1).
+  // Resets cop touches + rolls distance back like self-bail. Triggers
+  // a screen distortion + xena-bailed-out.mp3 sting, then fires the
+  // 'xena-bail' cutscene whose onComplete activates Xena's follower.
+  function jailBailXena() {
+    // Spend whatever Mike has. Could be 0 — that's the design.
+    state.coins = 0;
+    // Drop to 1 life (no-op if already at 1, never increases lives).
+    if (state.lives > 1) state.lives = 1;
+    // Same resume mechanics as self-bail:
+    state.copTouches = 0;
+    state.distance = Math.max(0, state.distance - JAIL_RESUME_ROLLBACK_M);
+    state.distancePx = Math.max(0, state.distancePx - JAIL_RESUME_ROLLBACK_M * 10);
+    state.player.lane = state.jail.checkpointLane;
+    state.player.targetLane = state.jail.checkpointLane;
+    state.player.lerpX = 1;
+    state.player.jumpStart = 0;
+    state.obstacles = [];
+    state.coinsArr = [];
+    state.pickups = [];
+    state.crossCars = [];
+    state.fauna = [];
+    state.chaseOfficers = [];
+    state.coinParticles = [];
+    state.effects.hamFreezeUntil = 0;
+    state.effects.hamBonusUntil = 0;
+    state.effects.weedDebuffUntil = 0;
+    state.effects.horseBoostUntil = 0;
+    state.effects.controlsReversedUntil = 0;
+    state.effects.textShownUntil = 0;
+    state.invulnUntil = performance.now() + 1500;
+    // Screen distortion overlay duration — drives a canvas-side
+    // "warp + chromatic-aberration" effect for the next 1500ms while
+    // the dialogue cutscene starts up. Drawn from drawEffects().
+    state.xenaBailDistortUntil = performance.now() + 1500;
+    // Hide the jail UI immediately. The cutscene overlay (HTML) takes
+    // over and the canvas distortion plays underneath / behind it.
+    hideJailOverlay();
+    // Stop the jail loops — the cutscene runs in 'ambient silence'
+    // until xena-bail finishes and finishJailExit restarts music.
+    stopLoop('jailed');
+    stopLoop('policejail');
+    state.jail.phase = 'bailing'; // gates input; finishJailExit returns it to 'none'
+    // Distortion-effect sting
+    playSfx('xena-bailed-out');
+    // Fire the cutscene after a brief delay so the distortion is the
+    // first thing the player perceives.
+    setTimeout(function () { startCutscene('xena-bail'); }, 700);
+  }
+
   // QUIT TO TITLE — bypass the bail entirely.
   function jailQuitToTitle() {
     hideJailOverlay();
@@ -2905,7 +3029,10 @@
     for (i = 0; i < state.coinsArr.length; i++) {
       var co = state.coinsArr[i];
       if (co.picked) continue;
-      // Ice gets first crack at the coin if it's within his reach radius
+      // XENA snipes coins BEFORE Ice or Mike can grab them. Returns
+      // true if she stole it; in that case skip both Ice + Mike paths.
+      if (tryXenaSnipe(co, now, 'coin')) continue;
+      // Ice gets second crack at the coin if it's within his reach radius
       if (tryIceGrab(co, now)) continue;
       if (co.lane !== state.player.targetLane) continue;
       var coCenterY = co.y + co.h / 2;
@@ -2919,10 +3046,15 @@
         else if (state.coins >= 6) state.multiplier = 2;
       }
     }
-    // Pickup collisions (ham / 400 / weed)
+    // Pickup collisions (ham / 400 / weed). Xena steals WEED only
+    // (per spec — her hostility cluster). Ham / 400 / horse / phone
+    // are unaffected by her — those land normally.
     for (i = 0; i < state.pickups.length; i++) {
       var pk = state.pickups[i];
       if (pk.picked) continue;
+      if (pk.type && pk.type.kind === 'weed') {
+        if (tryXenaSnipe(pk, now, 'weed')) continue;
+      }
       if (pk.lane !== state.player.targetLane) continue;
       var pkCenterY = pk.y + pk.h / 2;
       var pCenterY3 = py - playerSize.h * 0.4;
@@ -3094,6 +3226,9 @@
       drawPlayer(now);
       drawIce(now);
     }
+    // Xena (anti-sidekick) — drawn alongside Ice on the opposite side.
+    // Same Y plane as Mike, so render after Mike like side-kick Ice.
+    drawXena(now);
 
     // Shoovy's sailboat (mid-water approach). Drawn AFTER Mike so the
     // boat is visibly closer to camera than Mike (it's coming toward
@@ -3453,6 +3588,39 @@
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = 'rgba(255,90,170,.85)';
       ctx.fillRect(0, 0, w * rRem, 6);
+    }
+
+    // XENA BAIL-OUT DISTORTION (v0.18.52 phase C) — animated chromatic
+    // wave/glitch overlay played for ~1.5s after the player picks
+    // BAIL XENA. Reads as a "she's casting something" moment before
+    // the cutscene panel slides in. Pure canvas effect (no DOM), so
+    // it sits behind the cutscene HTML but in front of the gameplay
+    // canvas — same render-layer as the BUSTED flash below.
+    if (now < state.xenaBailDistortUntil) {
+      var dProg = 1 - (state.xenaBailDistortUntil - now) / 1500;  // 0→1
+      // Three-pass tinted scanline veil (red / green / blue offsets)
+      var ampPx = 14 * (1 - Math.abs(dProg - 0.5) * 2); // pulses
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ['rgba(255, 60, 200, 0.30)',
+       'rgba(60, 255, 200, 0.25)',
+       'rgba(80, 120, 255, 0.30)'].forEach(function (col, i) {
+        ctx.fillStyle = col;
+        var ox = Math.sin(now / (90 + i * 30) + i * 1.7) * ampPx;
+        ctx.fillRect(ox, 0, w, h);
+      });
+      ctx.restore();
+      // Glitch bars — randomly placed horizontal slabs of inverted lines
+      var nBars = 5;
+      ctx.save();
+      ctx.globalAlpha = 0.45 * (1 - dProg);
+      for (var bi = 0; bi < nBars; bi++) {
+        var by = ((now / (40 + bi * 17)) * 30 + bi * 200) % h;
+        var bh = 4 + (bi % 3) * 3;
+        ctx.fillStyle = bi % 2 === 0 ? 'rgba(255, 80, 220, 0.7)' : 'rgba(80, 220, 255, 0.7)';
+        ctx.fillRect(0, by, w, bh);
+      }
+      ctx.restore();
     }
 
     // BUSTED FLASH OVERLAY (v0.18.52) — drawn DEAD LAST so it covers
@@ -4162,6 +4330,119 @@
     return false;
   }
 
+  // ============================================================
+  // XENA THE WITCH — anti-sidekick (v0.18.52 phase C). Mirrors Ice's
+  // rendering path but on the OPPOSITE side of Mike (or same side if
+  // Ice is also there — they jostle for room). Steals Cx coins +
+  // weed pickups from Mike instead of grabbing for him.
+  // ============================================================
+  function xenaX() {
+    // Pick the side OPPOSITE to where Ice is. If Ice isn't around,
+    // pick the side with more room (mirrors Ice's iceX logic).
+    var mikeX = laneX(state.player.targetLane);
+    var w = viewW();
+    var leftRoom = mikeX;
+    var rightRoom = w - mikeX;
+    var side;
+    if (state.iceSidekickJoined && !state.iceTrailing) {
+      // Ice is on the side with more room — Xena takes the other.
+      side = (leftRoom > rightRoom) ? +1 : -1;
+    } else {
+      side = (leftRoom > rightRoom) ? -1 : +1;
+    }
+    state.xena.lastSide = side;
+    return mikeX + side * (w * XENA_OFFSET_X_FRAC);
+  }
+
+  function pickXenaFrame(now) {
+    // Cycle through 4 walk frames at XENA_FRAME_MS. Picked from the
+    // 18-frame walk sheet; frames 1-4 are the front-facing run cycle.
+    var frames = ['xena-walk-01', 'xena-walk-02', 'xena-walk-03', 'xena-walk-04'];
+    return frames[Math.floor(now / XENA_FRAME_MS) % frames.length];
+  }
+
+  function drawXena(now) {
+    if (!state.xenaFollowing) return;
+    if (cutscene.active) return;
+    // No Xena during the water phase — same rule as Ice. Mike's
+    // alone on the mattress raft.
+    if (state.water && state.water.phase !== 'none') return;
+    if (now < state.effects.horseBoostUntil) return;  // hidden during horse ride
+    var key = pickXenaFrame(now);
+    var img = sprites[key];
+    var baseImg = sprites['xena-walk-01'];
+    if (!img || !baseImg) return;
+    var pxPerSrc = (viewH() * XENA_HEIGHT_FRAC) / baseImg.height;
+    var w = img.width * pxPerSrc;
+    var h = baseImg.height * pxPerSrc;
+    var bob = Math.sin(now / 110) * (viewH() * 0.012);
+    var x = xenaX();
+    var y = playerY() - h + bob;
+
+    ctx.save();
+    // Brief gold-tint flash when she snipes a coin/weed
+    var flashing = now < state.xena.grabFlashUntil;
+    if (flashing) {
+      // Pulse alpha slightly while flashed
+      ctx.shadowColor = 'rgba(255, 213, 102, 0.85)';
+      ctx.shadowBlur = 18;
+    }
+    // Mirror horizontally if she's on Mike's left so she faces forward
+    if (state.xena.lastSide < 0) {
+      ctx.translate(x + w / 2, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, img.width, img.height, -w / 2, 0, w, h);
+    } else {
+      ctx.drawImage(img, 0, 0, img.width, img.height, x - w / 2, y, w, h);
+    }
+    ctx.restore();
+  }
+
+  // tryXenaSnipe — called from coin / pickup collision paths BEFORE
+  // Mike's own collision check. Returns true if Xena stole the item
+  // (caller should treat the item as already-consumed and skip Mike's
+  // normal collection / debuff effect).
+  //
+  // Logic:
+  //   1. Bail out if Xena isn't following or is already invisible.
+  //   2. Item must be within XENA_REACH_PX of Xena's current position.
+  //   3. Roll a 30% chance per item per frame it spends in radius.
+  //      Once she "decides to steal" she keeps the decision (item.xenaTagged)
+  //      so subsequent frames don't re-roll and accidentally let Mike
+  //      grab a coin she'd already committed to.
+  function tryXenaSnipe(item, now, kind) {
+    if (!state.xenaFollowing) return false;
+    if (!item || item.picked) return false;
+    if (cutscene.active) return false;
+    if (state.water && state.water.phase !== 'none') return false;
+    if (now < state.effects.horseBoostUntil) return false;
+    var ix = xenaX();
+    var iy = playerY() - (viewH() * XENA_HEIGHT_FRAC) * 0.5;
+    var itemCx = laneX(item.lane);
+    var itemCy = item.y + (item.h || 60) / 2;
+    var dx = itemCx - ix;
+    var dy = itemCy - iy;
+    if (dx * dx + dy * dy > XENA_REACH_PX * XENA_REACH_PX) return false;
+    if (item.xenaTagged) {
+      // Already committed; consume on actual reach
+      // (when item passes Xena's Y line)
+      if (itemCy >= iy - 10) {
+        item.picked = true;
+        state.xenaStolenCount++;
+        state.xena.grabFlashUntil = now + XENA_GRAB_FLASH_MS;
+        playSfx('xena-coin-pickup');
+        ga('xena_stole', { kind: kind || 'unknown' });
+        return true;
+      }
+      return false;  // tagged but hasn't reached her yet
+    }
+    // First time in radius — roll for steal commitment
+    if (Math.random() < XENA_STEAL_PROB) {
+      item.xenaTagged = true;
+    }
+    return false;
+  }
+
   function drawPlayer(now) {
     // Lerp X smoothly between current and target lane.
     var fromLane = state.player.lane;
@@ -4314,6 +4595,11 @@
     state.jail.startedAt = 0;
     state.jail.checkpointDistance = 0;
     state.jail.checkpointLane = 0;
+    state.xenaFollowing = false;
+    state.xena.lastSide = -1;
+    state.xena.grabFlashUntil = 0;
+    state.xenaStolenCount = 0;
+    state.xenaBailDistortUntil = 0;
     // ====================================================
     // NEW-RECORD CELEBRATION (v0.18.51)
     // Cache the leaderboard's current top score at run start.
@@ -4699,15 +4985,25 @@
   function loop(now) {
     var dt = Math.min(0.05, (now - lastTime) / 1000); // clamp dt to avoid huge jumps after tab switch
     lastTime = now;
-    // JAIL: world is frozen while jailed. update() is skipped, but
-    // tickJail still runs (drives the BUSTED → cell phase transition).
+    // FREEZE STATES — update() is skipped (no distance/elapsedMs/spawn
+    // advancement) for any of these:
+    //   - paused (player pressed P/ESC)
+    //   - jailed (BUSTED flash + cell + bailing phases)
+    //   - cutscene active (Ice/Mike/Adin/Shoovy/Xena dialogue panel up)
+    // The cutscene gate is critical — pre-v0.18.52 distance kept ticking
+    // during cutscenes, so a slow reader could blow past the next
+    // cutscene's trigger distance during the current one and queue
+    // back-to-back dialogue. With the gate, cutscenes are truly
+    // pause-equivalent for distance + time + spawning.
     var inJail = state.jail && state.jail.phase !== 'none';
-    if (state.phase === 'playing' && !state.paused && !inJail) update(dt);
+    var inCutscene = (typeof cutscene !== 'undefined') && cutscene.active;
+    var frozen = state.paused || inJail || inCutscene;
+    if (state.phase === 'playing' && !frozen) update(dt);
     if (inJail) tickJail(now);
     var renderNow;
-    if (state.paused || inJail) {
+    if (frozen) {
       // Same trick as pause — freeze render's time source so sprite
-      // walk-cycles don't tick during the jail freeze.
+      // walk-cycles don't tick during the freeze.
       if (!pauseFrozenRenderNow) pauseFrozenRenderNow = now;
       renderNow = pauseFrozenRenderNow;
     } else {
@@ -4937,7 +5233,14 @@
       if (state.jail.phase !== 'cell') return;
       jailQuitToTitle();
     });
-    // jail-bail-xena button stays disabled until phase C ships.
+    // BAIL XENA — phase C. Spends all coins (could be 0), drops Mike
+    // to 1 life, and Xena follows him as an anti-sidekick.
+    var jailXena = document.getElementById('jail-bail-xena');
+    if (jailXena) jailXena.addEventListener('click', function (e) {
+      e.target.blur();
+      if (state.jail.phase !== 'cell') return;
+      jailBailXena();
+    });
     // ============================================================
     // JAIL bg eye-blink loop — swaps src between open/closed every
     // JAIL_BG_BLINK_MS while the cell is shown. Cheap setInterval is
