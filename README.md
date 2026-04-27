@@ -17,6 +17,28 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.48 — 2026-04-27
+
+Fix — water EXIT transition tile was never visible. Real bug, not a perception issue.
+
+`drawWaterRoad` was computing `tProgress = elapsed / transitionDur` where `elapsed` is the TOTAL water-segment elapsed (from `state.water.startedAt`), not the phase-relative elapsed. During EXIT:
+
+- Total elapsed at exit phase start: **12,500ms** (WATER_ENTER_MS 2500 + WATER_BODY_MS 10000)
+- transitionDur: **2,500ms**
+- Computed tProgress: `12500 / 2500 = 5` → clamped to **1**
+
+So from the FIRST frame of the exit phase, the boat-ramp tile rendered as if it had already scrolled fully off the top of the screen. Player saw the BG underlay (street tile from v0.18.41 layered fix) for the entire 2.5s, then phase flipped to `'none'` — looked like an instant snap from sea to street with no transition.
+
+Worse: the Shoovy `onComplete` explicitly sets `startedAt = now - (WATER_ENTER_MS + WATER_BODY_MS)` to jump the phase forward, which made `elapsed === 12500` *immediately* at the moment the cutscene closed. Same broken math.
+
+Fix: introduce `phaseStartElapsed` per phase (entering = 0, exiting = WATER_ENTER_MS + WATER_BODY_MS). Compute `phaseElapsed = elapsed - phaseStartElapsed` and use that for the tile-scroll progress. Now during EXIT:
+
+- phaseElapsed: 0 → 2500 over the full 2.5s phase
+- tProgress: 0 → 1
+- Boat-ramp tile actually scrolls UP across the screen as designed
+
+This bug has been live since v0.18.34. The v0.18.41 layering fix and v0.18.47 boat-only-in-water fix were both real but couldn't be observed correctly because the transition tile itself was invisible the whole time. Should now see the boat-ramp tile fully scroll past during the 2.5s exit phase, revealing street as it rises.
+
 ### Run v0.18.47 — 2026-04-27
 
 Three fixes from playtest:

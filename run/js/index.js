@@ -3152,18 +3152,30 @@
     // Resolve the transition tile for this phase + compute its Y rect.
     var transitionTile = null;
     var transitionDur = 0;
+    // PHASE-RELATIVE elapsed: each transition tile's animation progress
+    // is measured from the START OF ITS OWN PHASE, not from the total
+    // water-segment start. The earlier code used `elapsed` (total)
+    // directly, which made tProgress = elapsed/transitionDur >> 1
+    // during the EXIT phase (elapsed at exit start = WATER_ENTER_MS +
+    // WATER_BODY_MS = 12500ms; transitionDur = 2500ms; ratio = 5).
+    // Result: the exit tile rendered fully scrolled-off from the very
+    // first frame of the exit phase — never visible to the player.
+    var phaseStartElapsed = 0;
     if (phase === 'entering') {
       transitionTile = enter;
       transitionDur = WATER_ENTER_MS;
+      phaseStartElapsed = 0;
     } else if (phase === 'exiting') {
       transitionTile = exit;
       transitionDur = WATER_EXIT_MS;
+      phaseStartElapsed = WATER_ENTER_MS + WATER_BODY_MS;
     }
     if (!transitionTile || transitionDur <= 0) {
       ctx.restore();
       return;
     }
-    var tProgress = Math.min(1, elapsed / transitionDur);
+    var phaseElapsed = Math.max(0, elapsed - phaseStartElapsed);
+    var tProgress = Math.min(1, phaseElapsed / transitionDur);
     var transitionTileH = transitionTile.height * (w / transitionTile.width);
     // Tile scrolls UP across the viewport: t=0 → tile top at yBot (just
     // appearing at viewport bottom); t=1 → tile top at yTop - tileH
