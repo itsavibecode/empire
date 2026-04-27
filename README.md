@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.43 — 2026-04-27
+
+Polish — the OG share preview was broken at launch and never noticed. Fixed.
+
+- **Generated `/run/og-runner.jpg`.** The meta tags had referenced this file forever but it was never created — every Facebook / Discord / iMessage / Slack / Twitter share preview was rendering only the URL fallback. New `build-runner-og.py` script composes the official 1200×630 share image from `titlescreen.jpg` (Mike + Ice in Chile) cover-fit into the standard OG canvas, with vignette gradient for legibility, "ON BABY!" cursive title at top, "An EmpireX endless runner — Chile streets, mob chase, hurricane survival" tagline, and OUREMPIREX.COM/RUN URL caption at bottom. Uses cross-platform font fallback (Windows / macOS / Linux) so the script runs anywhere. JPEG quality 88 — small file, plenty crisp at the social-card render size.
+- **Tightened the meta tags:**
+  - Updated `description`, `og:description`, and `twitter:description` to match the current game (mentions hurricane, cop cars, stream snipers — the v0.18.x feature set, not the launch state).
+  - Added `og:image:secure_url` (some crawlers prefer the explicit HTTPS field) and `og:image:type` (so the crawler doesn't have to sniff MIME).
+  - Added `twitter:image:alt` for accessibility on Twitter cards.
+  - Added `theme-color: #8E5CCB` so mobile browser chrome picks up the game's purple palette when added to home screen / shared.
+  - Tightened `og:image:alt` to mention both Mike + Ice + the URL caption (more accurate to what the image actually shows).
+
+Re-run `build-runner-og.py` after any title-art or tagline change.
+
 ### Run v0.18.42 — 2026-04-27
 
 Three fixes from playtest:
