@@ -1,22 +1,20 @@
 """
-Slice the Shoovy action sprite sheet into 24 individual PNG frames.
+Slice all Shoovy sprite sheets into individual PNG frames.
 
-Source: /run/concept/shoovy-actions.png
-        — 6 cols x 4 rows = 24 Shoovy poses on neon green background.
+Sources (in /run/concept/):
+  shoovy-actions.png        6 cols x 4 rows = 24 poses
+                            (idle/walk/gesture/specific actions)
+                            -> shoovy-action-01..24.png
+  shoovy-sailboat (1).png   4 cols x 4 rows = 16 sailboat poses
+                            -> shoovy-sail-01..16.png
+  shoovy-sailboat (2).png   4 cols x 4 rows = 16 mixed walk+sailboat
+                            -> shoovy-sail-17..32.png
 
-Layout (rough):
-  Row 1: standing / idle variants (front-facing)
-  Row 2: walking cycle (profile, side view)
-  Row 3: gesturing / talking / hand-raised poses
-  Row 4: specific actions (kneeling, holding camera, looking up,
-         holding tablet, hand wave, shrug)
-
-Output: /run/img/sprites/shoovy-action-XX.png  (01..24)
-
-Pipeline: chroma-key the neon green bg first (same target as the
-Shoovy + Adin + Ice cutscene extractions: rgb(7,223,33), tolerance
-90, 30-px feather), then per-cell slice + blob-filter to drop any
-inter-cell bleed.
+Pipeline: detect bg color from sheet corners (Gemini neon green is
+rgb(152,251,0), distinct from ChatGPT's rgb(7,223,33) — auto-detect
+avoids hardcoding), chroma-key + soft feather, per-cell slice with
+keep_largest_blob + trim. Each sheet's chroma-key target is detected
+independently in case different sheets use different shades.
 """
 
 from collections import deque
@@ -24,12 +22,14 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "run" / "concept" / "shoovy-actions.png"
 DST_DIR = ROOT / "run" / "img" / "sprites"
 
-COLS = 6
-ROWS = 4
-PREFIX = "shoovy-action-"
+# (filename, prefix, cols, rows, starting frame index)
+SHEETS = [
+    ("shoovy-actions.png",       "shoovy-action-", 6, 4,  1),
+    ("shoovy-sailboat (1).png",  "shoovy-sail-",   4, 4,  1),
+    ("shoovy-sailboat (2).png",  "shoovy-sail-",   4, 4, 17),
+]
 
 # The previous extractions used rgb(7, 223, 33) (ChatGPT's neon green).
 # The Shoovy action sheet was Gemini-generated and uses rgb(152, 251, 0)
@@ -120,34 +120,31 @@ def trim_transparent(im):
 
 
 def main():
-    if not SRC.exists():
-        print(f"SRC missing: {SRC}")
-        return
-    sheet = Image.open(SRC).convert("RGBA")
-    bg = detect_bg_color(sheet)
-    print(f"detected bg color: {bg}")
-    # 1) Chroma-key the bg from the WHOLE sheet first so the inter-cell
-    # gutters are transparent before per-cell crop.
-    sheet = chroma_key(sheet, bg, TOLERANCE, FEATHER)
-    w, h = sheet.size
-    cw = w // COLS
-    ch = h // ROWS
     DST_DIR.mkdir(parents=True, exist_ok=True)
-    idx = 1
-    for row in range(ROWS):
-        for col in range(COLS):
-            box = (col * cw, row * ch, (col + 1) * cw, (row + 1) * ch)
-            cell = sheet.crop(box).copy()
-            # Per-cell blob filter handles any neighbor bleed (e.g.,
-            # if Shoovy's outstretched hand from one cell drifted into
-            # another — should be rare since the cells have wide gutters).
-            cell = keep_largest_blob(cell)
-            cell = trim_transparent(cell)
-            name = f"{PREFIX}{idx:02d}.png"
-            cell.save(DST_DIR / name, "PNG", optimize=True)
-            print(f"wrote {name}  ({cell.size[0]}x{cell.size[1]})")
-            idx += 1
-    print("done.")
+    for sheet_name, prefix, cols, rows, start_idx in SHEETS:
+        src = ROOT / "run" / "concept" / sheet_name
+        if not src.exists():
+            print(f"SKIP missing: {sheet_name}")
+            continue
+        sheet = Image.open(src).convert("RGBA")
+        bg = detect_bg_color(sheet)
+        print(f"\n=== {sheet_name}  (bg: {bg}, {cols}x{rows} grid, start idx {start_idx})")
+        sheet = chroma_key(sheet, bg, TOLERANCE, FEATHER)
+        w, h = sheet.size
+        cw = w // cols
+        ch = h // rows
+        idx = start_idx
+        for row in range(rows):
+            for col in range(cols):
+                box = (col * cw, row * ch, (col + 1) * cw, (row + 1) * ch)
+                cell = sheet.crop(box).copy()
+                cell = keep_largest_blob(cell)
+                cell = trim_transparent(cell)
+                name = f"{prefix}{idx:02d}.png"
+                cell.save(DST_DIR / name, "PNG", optimize=True)
+                print(f"wrote {name}  ({cell.size[0]}x{cell.size[1]})")
+                idx += 1
+    print("\ndone.")
 
 
 if __name__ == "__main__":
