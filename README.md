@@ -17,6 +17,22 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.37 — 2026-04-27
+
+Fix — water → street EXIT transition now actually shows street being revealed instead of flickering back to sea before the snap.
+
+The exit phase scrolls the boat-ramp transition tile UP through the screen. The problem in v0.18.36 was that the BG behind the tile was always **sea** — so as the tile cleared the top of the screen, the player saw a beat of "still all sea" right before the phase flipped to `'none'` and the regular street tile snapped in. Visual hiccup right at the destination.
+
+Now the BG layer adapts to the phase direction:
+
+| Phase | BG underlay | What that does |
+|---|---|---|
+| `entering` | SEA (animated alternating waves) | Cliff transition reveals sea below |
+| `water` | SEA | Pure animated sea, no transition tile |
+| `exiting` | **STREET** (regular `currentRoadKey` tile) | Boat-ramp transition reveals street below as it scrolls up |
+
+New `drawStreetTileForBackground(yTop, yBot)` helper does the regular vertical-tile-scroll pattern but specifically as the underlay for the EXIT phase. So during the boat-ramp scroll, you see street appearing through the lower portion as the tile rises, smoothly bridging to the post-water world without that mid-frame "still sea" flash.
+
 ### Run v0.18.36 — 2026-04-27
 
 Three fixes for the hurricane segment from playtest:

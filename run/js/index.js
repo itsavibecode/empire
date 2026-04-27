@@ -2751,17 +2751,34 @@
     ctx.rect(0, yTop, w, roadH);
     ctx.clip();
 
-    // Fill the full clip with sea first so any gap reads as ocean,
-    // not the bg-color flash beneath. tileA color sample.
-    ctx.fillStyle = '#1d6587';
-    ctx.fillRect(0, yTop, w, roadH);
+    var phase = state.water.phase;
+    var elapsed = performance.now() - state.water.startedAt;
+
+    // Pick the BACKGROUND that fills the area BEHIND the transition
+    // tile based on which way the transition is going:
+    //   ENTERING: BG = SEA (the destination — once the cliff tile
+    //     scrolls out, the player should see open water).
+    //   EXITING:  BG = STREET (the destination — once the boat-ramp
+    //     tile scrolls out, the player should see road, NOT more sea
+    //     — that was the v0.18.36 bug where the exit transition
+    //     visually flickered back to sea before snapping to street).
+    //   WATER:    BG = SEA (no transition tile, just animated waves).
+    if (phase === 'exiting') {
+      // Render the regular street tile as the underlay so the exit
+      // transition reveals STREET as it scrolls up off the top.
+      drawStreetTileForBackground(yTop, yBot);
+    } else {
+      // ENTERING + WATER both want sea behind. Fill base color first
+      // (closes any gap before the alternating tiles draw on top).
+      ctx.fillStyle = '#1d6587';
+      ctx.fillRect(0, yTop, w, roadH);
+      drawAlternatingSea(0, yTop, yBot, tileH, offset);
+    }
 
     // Compute the scroll position of the SPECIAL transition tile (one
     // per phase). Its top-edge Y when first entering = below the
-    // viewport, then it scrolls UP past Mike. We anchor the transition
-    // to the phase's start time so it appears once and only once.
-    var phase = state.water.phase;
-    var elapsed = performance.now() - state.water.startedAt;
+    // viewport, then it scrolls UP past Mike. Anchored to phase start
+    // so it appears once and only once.
     var transitionTile = null;
     var transitionDur = 0;
     if (phase === 'entering') {
@@ -2772,33 +2789,38 @@
       transitionDur = WATER_EXIT_MS;
     }
     if (transitionTile && transitionDur > 0) {
-      // Transition tile starts BELOW yBot at elapsed=0 and reaches
-      // yTop at elapsed=transitionDur (scrolls full screen height).
       var tProgress = Math.min(1, elapsed / transitionDur);
       var transitionTileH = transitionTile.height * (w / transitionTile.width);
-      // For ENTER: t=0 → tile bottom at yBot; t=1 → tile top at yTop
-      //            (so the road→cliff scrolls from bottom edge up off the top).
-      // For EXIT: same scroll direction (up) — boat-ramp comes from
-      //           bottom and approaches Mike, then he's back on street.
-      var tileTopY;
-      if (phase === 'entering') {
-        // Tile top moves from (yBot) DOWN to (yTop - transitionTileH)
-        // — i.e. it scrolls UP across the screen. Linear interp.
-        tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
-      } else {
-        // EXITING: same upward scroll
-        tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
-      }
-      // Background sea (alternating tiles) above + below the transition
-      // tile so there's never a gap. We render the sea first, then
-      // overlay the transition.
-      drawAlternatingSea(0, yTop, yBot, tileH, offset);
+      // Tile scrolls UP across the screen: t=0 → tile bottom at yBot
+      // (just appearing), t=1 → tile top at yTop - transitionTileH
+      // (fully off the top). Same direction for both enter + exit.
+      var tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
       ctx.drawImage(transitionTile, 0, tileTopY, w, transitionTileH);
-    } else {
-      // WATER phase — pure animated sea
-      drawAlternatingSea(0, yTop, yBot, tileH, offset);
     }
+
     ctx.restore();
+  }
+
+  // Helper: render the regular street tile filling [yTop, yBot]. Used
+  // as the BACKGROUND underlay during the EXITING water phase so the
+  // boat-ramp transition reveals STREET (not more sea) as it scrolls
+  // up off the top of the screen.
+  function drawStreetTileForBackground(yTop, yBot) {
+    var w = viewW();
+    var roadH = yBot - yTop;
+    var bg = currentRoadKey ? sprites[currentRoadKey] : null;
+    if (!bg) {
+      // Fallback to procedural road if image missing
+      drawRoadProcedural(yTop, yBot);
+      return;
+    }
+    var bgScale = w / bg.width;
+    var tileH = bg.height * bgScale;
+    var offset = state.distancePx % tileH;
+    var firstY = yTop - offset + tileH;
+    for (var ty = firstY - tileH; ty - tileH < yBot; ty += tileH) {
+      ctx.drawImage(bg, 0, ty, w, tileH);
+    }
   }
 
   // Helper: tile bg-water-tile-a and bg-water-tile-b ALTERNATING
