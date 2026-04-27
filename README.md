@@ -17,6 +17,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.2 — 2026-04-26
+
+Patch — visible source list + clearer "users" label.
+
+- **"Live Sources" sidebar panel** above TOP 12 lists every streamer chat we're currently subscribed to, with the kick-green dot indicating live status. Pulls display names from `streamers.json` (e.g. "MikeSmallsJr") rather than the raw lowercase slug. Auto-updates every render tick as streamers go live or drop offline. Lets the operator see at a glance whose words are feeding the cloud right now, without having to inspect the WS or guess from the leaderboard.
+- **Footer label "speakers" → "unique users"** — same metric (count of distinct `userId`s seen across all live chats since page load) but with a less ambiguous label. The previous "speakers" reading was getting questioned in playtest because it wasn't clear whether it meant streamers or chatters. "Users" is unambiguous.
+
 ### Trending v0.1.1 — 2026-04-26
 
 Patch — Pusher key cycling + visible semver. Initial v0.1.0 release used a single Kick Pusher key (`eb1d5f283081a78b932c`) which Pusher rejected with code 4001 ("App key not in this cluster"). Kick rotates keys; the current one as of 2025 is `32cbd69e4b950bf97679`. The in-page debug overlay added in the previous patch surfaced the exact rejection message, which made the diagnosis trivial.

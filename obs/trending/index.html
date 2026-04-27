@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.1">
+<meta name="version" content="0.1.2">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -219,6 +219,57 @@
   .lb-row.top2 .word { color: var(--gold); }
   .lb-row.top3 .word { color: var(--ink); }
 
+  /* LIVE SOURCES — small panel above the leaderboard listing every
+     streamer chat we're currently subscribed to. Lets the operator see
+     at a glance whose words are feeding the cloud right now. */
+  .sources {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212,169,74,.15);
+  }
+  .sources h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 13px; letter-spacing: .25em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+    opacity: .85;
+  }
+  .sources-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 180px; overflow-y: auto;
+  }
+  .sources-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    border-radius: 3px;
+    background: rgba(83, 252, 24, 0.04);
+  }
+  .sources-row .dot {
+    width: 7px; height: 7px;
+    background: var(--kick);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--kick);
+    flex-shrink: 0;
+  }
+  .sources-row .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sources-empty {
+    text-align: center;
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 8px 0;
+  }
+
   /* FOOTER — connection status + brand */
   /* Debug overlay — visible by default whenever events are arriving but
      no chat is matching. Lets you read raw Pusher event names + sample
@@ -328,6 +379,12 @@
     </div>
 
     <aside class="leaderboard">
+      <div class="sources">
+        <h2>Live Sources</h2>
+        <div class="sources-list" id="sourcesList">
+          <div class="sources-empty">No streamers live</div>
+        </div>
+      </div>
       <h2>Top 12</h2>
       <div class="lb-list" id="lbList"></div>
     </aside>
@@ -356,7 +413,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.1';
+const TRENDING_VERSION = '0.1.2';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
@@ -752,6 +809,10 @@ async function resolveChatroomId(slug) {
 
 const pusher = new PusherClient();
 let roster = []; // [{slug}]
+// Display-name lookup populated from /streamers.json — used by the
+// "Live Sources" panel so we show "MikeSmallsJr" instead of the raw
+// lowercase slug.
+const slugToDisplay = {};
 const subscribedSlugs = new Set();
 const slugToChatroom = {};
 
@@ -937,11 +998,33 @@ function updateMsgStats() {
   // If "events" climbs but "chat" stays at 0, the event-name matcher
   // is wrong. If "chat" climbs but "msgs" is 0, payload parsing is
   // wrong. If "msgs" climbs but the cloud stays empty, the score
-  // threshold is too high.
+  // threshold is too high. "users" = unique chatters across ALL live
+  // streamer chats since page load (the all-time count, not windowed).
   el.textContent = `${stats.eventsReceived.toLocaleString()} events · ` +
     `${stats.chatEventsMatched.toLocaleString()} chat · ` +
     `${stats.totalMessages.toLocaleString()} msgs · ` +
-    `${stats.uniqueSpeakersAllTime.size.toLocaleString()} speakers`;
+    `${stats.uniqueSpeakersAllTime.size.toLocaleString()} unique users`;
+}
+
+// Render the "Live Sources" sidebar panel — one row per streamer we're
+// CURRENTLY subscribed to (i.e., live). Pulls display name from
+// slugToDisplay, with the kick-green dot indicating live status.
+function renderSources() {
+  const el = document.getElementById('sourcesList');
+  if (!el) return;
+  const slugs = Array.from(subscribedSlugs).sort((a, b) => {
+    const da = (slugToDisplay[a] || a).toLowerCase();
+    const db = (slugToDisplay[b] || b).toLowerCase();
+    return da.localeCompare(db);
+  });
+  if (slugs.length === 0) {
+    el.innerHTML = '<div class="sources-empty">No streamers live</div>';
+    return;
+  }
+  el.innerHTML = slugs.map(slug => {
+    const display = slugToDisplay[slug] || slug;
+    return `<div class="sources-row" title="kick.com/${escapeHtml(slug)}"><span class="dot"></span><span class="name">${escapeHtml(display)}</span></div>`;
+  }).join('');
 }
 
 // URL-based debug toggle — `?debug=1` forces panel visible, `?debug=0`
@@ -990,6 +1073,7 @@ function tick() {
   const top = win.topN(CONFIG.CLOUD_MAX_WORDS, CONFIG.MIN_SCORE);
   renderCloud(top);
   renderLeaderboard(top.slice(0, 12));
+  renderSources();
   updateConnStatus();
   updateMsgStats();
   updateDebugPanel();
@@ -1015,9 +1099,16 @@ fetch('/streamers.json', { cache: 'no-cache' })
   .then(r => r.json())
   .then(data => {
     const list = Array.isArray(data) ? data : (data.streamers || []);
-    // streamers.json uses `slug` for the Kick URL handle (e.g. "mikesmallsjr").
-    // Fall back to lowercased `name` if slug is missing for any entry.
-    roster = list.map(s => (s.slug || (s.name || '').toLowerCase())).filter(Boolean);
+    // streamers.json uses `slug` for the Kick URL handle (e.g. "mikesmallsjr")
+    // and `name` for the display name (e.g. "MikeSmallsJr"). Build both
+    // — `roster` drives subscription, `slugToDisplay` drives UI.
+    roster = [];
+    for (const s of list) {
+      const slug = s.slug || (s.name || '').toLowerCase();
+      if (!slug) continue;
+      roster.push(slug);
+      slugToDisplay[slug] = s.name || slug;
+    }
     pollRosterAndSubscribe();
     setInterval(pollRosterAndSubscribe, CONFIG.ROSTER_POLL_MS);
   })
