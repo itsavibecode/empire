@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
+<meta name="version" content="0.2.0">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -551,6 +552,69 @@
     z-index: 10;
     box-shadow: 0 0 8px rgba(212,169,74,.6);
   }
+
+  /* ---------- VERSION PILL (upper-left)
+     Tiny semver indicator so OBS operators can confirm which build is
+     loading in their browser source. Mirrors the bottom-of-screen
+     version pills used on /run/ + main site. Discreet styling. */
+  .version-pill {
+    position: fixed;
+    left: 14px;
+    top: 10px;
+    z-index: 5;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    opacity: .55;
+    text-shadow: 0 0 8px rgba(0,0,0,.9);
+    pointer-events: none;
+  }
+  .version-pill .v-prefix { color: var(--ink-dim); opacity: .6; }
+  .version-pill .v-num    { color: var(--gold); font-weight: 600; }
+
+  /* ---------- UPTIME COUNTER (lower-left)
+     Lightweight indicator of how long the BRB page has been mounted
+     since last refresh — useful for spotting stuck/stale OBS scenes
+     without having to F5 the page to find out. Discreet styling so
+     it doesn't compete with the streamer grid for attention. */
+  .uptime-counter {
+    position: fixed;
+    left: 22px;
+    bottom: 18px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-shadow: 0 0 8px rgba(0,0,0,.9);
+    pointer-events: none;
+  }
+  .uptime-counter .uptime-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px rgba(212,169,74,.6);
+    animation: uptime-pulse 2s ease-in-out infinite;
+  }
+  .uptime-counter .uptime-label {
+    color: var(--ink-dim);
+    opacity: .7;
+  }
+  .uptime-counter .uptime-value {
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: .15em;
+  }
+  @keyframes uptime-pulse {
+    0%, 100% { opacity: .35; }
+    50%      { opacity: 1; }
+  }
 </style>
 </head>
 <body>
@@ -568,6 +632,21 @@
 <div class="corner br"></div>
 
 <div class="rotation-progress" id="rotationProgress"></div>
+
+<!-- Version pill (upper-left) — confirms which build of the BRB scene
+     is loading in the OBS browser source. -->
+<div class="version-pill" aria-hidden="true">
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.0</span>
+</div>
+
+<!-- Uptime counter (lower-left) — ticks every second from page load.
+     Format auto-promotes from MM:SS to HH:MM:SS once the page has been
+     up for an hour or more. -->
+<div class="uptime-counter" aria-hidden="true">
+  <span class="uptime-dot"></span>
+  <span class="uptime-label">Uptime</span>
+  <span class="uptime-value" id="uptimeValue">00:00</span>
+</div>
 
 <div class="stage">
 
@@ -602,6 +681,30 @@
 
 <script>
   document.documentElement.style.setProperty('--video-opacity', CONFIG.VIDEO_OPACITY);
+
+  /* ==================================================================
+     UPTIME COUNTER — ticks every 1s. Useful for spotting frozen/stuck
+     OBS browser sources at a glance. Format auto-promotes:
+        < 1h: MM:SS
+        ≥ 1h: HH:MM:SS
+  ================================================================== */
+  (function () {
+    const startedAt = Date.now();
+    const el = document.getElementById('uptimeValue');
+    if (!el) return;
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+    function tick() {
+      const s = Math.floor((Date.now() - startedAt) / 1000);
+      const hh = Math.floor(s / 3600);
+      const mm = Math.floor((s % 3600) / 60);
+      const ss = s % 60;
+      el.textContent = hh > 0
+        ? pad2(hh) + ':' + pad2(mm) + ':' + pad2(ss)
+        : pad2(mm) + ':' + pad2(ss);
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -880,13 +983,105 @@
   let currentPageIdx = 0;
   let rotateTimer = null;
 
+  // Build a single tile DOM node from the HTML template above.
+  function buildTile(s, isTop) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = tileHTML(s, { isTop }).trim();
+    return wrap.firstElementChild;
+  }
+
+  // DOM-DIFFING render. Critical for stopping the iframe-blackout lag:
+  // previously this function set content.innerHTML = entire grid markup
+  // every poll, which destroyed + recreated EVERY iframe — so when a
+  // 2nd live streamer was discovered 5s after the 1st, the 1st's iframe
+  // would tear down + reload, going black for ~3 seconds.
+  //
+  // Strategy: index existing tiles by data-streamer, only inject brand
+  // new ones, only remove tiles whose streamer is no longer in this
+  // page, reorder via insertBefore as viewer counts shift. iframes
+  // owned by tiles that survive a re-render are NOT touched — they
+  // keep playing without blackout.
   function renderPage(idx) {
     const page = livePages[idx];
     if (!page || page.length === 0) return;
-    // Page is already sorted by viewers desc — first tile is the featured one.
     const count = Math.min(page.length, 6);
-    const tiles = page.map((s, i) => tileHTML(s, { isTop: i === 0 })).join('');
-    content.innerHTML = `<div class="grid" data-count="${count}">${tiles}</div>`;
+    const isTopName = page[0] ? page[0].username : null;
+
+    // First-time mount: create the grid element fresh
+    let grid = content.querySelector('.grid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'grid';
+      grid.dataset.count = count;
+      content.innerHTML = '';
+      content.appendChild(grid);
+    } else {
+      grid.dataset.count = count;
+    }
+
+    // Map currently-mounted tiles by streamer name so we can reuse them.
+    const existing = new Map();
+    grid.querySelectorAll('.tile').forEach(t => {
+      const iframe = t.querySelector('iframe');
+      if (iframe && iframe.dataset.streamer) {
+        existing.set(iframe.dataset.streamer, t);
+      }
+    });
+
+    // Set of streamers we WANT mounted on this page
+    const wanted = new Set(page.map(s => s.username));
+
+    // Drop tiles for streamers not on this page (offline, rotated off, etc.)
+    for (const [name, tile] of existing) {
+      if (!wanted.has(name)) {
+        tile.remove();
+        existing.delete(name);
+      }
+    }
+
+    // For each desired streamer in order, reuse OR create + position
+    for (let i = 0; i < page.length; i++) {
+      const s = page[i];
+      const isTop = s.username === isTopName;
+      let tile = existing.get(s.username);
+
+      if (tile) {
+        // EXISTING tile — update viewer badge in place, no iframe reload
+        const vb = tile.querySelector('.viewers-badge');
+        if (vb) vb.textContent = `${fmtViewers(s.viewers)} VIEWERS`;
+        // Featured-flip handling (top streamer changed). The audio-badge
+        // + tile-featured class control visuals, but the iframe muted
+        // state lives in the iframe's src URL — to actually swap audio
+        // we'd have to reload the iframe. Skipping that on purpose
+        // here: silent re-sort beats a 3s audio-blackout. If the user
+        // wants to force a re-mount with new audio, they can refresh.
+        const wasFeatured = tile.classList.contains('tile-featured');
+        if (isTop !== wasFeatured) {
+          tile.classList.toggle('tile-featured', isTop);
+          // Add/remove audio badge text DOM without rebuilding tile
+          const existingBadge = tile.querySelector('.audio-badge');
+          if (isTop && !existingBadge) {
+            const ab = document.createElement('div');
+            ab.className = 'audio-badge';
+            ab.innerHTML = '<span class="audio-icon">♪</span>AUDIO LIVE';
+            tile.insertBefore(ab, tile.querySelector('.embed'));
+          } else if (!isTop && existingBadge) {
+            existingBadge.remove();
+          }
+        }
+      } else {
+        // NEW tile — build + insert at correct grid position
+        tile = buildTile(s, isTop);
+      }
+
+      // Position correctly. insertBefore moves an existing node if it's
+      // already attached — no DOM destruction, iframe stays alive.
+      const desiredIdx = i;
+      const currentChild = grid.children[desiredIdx];
+      if (currentChild !== tile) {
+        grid.insertBefore(tile, currentChild || null);
+      }
+    }
   }
 
   function startRotation() {
