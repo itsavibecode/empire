@@ -344,16 +344,18 @@
     'bonus-end':           { src: 'audio/Blip/MP3/Blip2.mp3',      channel: 'sfx' },
     'dialogue-beep':       { src: 'audio/Blip/MP3/Blip3.mp3',      channel: 'dialogue' },
     'jump':                { src: 'audio/Jump/MP3/Jump1.mp3',      channel: 'sfx' },
-    // Hurricane segment audio. Files may not exist yet — startLoop /
-    // playSfx swallow load failures, so these will silently no-op
-    // until you drop the MP3s into /run/audio/. Add when sourced:
-    //   audio/water-loop.mp3  (calm waves looping)
-    //   audio/rain-loop.mp3   (heavy rain bed)
-    //   audio/thunder.mp3     (one-shot thunderclap on lightning)
-    'water-loop':          { src: 'audio/water-loop.mp3',          channel: 'sfx', loop: true },
-    'rain-loop':           { src: 'audio/rain-loop.mp3',           channel: 'sfx', loop: true },
-    'thunder':             { src: 'audio/thunder.mp3',             channel: 'sfx' },
+    // Hurricane segment audio. Ocean + rain are loops that play side
+    // by side during the entire phase; 3 thunder variants are one-shots
+    // picked at random per lightning flash for variety.
+    'water-loop':          { src: 'audio/ocean_sound.mp3',         channel: 'sfx', loop: true },
+    'rain-loop':           { src: 'audio/rain_sound.mp3',          channel: 'sfx', loop: true },
+    'thunder-clap':        { src: 'audio/thunder-clap.mp3',        channel: 'sfx' },
+    'thunder-dry':         { src: 'audio/dry_thunder.mp3',         channel: 'sfx' },
+    'thunder-loud':        { src: 'audio/loud_thunder.mp3',        channel: 'sfx' },
   };
+  // Pool of thunder variants — picked randomly per flash so the same
+  // crack doesn't repeat back-to-back during the segment.
+  var THUNDER_VARIANTS = ['thunder-clap', 'thunder-dry', 'thunder-loud'];
 
   var audioInstances = {};
   var audioMixer = {
@@ -1430,24 +1432,34 @@
     } else if (state.water.phase === 'water' && elapsed >= WATER_ENTER_MS + WATER_BODY_MS) {
       state.water.phase = 'exiting';
     } else if (state.water.phase === 'exiting' && elapsed >= WATER_TOTAL_MS) {
-      // Phase done — restore street ambient + clear weather effects.
+      // Phase done — restore street ambient + cut ALL hurricane audio.
+      // Stop the loops and any in-flight thunder one-shots so the
+      // street resumes in clean silence (apart from mob ambient).
       state.water.phase = 'none';
       state.water.raindrops = [];
       state.water.lightningUntil = 0;
       stopLoop('water-loop');
       stopLoop('rain-loop');
+      for (var ti = 0; ti < THUNDER_VARIANTS.length; ti++) {
+        stopLoop(THUNDER_VARIANTS[ti]);
+      }
       if (state.phase === 'playing') startLoop('mob-angry');
     }
 
     if (state.water.phase === 'none') return;
 
-    // Lightning trigger — schedule one-shot white-screen flashes.
+    // Lightning trigger — fires a screen flash AND a random thunder
+    // variant on the SAME frame so the audio cracks at the same instant
+    // the screen lights up (real lightning + thunder are perceived
+    // simultaneously when nearby — this is a hurricane right on top
+    // of Mike). 3-variant random pool so back-to-back claps don't
+    // repeat the same sample.
     if (now >= state.water.nextLightningAt) {
       state.water.lightningUntil = now + WATER_LIGHTNING_FLASH_MS;
       state.water.nextLightningAt = now + WATER_LIGHTNING_INTERVAL_MS
         + Math.random() * WATER_LIGHTNING_INTERVAL_JITTER_MS;
-      // Optional thunder SFX — silently no-op if asset not loaded
-      playSfx('thunder');
+      var thunderKey = THUNDER_VARIANTS[Math.floor(Math.random() * THUNDER_VARIANTS.length)];
+      playSfx(thunderKey);
     }
 
     // Raindrops — physics tick. Reset to top when off-screen bottom
@@ -3213,6 +3225,16 @@
     state.phase = 'menu';
     stopBackgroundMusic();
     stopLoop('mob-angry');
+    // Hurricane segment audio — stop loops + thunder one-shots so they
+    // don't keep playing if the player quit mid-water.
+    stopLoop('water-loop');
+    stopLoop('rain-loop');
+    for (var ti = 0; ti < THUNDER_VARIANTS.length; ti++) {
+      stopLoop(THUNDER_VARIANTS[ti]);
+    }
+    state.water.phase = 'none';
+    state.water.raindrops = [];
+    state.water.lightningUntil = 0;
     // Stop the death + gameover-music SFX explicitly. They're one-shots
     // (not loops) but if the player quits to title BEFORE death-gameover
     // finishes its ~3 sec play, it'd keep playing on the title screen.
@@ -3422,6 +3444,13 @@
     // Audio: death sting first, then queue the gameover music
     stopBackgroundMusic();
     stopLoop('mob-angry');
+    // Cut hurricane audio if Mike died mid-water (sea/rain/thunder
+    // loops would keep playing on the gameover screen otherwise).
+    stopLoop('water-loop');
+    stopLoop('rain-loop');
+    for (var tdi = 0; tdi < THUNDER_VARIANTS.length; tdi++) {
+      stopLoop(THUNDER_VARIANTS[tdi]);
+    }
     playSfx('death');
     setTimeout(function () { playSfx('death-gameover'); }, 600);
     var ov = document.getElementById('overlay-gameover');

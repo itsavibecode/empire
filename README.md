@@ -17,6 +17,15 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.35 — 2026-04-27
+
+Patch — wire up the water/rain/thunder audio that just dropped into `/run/audio/`.
+
+- **AUDIO_DEFS updated** to point at the actual filenames on disk (`ocean_sound.mp3`, `rain_sound.mp3`, `thunder-clap.mp3`, `dry_thunder.mp3`, `loud_thunder.mp3`) instead of the placeholder names from v0.18.34.
+- **3-thunder variant pool** — `THUNDER_VARIANTS = ['thunder-clap', 'thunder-dry', 'thunder-loud']`. Each lightning flash picks one at random so back-to-back claps don't repeat the same sample. Same trigger frame as the visual flash, so audio + bright pulse hit simultaneously (perceived simultaneity is correct for a hurricane right on top of Mike — distance-delay would only matter if the storm were far away).
+- **Clean audio shutoff** on every exit path: water phase end, `quitToTitle`, AND `endRun` (in case Mike dies mid-water). All three call `stopLoop('water-loop')` + `stopLoop('rain-loop')` + a loop over `THUNDER_VARIANTS` to kill any in-flight one-shots. Prevents storm audio bleeding onto the title or game-over screens.
+- Cars + people automatically resume on transition back to street — already handled by the `!inWater` spawn gate cleared the moment the phase flips back to `'none'`.
+
 ### Run v0.18.34 — 2026-04-27
 
 Major — **HURRICANE / WATER SEGMENT**. Periodically the road ends at a cliff and Mike gets washed onto the open sea on a mattress raft for ~15 seconds. Storm overlay (lightning + rain), audio swap (mob ambient → water + rain loops), no street obstacles or pickups during the segment.
