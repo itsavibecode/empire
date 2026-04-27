@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.21 — 2026-04-26
+
+Patch — title-screen shoulder budgie. The same yellow-green parakeet now perches on Mike's shoulder on the title screen too, with the same 5-phase loop (perch → takeoff → fly → hover → return). Different render path though: the title is drawn to the canvas (not DOM) so the bird is rendered via `ctx.drawImage` inside `drawTitleScreen`, with position calculated in the same coordinate space as the title image (cover-fit aware — anchor + flight target are in *image* fractions, not canvas fractions, so they track Mike's shoulder regardless of viewport aspect).
+
+Anchor on the source `titlescreen.jpg`: `(x: 14%, y: 68%)` of the image, with bird height = 6% of image height. Flight target offsets are also fractional (`+30%` X, `-32%` Y of image height) with small per-loop random jitter. Smooth-step (`easeInOut`) interpolation between transition keyframes — JS computes the X/Y per frame and draws on top.
+
+Same sprite atlas as v0.18.20 (`budgie-01..16.png`) — the preload was extended to include all 16 frames so both the cutscene DOM overlay AND the canvas-rendered title bird can pick frames without flicker. State is its own `titleBird` object, separate from the cutscene `bird` state, so they don't fight.
+
 ### Run v0.18.20 — 2026-04-26
 
 Minor — animated shoulder budgie during cutscenes. A yellow-green parakeet now perches on Mike's left shoulder during every cutscene, takes off every ~5.5 seconds for a small flight loop, and lands back on the shoulder. Pure DOM/CSS animation layered on top of the cutscene art — no canvas, no perf hit.

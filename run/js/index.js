@@ -203,6 +203,13 @@
   ['01', '02', '05', '09'].forEach(function (n) {
     SPRITE_PATHS['cop-car-' + n] = 'img/sprites/cop-car-' + n + '.png';
   });
+  // Budgie sprites — perched on Mike's shoulder during cutscenes (DOM
+  // overlay) AND on the title screen (canvas-rendered). Preload all 16
+  // so both render paths can pick frames without flicker.
+  for (var bg = 1; bg <= 16; bg++) {
+    var bgk = 'budgie-' + (bg < 10 ? '0' + bg : bg);
+    SPRITE_PATHS[bgk] = 'img/sprites/' + bgk + '.png';
+  }
   // Seagull frames for animated title-screen flying birds (rows 3-4 of
   // the source sheet are the wings-spread flight poses).
   for (var sg = 9; sg <= 12; sg++) {
@@ -1614,16 +1621,117 @@
   // Title screen — cover art + animated seagull flock.
   // ============================================================
   var seagullLastTick = 0;
+  // Title-screen shoulder budgie — same 5-phase state machine as the
+  // cutscene bird, but rendered onto the canvas (since the title is
+  // also canvas-drawn) and positioned in IMAGE-relative coordinates
+  // that get mapped through the title-image's cover-fit transform.
+  // Mike's visible left shoulder (from viewer perspective) sits roughly
+  // at (x:14%, y:68%) of the source titlescreen.jpg.
+  var TITLE_BIRD_PERCH_FRAMES = ['budgie-13', 'budgie-14', 'budgie-13', 'budgie-16'];
+  var TITLE_BIRD_FLAP_FRAMES  = ['budgie-01', 'budgie-02', 'budgie-03', 'budgie-04'];
+  var TITLE_BIRD_PERCH_FRAME_MS = 600;
+  var TITLE_BIRD_FLAP_FRAME_MS  = 90;
+  var TITLE_BIRD_PERCH_SETTLE_MS = 5500;
+  var TITLE_BIRD_TAKEOFF_MS = 350;
+  var TITLE_BIRD_FLIGHT_MS = 1800;
+  var TITLE_BIRD_HOVER_MS = 600;
+  var TITLE_BIRD_RETURN_MS = 1500;
+  // Image-relative anchor for Mike's shoulder on titlescreen.jpg
+  var TITLE_BIRD_BASE_X_FRAC = 0.14;
+  var TITLE_BIRD_BASE_Y_FRAC = 0.68;
+  var TITLE_BIRD_SIZE_FRAC = 0.06;  // bird height as fraction of image height
+  // Flight-target offsets, in fractions of the image height (so the
+  // path scales with the rendered title image, not the canvas).
+  var TITLE_BIRD_FLY_DX_FRAC = 0.30;   // fly to the right
+  var TITLE_BIRD_FLY_DY_FRAC = -0.32;  // and up
+  var titleBird = {
+    phase: 'perch',
+    nextPhaseAt: 0,
+    transitionStartAt: 0,
+    fromX: 0, fromY: 0,
+    toX: 0, toY: 0,
+    transitionDur: 0,
+  };
+
+  function tickTitleBird(now) {
+    if (now < titleBird.nextPhaseAt) return;
+    if (titleBird.phase === 'perch') {
+      titleBird.phase = 'takeoff';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_TAKEOFF_MS;
+    } else if (titleBird.phase === 'takeoff') {
+      titleBird.phase = 'flying';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_FLIGHT_MS;
+      titleBird.transitionStartAt = now;
+      titleBird.transitionDur = TITLE_BIRD_FLIGHT_MS;
+      titleBird.fromX = 0; titleBird.fromY = 0;
+      titleBird.toX = TITLE_BIRD_FLY_DX_FRAC + (Math.random() * 0.06 - 0.03);
+      titleBird.toY = TITLE_BIRD_FLY_DY_FRAC + (Math.random() * 0.06 - 0.03);
+    } else if (titleBird.phase === 'flying') {
+      titleBird.phase = 'hover';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_HOVER_MS;
+    } else if (titleBird.phase === 'hover') {
+      titleBird.phase = 'return';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_RETURN_MS;
+      titleBird.transitionStartAt = now;
+      titleBird.transitionDur = TITLE_BIRD_RETURN_MS;
+      titleBird.fromX = titleBird.toX; titleBird.fromY = titleBird.toY;
+      titleBird.toX = 0; titleBird.toY = 0;
+    } else if (titleBird.phase === 'return') {
+      titleBird.phase = 'perch';
+      titleBird.nextPhaseAt = now + TITLE_BIRD_PERCH_SETTLE_MS;
+    }
+  }
+
+  // Smooth-step easing for the canvas-side flight transitions
+  function easeInOut(t) {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    return t * t * (3 - 2 * t);
+  }
+
+  function drawTitleBird(now, imgX, imgY, imgW, imgH) {
+    var birdSprite = sprites['budgie-13'];
+    if (!birdSprite) return;
+    // Frame swap based on phase
+    var key;
+    if (titleBird.phase === 'perch') {
+      key = TITLE_BIRD_PERCH_FRAMES[Math.floor(now / TITLE_BIRD_PERCH_FRAME_MS) % TITLE_BIRD_PERCH_FRAMES.length];
+    } else {
+      key = TITLE_BIRD_FLAP_FRAMES[Math.floor(now / TITLE_BIRD_FLAP_FRAME_MS) % TITLE_BIRD_FLAP_FRAMES.length];
+    }
+    var frame = sprites[key] || birdSprite;
+    // Compute current fractional offset (interpolated during flying/return)
+    var ox = 0, oy = 0;
+    if ((titleBird.phase === 'flying' || titleBird.phase === 'return') && titleBird.transitionDur > 0) {
+      var t = easeInOut((now - titleBird.transitionStartAt) / titleBird.transitionDur);
+      ox = titleBird.fromX + (titleBird.toX - titleBird.fromX) * t;
+      oy = titleBird.fromY + (titleBird.toY - titleBird.fromY) * t;
+    } else if (titleBird.phase === 'hover') {
+      ox = titleBird.toX; oy = titleBird.toY;
+    }
+    // Anchor + offset → canvas coords
+    var cx = imgX + (TITLE_BIRD_BASE_X_FRAC + ox) * imgW;
+    var cy = imgY + (TITLE_BIRD_BASE_Y_FRAC + oy) * imgH;
+    var targetH = imgH * TITLE_BIRD_SIZE_FRAC;
+    var scale = targetH / frame.height;
+    var drawW = frame.width * scale;
+    var drawH = targetH;
+    ctx.drawImage(frame, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+  }
+
   function drawTitleScreen(now) {
     var w = viewW();
     var h = viewH();
     var ts = sprites['titlescreen'];
+    var imgX = 0, imgY = 0, iw = w, ih = h;
     if (ts) {
       // Cover-fit (fill viewport, may crop). Aspect-ratio aware.
       var s = Math.max(w / ts.width, h / ts.height);
-      var iw = ts.width * s;
-      var ih = ts.height * s;
-      ctx.drawImage(ts, (w - iw) / 2, (h - ih) / 2, iw, ih);
+      iw = ts.width * s;
+      ih = ts.height * s;
+      imgX = (w - iw) / 2;
+      imgY = (h - ih) / 2;
+      ctx.drawImage(ts, imgX, imgY, iw, ih);
     }
 
     // Tick seagull simulation in render (no separate update loop while in menu).
@@ -1635,6 +1743,11 @@
     for (var i = 0; i < state.seagulls.length; i++) {
       drawSeagull(state.seagulls[i], now);
     }
+
+    // Title-screen shoulder bird — perched on Mike's shoulder + flies
+    // off and back periodically. Drawn after seagulls so it's on top.
+    tickTitleBird(now);
+    if (ts) drawTitleBird(now, imgX, imgY, iw, ih);
   }
 
   function updateSeagulls(dt, now) {
