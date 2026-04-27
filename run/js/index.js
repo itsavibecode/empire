@@ -895,11 +895,39 @@
     tickBird(now);
     var panel = currentPanel();
     if (!panel) return;
-    if (cutscene.showingChoices) return; // text done, waiting for input
+    var bg = document.getElementById('cutscene-bg');
+
+    // IDLE ANIMATION — keep cycling the speaker's frames even after
+    // text has finished typing (during showingChoices). 3 frames cycle
+    // every CUTSCENE_MOUTH_MS, then a brief pause every 3rd loop so
+    // it reads as natural fidgeting (mouth + hands) rather than a
+    // hyperactive twitch. The cycle pattern:
+    //   cycle 1: closed → mid → open
+    //   cycle 2: closed → mid → open
+    //   cycle 3: closed → mid → open
+    //   PAUSE on closed for ~700ms, then repeat.
+    if (cutscene.showingChoices) {
+      var idleElapsed = now - cutscene.startedAt;
+      var CYCLE_MS = CUTSCENE_MOUTH_MS * 3;            // 3 frames per cycle
+      var LOOP_MS = CYCLE_MS * 3 + 700;                // 3 cycles + pause
+      var loopPos = idleElapsed % LOOP_MS;
+      var idleVariant;
+      if (loopPos >= CYCLE_MS * 3) {
+        idleVariant = 'closed';                         // pause beat
+      } else {
+        var idleIdx = Math.floor(loopPos / CUTSCENE_MOUTH_MS) % 3;
+        idleVariant = ['closed', 'mid', 'open'][idleIdx];
+      }
+      if (bg && bg.dataset.mouth !== idleVariant) {
+        bg.dataset.mouth = idleVariant;
+        bg.src = 'img/' + panel.bgPrefix + idleVariant + panel.bgExt;
+      }
+      return; // skip the typewriter logic below
+    }
+
     // Mouth animation cycle while typing
     var mouthIdx = Math.floor((now - cutscene.startedAt) / CUTSCENE_MOUTH_MS) % 3;
     var mouthVariant = ['closed', 'mid', 'open'][mouthIdx];
-    var bg = document.getElementById('cutscene-bg');
     if (bg && bg.dataset.mouth !== mouthVariant) {
       bg.dataset.mouth = mouthVariant;
       bg.src = 'img/' + panel.bgPrefix + mouthVariant + panel.bgExt;
@@ -988,14 +1016,27 @@
     ga('cutscene_choice', { def: cutscene.defId, panel: cutscene.panelIdx, selected_option: choiceIdx });
     var nextIdx = cutscene.panelIdx + 1;
     if (nextIdx >= def.panels.length) {
-      // All panels done — fire the onComplete effect + dismiss
+      // All panels done — fire onComplete effect, then dismiss the
+      // overlay UNLESS onComplete chained to a new cutscene (e.g.,
+      // before-water → adin-ross). In that case `cutscene.defId` will
+      // have changed; preserve the new state instead of clobbering it
+      // back to closed/null and accidentally killing the chain.
+      var preDefId = cutscene.defId;
       if (def.onComplete) def.onComplete();
+      if (cutscene.defId !== preDefId) {
+        // Chained to a different cutscene — let it run, do nothing.
+        return;
+      }
       cutscene.active = false;
       cutscene.defId = null;
       var ov = document.getElementById('overlay-cutscene');
       if (ov) ov.classList.add('hidden');
-      // Resume the mob-yelling ambient loop now that dialogue is over
-      if (state.phase === 'playing') startLoop('mob-angry');
+      // Resume the mob-yelling ambient loop now that dialogue is over,
+      // unless the onComplete started the water phase (in which case
+      // mob ambient should stay off — water handles its own audio).
+      if (state.phase === 'playing' && state.water.phase === 'none') {
+        startLoop('mob-angry');
+      }
     } else {
       transitionToPanel(nextIdx);
     }
@@ -2917,31 +2958,16 @@
     var phase = state.water.phase;
     var elapsed = performance.now() - state.water.startedAt;
 
-    // Pick the BACKGROUND that fills the area BEHIND the transition
-    // tile based on which way the transition is going:
-    //   ENTERING: BG = SEA (the destination — once the cliff tile
-    //     scrolls out, the player should see open water).
-    //   EXITING:  BG = STREET (the destination — once the boat-ramp
-    //     tile scrolls out, the player should see road, NOT more sea
-    //     — that was the v0.18.36 bug where the exit transition
-    //     visually flickered back to sea before snapping to street).
-    //   WATER:    BG = SEA (no transition tile, just animated waves).
-    if (phase === 'exiting') {
-      // Render the regular street tile as the underlay so the exit
-      // transition reveals STREET as it scrolls up off the top.
-      drawStreetTileForBackground(yTop, yBot);
-    } else {
-      // ENTERING + WATER both want sea behind. Fill base color first
-      // (closes any gap before the alternating tiles draw on top).
+    if (phase === 'water') {
+      // Pure sea phase — no transition tile, just animated waves.
       ctx.fillStyle = '#1d6587';
       ctx.fillRect(0, yTop, w, roadH);
       drawAlternatingSea(0, yTop, yBot, tileH, offset);
+      ctx.restore();
+      return;
     }
 
-    // Compute the scroll position of the SPECIAL transition tile (one
-    // per phase). Its top-edge Y when first entering = below the
-    // viewport, then it scrolls UP past Mike. Anchored to phase start
-    // so it appears once and only once.
+    // Resolve the transition tile for this phase + compute its Y rect.
     var transitionTile = null;
     var transitionDur = 0;
     if (phase === 'entering') {
@@ -2951,15 +2977,62 @@
       transitionTile = exit;
       transitionDur = WATER_EXIT_MS;
     }
-    if (transitionTile && transitionDur > 0) {
-      var tProgress = Math.min(1, elapsed / transitionDur);
-      var transitionTileH = transitionTile.height * (w / transitionTile.width);
-      // Tile scrolls UP across the screen: t=0 → tile bottom at yBot
-      // (just appearing), t=1 → tile top at yTop - transitionTileH
-      // (fully off the top). Same direction for both enter + exit.
-      var tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
-      ctx.drawImage(transitionTile, 0, tileTopY, w, transitionTileH);
+    if (!transitionTile || transitionDur <= 0) {
+      ctx.restore();
+      return;
     }
+    var tProgress = Math.min(1, elapsed / transitionDur);
+    var transitionTileH = transitionTile.height * (w / transitionTile.width);
+    // Tile scrolls UP across the viewport: t=0 → tile top at yBot (just
+    // appearing at viewport bottom); t=1 → tile top at yTop - tileH
+    // (tile fully off the top).
+    var tileTopY = yBot - tProgress * (yBot - yTop + transitionTileH);
+    var tileBotY = tileTopY + transitionTileH;
+
+    // Layered BG: SOURCE world ABOVE the tile (where it's been after
+    // scrolling past — Mike came from there), DESTINATION world BELOW
+    // the tile (where it's going — Mike is heading there).
+    //   ENTERING (street → water): above = STREET, below = SEA
+    //   EXITING  (water → street): above = SEA,    below = STREET
+    // The transition tile itself bridges the two (street content at
+    // its top edge for enter, water content at its top edge for exit
+    // — confirmed against the source art).
+    var aboveIsSea = (phase === 'exiting');
+    var belowIsSea = (phase === 'entering');
+
+    // Render BG ABOVE the tile (clipped to [yTop, tileTopY])
+    if (tileTopY > yTop) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, yTop, w, Math.max(0, tileTopY - yTop));
+      ctx.clip();
+      if (aboveIsSea) {
+        ctx.fillStyle = '#1d6587';
+        ctx.fillRect(0, yTop, w, tileTopY - yTop);
+        drawAlternatingSea(0, yTop, tileTopY, tileH, offset);
+      } else {
+        drawStreetTileForBackground(yTop, tileTopY);
+      }
+      ctx.restore();
+    }
+    // Render BG BELOW the tile (clipped to [tileBotY, yBot])
+    if (tileBotY < yBot) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, tileBotY, w, Math.max(0, yBot - tileBotY));
+      ctx.clip();
+      if (belowIsSea) {
+        ctx.fillStyle = '#1d6587';
+        ctx.fillRect(0, tileBotY, w, yBot - tileBotY);
+        drawAlternatingSea(0, tileBotY, yBot, tileH, offset);
+      } else {
+        drawStreetTileForBackground(tileBotY, yBot);
+      }
+      ctx.restore();
+    }
+
+    // Finally draw the transition tile on top
+    ctx.drawImage(transitionTile, 0, tileTopY, w, transitionTileH);
 
     ctx.restore();
   }

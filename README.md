@@ -17,6 +17,30 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.42 — 2026-04-27
+
+Three fixes from playtest:
+
+- **Cutscene chain bug** — the v0.18.40 chain (`before-water` → `adin-ross` → water) was broken because `advanceCutscene` clobbered `cutscene.active = false` AND `cutscene.defId = null` *after* calling `onComplete`. So when `before-water.onComplete` chained to `startCutscene('adin-ross')`, the very next two lines killed Adin's setup and hid the overlay. Player saw the road, hit Enter expecting to advance, hit nothing, may have ended up triggering some other key path. Fix: capture `preDefId` before `onComplete`, then only wipe state if `cutscene.defId === preDefId` (i.e., onComplete did NOT chain to a new cutscene). If a chain happened, leave the new state alone so the chained cutscene runs.
+- **Mob-ambient bleed into water phase** — also in `advanceCutscene`'s end-block, the code unconditionally restarted `mob-angry` if `state.phase === 'playing'`. But when Adin's onComplete fires `startWaterPhase` (which intentionally stopped mob and started water/rain), the very next line restarted mob on top of the water audio. Fix: only restart mob if `state.water.phase === 'none'`.
+- **Adin idle animation** — speakers now keep cycling their mouth/hand frames during `showingChoices` (after text finishes typing) instead of freezing on the closed-mouth pose. Cycle pattern: 3 frames (closed → mid → open) repeating 3 times, then a ~700ms pause beat on the closed frame, then loop. Reads as natural fidgeting (mouth movement + hand-rubbing visible across Adin's 3 panels) rather than a hyperactive twitch. Applies to all speakers.
+
+### Run v0.18.41 — 2026-04-27
+
+Fix — water transition flicker on both edges.
+
+Verified the source-tile mapping is correct (`1roadwater.png` = enter, top=street/bottom=water; `3roadwater.png` = exit, top=water/bottom=street). The bug was the **BG underlay**: I was picking ONE bg color for the whole viewport during a transition, which created a brief visual flicker at the edges where the tile didn't fully cover.
+
+Fixed by rendering the BG in **two layers** based on the transition tile's current Y position:
+
+| Phase | Above the tile | Below the tile |
+|---|---|---|
+| `entering` (street→water) | **STREET** (where Mike came from) | **SEA** (where he's heading) |
+| `water` | (no transition tile) | (just animated sea everywhere) |
+| `exiting` (water→street) | **SEA** (where he came from) | **STREET** (where he's heading) |
+
+Each region gets its own clipped render (sea-tile or street-tile underlay) so the BG matches what the tile content shows at that edge — smooth visual continuity from street through the cliff/ramp into sea and back, no mid-frame flash.
+
 ### Run v0.18.40 — 2026-04-27
 
 Two things:
