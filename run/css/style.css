@@ -1074,20 +1074,21 @@ html, body {
      page root — that's why the chile bg wasn't appearing in v0.18.14
      (was looking up `run/css/img/...` which doesn't exist). */
   background: #000 url('../img/bg/bg-chile-runner-01.png') center/cover no-repeat;
-}
-/* v0.18.53 — when the xena-bail cutscene is active, swap the chile
-   runner backdrop for the Carabineros de Chile police station so the
-   scene reads as "outside the police station" right after Mike bails
-   her out. JS adds `.is-jail-bg` on the .overlay-cutscene element when
-   xena-bail starts and removes it when the cutscene ends. */
-.overlay-cutscene.is-jail-bg {
-  background: #000 url('../img/bg/bg-chile-police.png') center/cover no-repeat;
   padding: 0;
   z-index: 40;
   /* Flex-center the canvas wrapper. Dialogue uses position:absolute
      so it ignores flex layout and still anchors at the bottom. */
   justify-content: center;
   align-items: center;
+}
+/* v0.18.53 — when the xena-bail cutscene is active, swap the chile
+   runner backdrop for the Carabineros de Chile police station so the
+   scene reads as "outside the police station" right after Mike bails
+   her out. JS adds `.is-jail-bg` on the .overlay-cutscene element when
+   xena-bail starts and removes it when the cutscene ends. !important
+   bumps specificity so it always wins against the base rule. */
+.overlay-cutscene.is-jail-bg {
+  background: #000 url('../img/bg/bg-chile-police.png') center/cover no-repeat !important;
 }
 /* 3:2 wrapper that matches the cutscene art's native aspect ratio.
    Sized to fit within the overlay (whichever dimension is the binding

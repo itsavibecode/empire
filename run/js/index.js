@@ -172,7 +172,11 @@
   var XENA_OFFSET_X_FRAC   = 0.13;   // mirrors Ice — typically the OPPOSITE side
   var XENA_REACH_PX        = 250;    // detection + grab radius (per user spec)
   var XENA_STEAL_PROB      = 0.30;   // 30% chance per pass through her radius
-  var XENA_HEIGHT_FRAC     = 0.27;   // matches Ice for visual parity
+  // Per user feedback (v0.18.54): Xena was way too tall at Ice's
+  // height (0.27). Pulled to 0.20 — only slightly taller than Mike
+  // (0.17) so she reads as a regular-sized person trailing him
+  // instead of a giantess looming over him.
+  var XENA_HEIGHT_FRAC     = 0.20;
   var XENA_FRAME_MS        = 110;    // walk-cycle frame duration
   var XENA_GRAB_FLASH_MS   = 350;    // brief gold flash on her body when she snipes
 
@@ -2654,12 +2658,18 @@
   // Update — physics, spawning, collisions.
   // ============================================================
   function update(dt) {
-    // ALWAYS-RUN TICKS (regardless of pause/jail/cutscene/ham-freeze).
-    // These advance time-based effect expiries, the cutscene typewriter,
-    // and the water-phase state machine — none of which should pause
-    // when the player pauses or a cutscene is up. Tick ordering matters:
-    // tickCutscene must run BEFORE the freeze short-circuits below so
-    // dialogue can keep advancing.
+    // PAUSE — true freeze. Skip even the tick* helpers (cutscene
+    // typewriter, effect expiries, water-phase state machine) so the
+    // pause overlay is a hard stop. shiftEffectTimers handles bumping
+    // spawnedAt + expiry timestamps on resume so animations continue
+    // mid-cycle instead of jumping. v0.18.54 fix: was missing,
+    // causing distance + elapsedMs to tick during pause.
+    if (state.paused) return;
+
+    // TICKS that run during cutscene/jail/ham freeze (but NOT during
+    // pause — see above). These drive timer-based animations + state
+    // machines that need to keep advancing during dialogue/jail dialog
+    // even though the world itself is frozen.
     var nowMs = performance.now();
     tickEffects(nowMs);
     tickCutscene(nowMs);
@@ -2671,7 +2681,6 @@
     //     dialogue or back-to-back triggers fire)
     //   - jailed (BUSTED flash, cell, bailing all freeze the world)
     //   - ham-freeze active (Mario-style 1UP pause)
-    // Pause is handled at the loop level by skipping update() entirely.
     if (cutscene.active) return;
     if (state.jail && state.jail.phase !== 'none') return;
     if (nowMs < state.effects.hamFreezeUntil) return;

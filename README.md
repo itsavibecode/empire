@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.54 — 2026-04-27 — Three hotfixes from playtest
+
+1. **Pause now actually freezes everything.** I dropped `!state.paused` from the loop's update() gate during the v0.18.53 refactor — distance + elapsedMs were ticking during pause. Restored as an early-return at the top of update() so pause is a true hard stop on every counter and timer; resume continues to use `shiftEffectTimers` to compensate spawnedAt/expiry timestamps so animations resume mid-cycle.
+
+2. **`bg-chile-police.png` finally shows behind the Xena bail cutscene.** The v0.18.53 CSS edit accidentally moved the base `.overlay-cutscene`'s critical layout properties (`padding`, `z-index`, `justify-content`, `align-items`) INSIDE the new `.is-jail-bg` rule, so the base overlay was missing them and the police-bg rule wasn't winning specificity. Fixed: properties restored to the base rule, `.is-jail-bg` now only overrides the bg image with `!important` to win cleanly.
+
+3. **Xena's height pulled down 0.27 → 0.20.** She was matching Ice's tall stature, which made her loom over Mike. Per spec she should only be slightly taller than Mike (0.17) — now reads as a regular-sized person trailing him.
+
+Open: a player reported an NPC sometimes blinking with a magenta square mid-walk. Magenta = `drawAt`'s sprite-not-loaded fallback, but disk + content checks of all walk-woman frames came back clean, so the trigger condition is unclear without a repro. Filed for follow-up.
+
 ### Run v0.18.53 — 2026-04-27 — Jail-feature follow-ups + auto-submit to leaderboard
 
 Five fixes / tweaks based on first-playtest feedback:
