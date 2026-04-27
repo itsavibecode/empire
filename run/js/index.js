@@ -1642,6 +1642,11 @@
     state.crossCars = [];
     state.fauna = [];
     state.chaseOfficers = [];
+    // Ice does not exist in the water — Mike's solo on the mattress.
+    // Force-clear in case some code path got here without going through
+    // the before-water cutscene (e.g., dev URL ?water=1 skip).
+    state.iceSidekickJoined = false;
+    state.iceTrailing = false;
     // Audio swap: stop street ambient, start water + rain bed
     stopLoop('mob-angry');
     startLoop('water-loop');
@@ -1665,6 +1670,9 @@
       state.water.phase = 'water';
     } else if (state.water.phase === 'water' && elapsed >= WATER_ENTER_MS + WATER_BODY_MS) {
       state.water.phase = 'exiting';
+      // Boat doesn't follow Mike onto the boat ramp — it lives in open
+      // water only. Clear it on transition to exiting if still around.
+      state.water.shoovyBoat = null;
     } else if (state.water.phase === 'exiting' && elapsed >= WATER_TOTAL_MS) {
       // Phase done — restore street ambient + cut ALL hurricane audio.
       // Stop the loops and any in-flight thunder one-shots so the
@@ -2707,6 +2715,11 @@
   // boat can pass behind him visually as it scrolls up.
   function drawShoovyBoat(now) {
     if (!state.water || !state.water.shoovyBoat) return;
+    // Boat ONLY exists in open water — never visible during the
+    // entering (cliff) or exiting (boat ramp) transition tiles where
+    // street is partially showing. Player rule: "Shoovy's boat should
+    // never touch land."
+    if (state.water.phase !== 'water') return;
     var b = state.water.shoovyBoat;
     var fIdx = Math.floor((now - b.spawnedAt) / SHOOVY_BOAT_FRAME_MS) % SHOOVY_BOAT_FRAMES.length;
     var key = SHOOVY_BOAT_FRAMES[fIdx];
@@ -3393,6 +3406,11 @@
   function drawIce(now) {
     if (!state.iceSidekickJoined) return;
     if (cutscene.active) return;
+    // Ice never appears during the water/hurricane phase — Mike's
+    // floating alone on his mattress. Even if some path left
+    // iceSidekickJoined=true going into water (e.g., dev URL params
+    // skipping the before-water cutscene), defensively hide him here.
+    if (state.water && state.water.phase !== 'none') return;
     // During horse boost, Ice rides on Mike's horse (built into the
     // mike-ice-horse-* sprite), so no separate Ice render needed.
     if (performance.now() < state.effects.horseBoostUntil) return;

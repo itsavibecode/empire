@@ -36,8 +36,15 @@ SHEETS = [
 # instead — a different shade of green. Auto-detect from a corner pixel
 # so this script doesn't need a hardcoded target per generator.
 TARGET = None  # auto-detect from sheet corner
-TOLERANCE = 90
-FEATHER = 30
+# Tightened tolerance + feather for the sailboat extractions (was 90/30
+# with the action sheet, but the sailboat sails have thin pointed tips
+# that get partially eaten by aggressive chroma-key — anti-aliased
+# edges drift into greenish values that the tolerance includes. Lower
+# values preserve more sail edge at the cost of leaving slight green
+# halos on rounded body parts, which we mostly clean up with the
+# per-cell blob filter anyway.
+TOLERANCE = 60
+FEATHER = 18
 
 
 def detect_bg_color(im):

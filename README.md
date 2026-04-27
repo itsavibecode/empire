@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.47 — 2026-04-27
+
+Three fixes from playtest:
+
+- **Shoovy's boat is now water-only.** Per playtest rule "Shoovy's boat should never touch land": `drawShoovyBoat` now early-returns unless `state.water.phase === 'water'`. Also explicitly clears `state.water.shoovyBoat = null` when the phase transitions to `'exiting'`, so the boat disappears the moment the boat-ramp tile starts crossing.
+- **Sail tip "cut off" repair.** The 6-frame sail sprite extraction was using TOLERANCE 90 / FEATHER 30 for chroma-key, which was eating anti-aliased pixels at the sail's pointed tip (the AA edges drift toward greenish values that fall inside the tolerance window). Tightened to TOLERANCE 60 / FEATHER 18 — preserves the sail's full curved finial. Re-extracted all 32 `shoovy-sail-*.png` frames.
+- **Ice never appears during water.** New rule per playtest. `drawIce` returns early if `state.water.phase !== 'none'` so even if some code path left `iceSidekickJoined=true` going into water (e.g., the dev URL `?water=1` skip that bypasses the `before-water` cutscene), Ice stays hidden. Also force-clears `iceSidekickJoined` + `iceTrailing` inside `startWaterPhase` as belt-and-suspenders.
+
 ### Run v0.18.46 — 2026-04-27
 
 UX fix — dev URL params (`?cut=`, `?water=1`, `?dist=NNN`) now **auto-start the run** instead of dropping the user on the title screen. v0.18.44 wired the dev-params application inside `startRun()`, which only fires when the player clicks START — so the URL didn't actually skip to the requested state. Now `init()` checks if dev mode is unlocked AND the URL implies a state change (cut, water, or dist), and if so, fires `startRun()` automatically after the first frame paints.
