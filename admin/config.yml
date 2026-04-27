@@ -285,3 +285,51 @@ collections:
             media_folder: '/'
             public_folder: '/'
             hint: 'The image that appears in link previews on Facebook, LinkedIn, X, Discord, etc. 1200x630 is the recommended size; square (1024x1024) also works. Saved at the repo root.'
+
+  - name: cta
+    label: CTA Buttons
+    description: |
+      The two big call-to-action buttons on the homepage.
+      "Top button" lives in the hero (right under the meta grid — "Location /
+      Duration / Access"). "Bottom button" lives at the very bottom of the
+      page in the "Ready to Join Empire X?" footer section.
+
+      Both buttons share the same gold-pill styling — only the text and the
+      URL are editable here. Text is shown as-is (typing in ALL CAPS will
+      display in ALL CAPS). External URLs open in a new tab automatically;
+      same-origin paths starting with "/" open in the same tab.
+
+      Saving here triggers the GitHub Action that regenerates the buttons
+      in index.html (~30 seconds after save).
+    files:
+      - file: cta.json
+        label: CTA buttons
+        name: cta_file
+        format: json
+        fields:
+          - name: top_button
+            label: 'Top button (in the hero, under Location / Duration / Access)'
+            widget: object
+            fields:
+              - name: text
+                label: 'Button text'
+                widget: string
+                hint: 'Shown on the button. Typed exactly as entered (e.g. "CLICK HERE TO RSVP").'
+              - name: url
+                label: 'Button URL'
+                widget: string
+                hint: 'Where the button links. Full https://... URL for external sites, or a path starting with "/" for an in-site link.'
+                pattern: ['^(https?://|/).+', 'Must be a full URL or a path starting with /']
+          - name: bottom_button
+            label: 'Bottom button (in the "Ready to Join Empire X?" footer)'
+            widget: object
+            fields:
+              - name: text
+                label: 'Button text'
+                widget: string
+                hint: 'Shown on the button. Typed exactly as entered (e.g. "Official Instagram").'
+              - name: url
+                label: 'Button URL'
+                widget: string
+                hint: 'Where the button links. Full https://... URL for external sites, or a path starting with "/" for an in-site link.'
+                pattern: ['^(https?://|/).+', 'Must be a full URL or a path starting with /']

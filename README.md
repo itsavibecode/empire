@@ -1000,6 +1000,18 @@ Iteration 2 on the runner. Big visual + UX changes.
 
 (Inherited the v0.13.0 number from the previous shared-version scheme. No functional changes since the OG/Twitter share metadata + cropped PNG export work in v0.10.16/0.10.17.)
 
+### Site v0.13.1 — 2026-04-27
+
+Hero CTA buttons updated + made editable in the CMS.
+
+**Live changes on the homepage:**
+- **Top button** (in the hero): was *"RSVP on Insta (Link in Bio)"* → instagram.com/our.empire. Now reads **"CLICK HERE TO RSVP"** and links to the Evernote RSVP note (`lite.evernote.com/note/50fb8d35-...`).
+- **Bottom button** (in the "Ready to Join Empire X?" footer): was *"Click Here to RSVP →"* → Evernote share link. Now reads **"Official Instagram"** and links to instagram.com/our.empire. The two buttons effectively swapped roles.
+
+**CMS — new "CTA Buttons" collection.** Both buttons are now editable in `/admin/`. New `cta.json` holds `top_button` and `bottom_button`, each with a `text` field and a `url` field. New `sync-cta.py` is wired into the existing content-sync workflow — saving in Decap regenerates the two anchors in `index.html` ~30s later. Each anchor got a stable hook class (`hero-cta-top` / `hero-cta-bottom`) so the regex replacement always targets the right one regardless of class order.
+
+External URLs auto-open in a new tab (`target="_blank" rel="noopener"`). Same-origin paths starting with `/` open in the same tab. Pattern validation requires either a full http(s) URL or a `/...` path so the admin can't accidentally save a bare-string URL.
+
 ### Site v0.13.0 — 2026-04-26
 
 (Inherited from the shared-version scheme. No content changes — last meaningful update was the SEO/Decap CMS work in earlier v0.x.)

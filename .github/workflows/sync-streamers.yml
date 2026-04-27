@@ -1,4 +1,4 @@
-name: Sync content (streamers + properties + socials + about + seo)
+name: Sync content (streamers + properties + socials + about + seo + cta)
 
 # When any *.json content file changes (typically from a Decap CMS commit),
 # regenerate the derived blocks in index.html and llms.txt.
@@ -13,6 +13,7 @@ on:
       - socials.json
       - about.json
       - seo.json
+      - cta.json
 
 permissions:
   contents: write
@@ -55,6 +56,11 @@ jobs:
         env:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-seo.py
+
+      - name: Sync hero CTA buttons (top + bottom) in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-cta.py
 
       - name: Commit and push if changed
         run: |
