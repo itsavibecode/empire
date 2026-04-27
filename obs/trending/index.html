@@ -342,7 +342,12 @@ const CONFIG = {
 
   // Score = uniqueUsers * log(count + 1). Words below this score
   // are hidden from the cloud + leaderboard (filters singletons).
-  MIN_SCORE: 1.5,
+  // Lowered from 1.5 -> 0.5 so even a single user saying a word once
+  // shows up immediately. With 4 streamers averaging maybe 30 msgs/min,
+  // the old threshold demanded 2+ users overlap on the same word in a
+  // 60s window, which almost never happened. Render is naturally
+  // bottlenecked by uniqueUsers in the score so spam still loses.
+  MIN_SCORE: 0.5,
 
   // Minimum word length AFTER normalization (filters single-char noise).
   MIN_WORD_LEN: 2,
@@ -489,12 +494,30 @@ const windows = {};
 for (const w of CONFIG.WINDOWS) windows[w.sec] = new WordWindow(w.sec);
 let activeWindowSec = CONFIG.DEFAULT_WINDOW;
 
-// Stats: for "X chats · Y unique speakers" footer
+// Stats: for the "live · connected · events · msgs" footer.
+// `eventsReceived` counts EVERY frame we got from the WS (including
+// pings + subscription confirmations). It's the canary that proves the
+// socket is alive even if no chat is matching. `chatEventsMatched` is
+// the subset that actually fired processMessage(). If events grows but
+// chatEventsMatched doesn't, our event-name matcher is wrong.
 const stats = {
   totalMessages: 0,
   channelsConnected: new Set(),
   uniqueSpeakersAllTime: new Set(),
+  eventsReceived: 0,
+  chatEventsMatched: 0,
 };
+
+// First-occurrence logger — prints each unique event name to the
+// console once so you can see what Kick is actually sending if the
+// matcher misses. Open DevTools to inspect.
+const seenEventNames = new Set();
+function noteEventName(name) {
+  if (!seenEventNames.has(name)) {
+    seenEventNames.add(name);
+    console.log('[trending] new event type:', name);
+  }
+}
 
 function processMessage(content, userId) {
   if (!content || !userId) return;
@@ -542,7 +565,10 @@ class PusherClient {
   _onMessage(ev) {
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
+    stats.eventsReceived++;
     const { event, data, channel } = msg;
+    if (!event) return;
+    noteEventName(event);
     if (event === 'pusher:connection_established') {
       // Re-subscribe to everything we wanted
       for (const ch of this.subscribed) this._sendSubscribe(ch);
@@ -551,13 +577,20 @@ class PusherClient {
     } else if (event === 'pusher_internal:subscription_succeeded') {
       this.confirmed.add(channel);
       stats.channelsConnected.add(channel);
-    } else if (event === 'App\\Events\\ChatMessageEvent' || event === 'App\\\\Events\\\\ChatMessageEvent') {
-      // Kick chat message. `data` is a JSON string.
+    } else if (event.indexOf('ChatMessage') !== -1) {
+      // Substring match — Kick has used both `App\Events\ChatMessageEvent`
+      // and `App\Events\ChatMessageSentEvent` historically. Anything with
+      // "ChatMessage" in the name is a chat. `data` is usually a JSON
+      // string but sometimes already-parsed.
       let payload;
       try { payload = typeof data === 'string' ? JSON.parse(data) : data; } catch { return; }
-      const content = payload && payload.content;
-      const sender = payload && payload.sender;
-      const userId = sender && (sender.id || sender.slug);
+      if (!payload) return;
+      // Kick payloads have varied shapes — try common keys for the text
+      // body and the speaker id.
+      const content = payload.content || payload.message || payload.body;
+      const sender = payload.sender || payload.user;
+      const userId = sender && (sender.id || sender.slug || sender.username);
+      stats.chatEventsMatched++;
       processMessage(content, userId);
     }
   }
@@ -697,6 +730,27 @@ resizeCanvas();
 function renderCloud(top) {
   if (top.length === 0) {
     cloudEmpty.classList.remove('hidden');
+    // Match the leaderboard's diagnostic message — same logic, bigger
+    // text. Helps the operator see exactly which stage of the pipeline
+    // is the bottleneck without opening DevTools.
+    let head, sub;
+    if (subscribedSlugs.size === 0) {
+      head = 'No streamers live';
+      sub = 'Waiting for someone to go live…';
+    } else if (stats.chatEventsMatched === 0 && stats.eventsReceived < 5) {
+      head = 'Connecting to chats…';
+      sub = `${subscribedSlugs.size} live · ${stats.channelsConnected.size} subscribed`;
+    } else if (stats.chatEventsMatched === 0) {
+      head = 'WS connected — no chat events matched';
+      sub = `Got ${stats.eventsReceived} frames but none looked like chat. Check console for event names.`;
+    } else if (stats.totalMessages < 5) {
+      head = `Got ${stats.totalMessages} message${stats.totalMessages === 1 ? '' : 's'} so far`;
+      sub = 'Cloud needs a few more before it lights up.';
+    } else {
+      head = 'Chat is moving';
+      sub = 'But no word has repeated enough yet to trend.';
+    }
+    cloudEmpty.innerHTML = `${escapeHtml(head)}<br><span style="font-size:18px;color:var(--ink-dim);">${escapeHtml(sub)}</span>`;
     const ctx = cloudCanvas.getContext('2d');
     ctx.clearRect(0, 0, cloudCanvas.width, cloudCanvas.height);
     return;
@@ -736,7 +790,22 @@ function renderCloud(top) {
 
 function renderLeaderboard(top12) {
   if (top12.length === 0) {
-    lbList.innerHTML = '<div style="color:var(--ink-dim);font-size:12px;text-align:center;padding:20px;">No words tracked yet</div>';
+    // Tell the user WHY the list is empty — different reasons need
+    // different reactions (still warming up vs. matcher broken vs.
+    // genuinely too quiet).
+    let reason;
+    if (subscribedSlugs.size === 0) {
+      reason = 'No streamers live right now.';
+    } else if (stats.chatEventsMatched === 0 && stats.eventsReceived < 5) {
+      reason = 'Waiting for first chat message…';
+    } else if (stats.chatEventsMatched === 0) {
+      reason = 'WS alive but no chat events matched. See console.';
+    } else if (stats.totalMessages < 5) {
+      reason = `${stats.totalMessages} msg${stats.totalMessages === 1 ? '' : 's'} so far — needs more chatter.`;
+    } else {
+      reason = 'Chat is moving but no word repeated enough yet.';
+    }
+    lbList.innerHTML = `<div style="color:var(--ink-dim);font-size:12px;text-align:center;padding:20px;line-height:1.5;">${escapeHtml(reason)}</div>`;
     return;
   }
   lbList.innerHTML = top12.map((t, i) => `
@@ -762,7 +831,16 @@ function updateConnStatus() {
 function updateMsgStats() {
   const el = document.getElementById('msgStats');
   if (!el) return;
-  el.textContent = `${stats.totalMessages.toLocaleString()} msgs · ${stats.uniqueSpeakersAllTime.size.toLocaleString()} speakers`;
+  // Show the full diagnostic chain so it's obvious where the pipeline
+  // breaks: events received -> chat events matched -> msgs counted.
+  // If "events" climbs but "chat" stays at 0, the event-name matcher
+  // is wrong. If "chat" climbs but "msgs" is 0, payload parsing is
+  // wrong. If "msgs" climbs but the cloud stays empty, the score
+  // threshold is too high.
+  el.textContent = `${stats.eventsReceived.toLocaleString()} events · ` +
+    `${stats.chatEventsMatched.toLocaleString()} chat · ` +
+    `${stats.totalMessages.toLocaleString()} msgs · ` +
+    `${stats.uniqueSpeakersAllTime.size.toLocaleString()} speakers`;
 }
 
 function tick() {
