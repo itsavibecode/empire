@@ -241,7 +241,9 @@ async function openLeaderboard() {
   document.body.appendChild(overlay);
   overlay.querySelector('.leaderboard-close').addEventListener('click', () => overlay.remove());
   try {
-    const rows = await fetchTop(100);
+    // Top 10 only, rendered in a 2-column grid (5 per column).
+    // Tighter than the old top-100 single column — easier to scan.
+    const rows = await fetchTop(10);
     const wrap = overlay.querySelector('.leaderboard-rows');
     wrap.hidden = false;
     overlay.querySelector('.leaderboard-loading').hidden = true;

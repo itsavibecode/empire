@@ -17,6 +17,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.28 — 2026-04-26
+
+Patch — Ice trails Mike after the "lemme grab that dick" cutscene + leaderboard 2-column top-10.
+
+- **Returning Ice now CHASES Mike from behind** instead of running side-by-side. After the `ice-returns` cutscene fires (~3800m), `state.iceTrailing` flips true and `drawIce` switches to a different positioning mode: same lane as Mike (so it reads as an active pursuer locked onto him), positioned ~12vh further down the road (higher screen Y = closer to camera = visually IN FRONT of Mike, which sells the "trailing him" perspective in a top-down runner). Slight 0.85× scale-down for the "further away" perspective. Forces lastSide to +1 so trailing Ice always faces forward without mirror-flipping. Side-kick mode still applies during the original join → tells-off arc; trailing only kicks in after the second cutscene. Reset on `startRun`.
+- **Leaderboard expanded to 2 columns showing top 10** (5 per column). Was top-100 in a single tall column that needed scrolling. New CSS grid: `grid-template-columns: 1fr 1fr` with a 1080px max-width container. Mobile (≤720px) collapses back to single column.
+
 ### Run v0.18.27 — 2026-04-26
 
 Patch — three things from playtest stream:

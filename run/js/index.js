@@ -486,7 +486,14 @@
           line: "AHHH WHAT THE FUCK!",
         },
       ],
-      onComplete: function () { state.iceSidekickJoined = true; },
+      // Returning Ice TRAILS Mike (chases from behind) instead of
+      // running side-by-side, matching the "lemme grab that dick"
+      // narrative beat — he's now the unwanted pursuer, not the
+      // friendly side-kick.
+      onComplete: function () {
+        state.iceSidekickJoined = true;
+        state.iceTrailing = true;
+      },
     },
   };
 
@@ -926,6 +933,7 @@
     seagulls: [],        // [{x, y, vx, scale, spawnedAt}] — title-screen flock
     seagullSpawnTimer: 0,
     iceSidekickJoined: false, // toggles via cut scenes during a run
+    iceTrailing: false,       // true after the 'ice-returns' cutscene — Ice chases from behind instead of running beside
     cutscenesTriggered: {},   // { defId: true } — per-run flags so each fires once
     ice: {
       neckStretchUntil: 0,    // ms timestamp when neck-stretch animation ends (0 = idle running pose)
@@ -2214,29 +2222,47 @@
     var img = sprites[key];
     var baseImg = sprites['ice-15']; // reference frame for the base Ice height
     if (!img || !baseImg) return;
-    // Compute scale so ice-15 renders at ICE_HEIGHT_FRAC * viewH.
-    // Then ANY current frame gets that same px-per-source-px ratio
-    // applied — meaning neck-stretch frames (which are taller in the
-    // source) render proportionally taller, so the neck visibly
-    // EXTENDS UPWARD when Ice grabs a coin. Without this, scaledSize
-    // would force every frame into ice-15's box and the stretch would
-    // be invisible.
     var pxPerSrc = (viewH() * ICE_HEIGHT_FRAC) / baseImg.height;
     var w = img.width * pxPerSrc;
     var h = img.height * pxPerSrc;
-    var x = iceX();
     // Y-bob: small sine-wave vertical oscillation while NOT mid-stretch
-    // — fakes the up/down bounce of a real run cycle and disguises the
-    // fact that we only have 2 distinct stride frames to alternate.
     var bob = 0;
     if (now >= state.ice.neckStretchUntil) {
       bob = Math.sin(now / 110) * (viewH() * 0.012);
     }
-    var y = playerY() - h + bob; // bottom-anchored at Mike's foot line
-    // CROP the bottom 9% of the source image to hide the ground-shadow
-    // ellipse that's baked into every Ice frame. Render at the same
-    // visible footprint but pull the source rect short on the bottom.
-    var srcCropFrac = 0.91;
+
+    // TRAILING MODE — after the 'ice-returns' cutscene, Ice chases
+    // Mike from BEHIND instead of running beside him. Same lane as
+    // Mike (so he reads as actively pursuing), positioned further
+    // down the road (higher screen Y). Render at slightly smaller
+    // scale + with the ground-perspective offset so he reads as
+    // "further away" behind Mike.
+    var x, y, srcCropFrac;
+    if (state.iceTrailing) {
+      x = laneX(state.player.targetLane);
+      // Trail offset: ~12% of viewport height behind Mike's foot line.
+      // Far enough that he reads as "behind" but close enough to feel
+      // like an active threat catching up.
+      var trailOffsetY = viewH() * 0.12;
+      // Slight scale-down for "further from camera" perspective.
+      var trailScale = 0.85;
+      w *= trailScale;
+      h *= trailScale;
+      y = playerY() - h + bob + trailOffsetY;
+      srcCropFrac = 0.91;
+      // Force lastSide to +1 so trailing Ice always faces forward
+      // (toward the camera / toward Mike). No mirror flipping needed.
+      state.ice.lastSide = +1;
+    } else {
+      // SIDE-KICK MODE — original behavior, run beside Mike on the
+      // side of the road that has more room.
+      x = iceX();
+      y = playerY() - h + bob; // bottom-anchored at Mike's foot line
+      srcCropFrac = 0.91;
+    }
+
+    // CROP the bottom of the source image to hide the ground-shadow
+    // ellipse that's baked into every Ice frame.
     var srcH = img.height * srcCropFrac;
     var dstH = h * srcCropFrac;
     // Mirror horizontally if Ice is on Mike's left (so he faces forward)
@@ -2399,6 +2425,7 @@
     cutscene.defId = null;
     state.cutscenesTriggered = {};
     state.iceSidekickJoined = false;
+    state.iceTrailing = false;
     state.ice.neckStretchUntil = 0;
     state.iceCoinsCollected = 0;
     document.getElementById('overlay-cutscene').classList.add('hidden');

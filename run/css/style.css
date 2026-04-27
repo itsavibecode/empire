@@ -1033,11 +1033,22 @@ html, body {
 }
 
 /* ---- Leaderboard rows ---- */
+/* Top 10 in a 2-column grid (5 per column). Wider container to fit
+   both columns side-by-side; mobile fallback collapses to one. */
 .overlay-leaderboard .leaderboard-rows {
-  width: min(560px, 92vw);
+  width: min(1080px, 95vw);
   max-height: 65vh;
   overflow-y: auto;
   padding: 0 .5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .25rem 1.5rem;
+}
+@media (max-width: 720px) {
+  .overlay-leaderboard .leaderboard-rows {
+    grid-template-columns: 1fr;
+    width: min(560px, 92vw);
+  }
 }
 .lb-row {
   display: grid;
