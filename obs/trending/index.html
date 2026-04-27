@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow">
-<meta name="version" content="0.1.6">
+<meta name="version" content="0.1.7">
 <title>EmpireX Trending — Cross-Chat Word Cloud</title>
 
 <!--
@@ -226,7 +226,7 @@
        list of usernames who said it, with per-user count.
      Rendered as a SINGLE shared #lbTooltip element appended to <body>
      (positioned `fixed`) so it escapes the `.lb-list` `overflow:hidden`
-     parent — that was clipping the v0.1.6 implementation invisible. */
+     parent — that was clipping the v0.1.7 implementation invisible. */
   .lb-row .word { cursor: help; }
   .lb-row .meta { cursor: help; }
   #lbTooltip {
@@ -598,7 +598,7 @@
 
 // Visible version — bumped any time this file ships a meaningful change.
 // Mirrors the Run/Slots scope from /run/ and /game/.
-const TRENDING_VERSION = '0.1.6';
+const TRENDING_VERSION = '0.1.7';
 
 // --- Config ---------------------------------------------------------------
 const CONFIG = {
@@ -704,6 +704,35 @@ const HATE_TERMS = new Set([
   'nigger','nigga','faggot','tranny','kike','spic','chink','gook','wetback',
   'retard','retarded',
 ]);
+
+// Known Kick chat bots — their messages get dropped entirely (not just
+// filtered word-by-word). Bots inflate counts on commands, raid alerts,
+// follow notifications, etc., which would otherwise trend instead of
+// real chatter. Match is case-insensitive on the EXACT username.
+const BOT_USERNAMES = new Set([
+  // Generic Kick bots (most common)
+  'botrix', 'botisimo', 'streamelements', 'nightbot', 'fossabot',
+  'sery_bot', 'serybot', 'wizebot', 'moobot', 'streamlabs',
+  'kickbot', 'kick_bot', 'chat_bot', 'chatbot',
+  // Community / raid / follow alert bots
+  'commanderroot', 'communitybot', 'raid_bot', 'raidbot',
+  'followers_bot', 'followage', 'followbot', 'soundalerts',
+  // Kick official / moderation
+  'kick', 'kickmod', 'automod',
+]);
+// Also flag any username matching this regex — catches "FooBot",
+// "bar_bot", "RaidBot_v2" etc. without needing to enumerate every one.
+// Tightened to require "bot" as a SUFFIX (not just appearing inside the
+// name) so legit users like "Bottlejack" don't get filtered out.
+const BOT_NAME_REGEX = /(^|[^a-z])bot$|(^|[_-])bot[_-]?\d*$/i;
+
+function isBotUsername(name) {
+  if (!name) return false;
+  const lower = String(name).toLowerCase();
+  if (BOT_USERNAMES.has(lower)) return true;
+  if (BOT_NAME_REGEX.test(lower)) return true;
+  return false;
+}
 
 // l33t-speak character substitutions for the hate-word filter normalize step.
 const L33T_MAP = {
@@ -847,6 +876,13 @@ function noteEventName(name, rawMsg) {
 
 function processMessage(content, userId, srcSlug, userName) {
   if (!content || !userId) return;
+  // Bot filter — skip the message entirely (don't even count toward
+  // totalMessages or unique users) so bot output never reaches the
+  // word counter.
+  if (isBotUsername(userName)) {
+    stats.botMessagesFiltered = (stats.botMessagesFiltered || 0) + 1;
+    return;
+  }
   const ts = Date.now();
   const words = tokenize(content);
   if (words.length === 0) return;

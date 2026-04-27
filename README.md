@@ -17,6 +17,17 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Trending v0.1.7 — 2026-04-26
+
+Patch — bot filter. Kick chat is full of bots (BotRix, StreamElements, Nightbot, Fossabot, Sery_Bot, Wizebot, Moobot, Streamlabs, etc.) that post command responses, raid alerts, follow notifications, and rule reminders — all of which would otherwise inflate word counts and crowd the cloud with bot vocabulary instead of real chatter. Now their messages get dropped *entirely* before tokenization so they don't count toward `totalMessages` or `unique users` either.
+
+Two-layer match:
+
+1. **Explicit allowlist** of ~25 known Kick bot usernames (case-insensitive exact match). Easy to maintain — add a new bot to the `BOT_USERNAMES` Set as you find them.
+2. **Regex catch-all** for usernames ending in `bot` (with separator) — matches `FooBot`, `bar_bot`, `RaidBot_v2` without enumerating each. Tightened to *suffix* match so legit users like `Bottlejack` don't get caught.
+
+A dropped-bot counter (`stats.botMessagesFiltered`) is incremented but not yet shown in the UI; can surface it in the footer or tooltip if you want visibility into how much bot traffic is being filtered.
+
 ### Trending v0.1.6 — 2026-04-26
 
 Fix — leaderboard tooltips were invisible. The v0.1.4/v0.1.5 tooltips used `position: absolute` inside each `.lb-row`, but the parent `.lb-list` has `overflow: hidden` (kept that way so long word lists don't break the layout). The tooltips were rendered to the LEFT of the row with `right: calc(100% + 12px)` — which put them outside the leaderboard's box, where overflow:hidden silently clipped them away. The CSS was right, the math was right, the tooltip was just off-screen.
