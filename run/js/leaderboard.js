@@ -116,6 +116,11 @@ async function submit(scoreData) {
   // Push to /scores in Firebase RTDB. Auto-generates a unique ID.
   await push(ref(db, 'scores'), entry);
   markSubmitted(scoreData);
+  // Stash the submitted identity on the global so the SHARE-PNG flow
+  // in index.js can credit the player on the share image without
+  // re-prompting them for their handle.
+  window.RunnerLeaderboard.lastSubmittedIdentity = identity;
+  window.RunnerLeaderboard.lastSubmittedPlatform = it;
   return entry;
 }
 

@@ -253,6 +253,54 @@ html, body {
   color: #FFD566;
   letter-spacing: .12em;
 }
+/* SHARE-PNG affordance below the game-over button row. Less prominent
+   than the primary actions (SUBMIT/RESTART/QUIT) but visible enough
+   to invite the player to brag about their run on socials. Hint line
+   below changes based on share success ("Saved!" or "Copied!"). */
+.gameover-share {
+  margin-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+}
+.btn-share {
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  letter-spacing: .15em;
+  padding: .55rem 1.4rem;
+  background: rgba(83, 252, 24, .12);
+  color: #a8f582;
+  border: 2px solid rgba(83, 252, 24, .55);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  -webkit-appearance: none;
+          appearance: none;
+}
+.btn-share:hover {
+  background: rgba(83, 252, 24, .25);
+  color: #fff;
+  border-color: #53fc18;
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(83, 252, 24, .35);
+}
+.btn-share .share-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.share-hint {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: .85rem;
+  color: rgba(168, 245, 130, .85);
+  min-height: 1em;
+  letter-spacing: .05em;
+}
+.share-hint.error { color: #ff6b6b; }
+
 /* Death-pose sprite that appears at the top of the game-over overlay
    (one of 12 poses picked at random). Sized to ~22% of viewport height
    so it doesn't crowd out the score + buttons below it. */

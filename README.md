@@ -17,6 +17,13 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.31 — 2026-04-26
+
+Two fixes + the long-queued PNG share feature.
+
+- **Cross-traffic cop car aspect ratio fixed.** The v0.18.30 first cut was rendering the rotated car at literal `(cc.h, cc.w)` dimensions, which gave a 0.97× scale on one axis and 0.28× on the other — squashing the source 185×342 sprite into something close to a square. New math computes a single `s = cc.h / img.height` scale and applies it to both `rw = img.width * s` and `rh = img.height * s`, preserving native aspect ratio. Same fix propagated to spawn-startX, off-screen cull, and collision hitbox math (all of which were using `cc.w` where they should use `cc.h` post-rotation).
+- **NEW SHARE PNG button on game-over screen.** Generates a 1080×1080 image at click: title-card art as cover-fit background with vignette gradient, "On Baby!" cursive title at top, semi-opaque score panel mid-frame showing total score in big gold + 3-column distance/coins/multiplier breakdown, streamer credit at the bottom (handle + colored platform icon, only shown if the player submitted this session — `RunnerLeaderboard.lastSubmittedIdentity` stashed on submit success), URL caption for branding. Triggers download via temporary `<a download>` link with filename `onbaby-run-{distance}m.png`. Pure offscreen canvas; no taint since all assets are same-origin. Sits below the action buttons in a new `.gameover-share` block with a green-on-dark style + status hint line below ("Saved as ..." or error message).
+
 ### Run v0.18.30 — 2026-04-26
 
 Heavy patch — 7 things from playtest stream:

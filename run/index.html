@@ -16,7 +16,7 @@
   <meta name="description" content="EmpireX Runner — help Mike Smalls Jr survive the chase through Chile. SkiFree-style endless runner. Dodge stream snipers, collect Cx coins, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.30">
+  <meta name="version" content="0.18.31">
   <title>On Baby! — EmpireX Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) -->
@@ -221,6 +221,17 @@
       <button type="button" id="btn-restart">RUN AGAIN</button>
       <button type="button" id="btn-gameover-quit">QUIT TO TITLE</button>
     </div>
+    <!-- SHARE button — generates a PNG card (title-art bg + score panel
+         + streamer credit if submitted) for posting on socials. Sits
+         below the action buttons so it reads as "next step" once the
+         player has decided what to do with their run. -->
+    <div class="gameover-share">
+      <button type="button" id="btn-share-png" class="btn-share">
+        <span class="share-icon" aria-hidden="true">↗</span>
+        SHARE AS PNG
+      </button>
+      <div class="share-hint" id="share-hint"></div>
+    </div>
   </div>
 
   <!-- BookHockeys cross-link sits above the URL caption. Grayscale at
@@ -231,7 +242,7 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.30</div>
+  <div class="game-version">Run v0.18.31</div>
 
   <script src="js/index.js"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM

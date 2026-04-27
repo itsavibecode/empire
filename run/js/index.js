@@ -1246,22 +1246,28 @@
 
   // Cross-traffic cop car — spawns from off-screen left or right and
   // drives across the road perpendicular to Mike's direction. Uses the
-  // overhead-view sprite (cop-overhead-XX). Spawns at a random Y near
-  // Mike's foot line so dodging requires lane management.
+  // overhead-view sprite (cop-overhead-XX), which is rotated 90° at
+  // render time. So the on-SCREEN dimensions after rotation are:
+  //   visualHorizontalExtent = size.h  (source's TALL axis)
+  //   visualVerticalExtent   = size.w  (source's WIDE axis)
+  // We store size.w/size.h as-is and account for the swap in the
+  // spawn/cull/collision math.
   function spawnCrossCar() {
     var size = scaledSize('cop-overhead-01', CROSS_CAR_HEIGHT_FRAC);
     var dir = Math.random() < 0.5 ? -1 : +1;
-    // Spawn just off the appropriate edge of the screen
-    var startX = dir > 0 ? -size.w : viewW() + size.w;
+    // Use the post-rotation horizontal extent (size.h) so the car
+    // spawns FULLY off-screen, not half-poking out at the start.
+    var startX = dir > 0 ? -size.h : viewW() + size.h;
     // Y range: near Mike's foot line +/- 4% viewH so it overlaps Mike's
     // hitbox when crossing his lane. Random within that band so cars
-    // don't all cross at the exact same Y.
-    var y = playerY() - size.h * 0.85 + (Math.random() * 0.04 - 0.02) * viewH();
+    // don't all cross at the exact same Y. size.w is the visual
+    // vertical extent post-rotation.
+    var y = playerY() - size.w * 0.85 + (Math.random() * 0.04 - 0.02) * viewH();
     state.crossCars.push({
       x: startX,
       y: y,
-      w: size.w,
-      h: size.h,
+      w: size.w,   // source-w = visual vertical extent post-rotation
+      h: size.h,   // source-h = visual horizontal extent post-rotation
       vx: CROSS_CAR_SPEED * dir,
       dir: dir,
       spawnedAt: performance.now(),
@@ -1601,8 +1607,10 @@
       state.crossCars[i].x += state.crossCars[i].vx * dt;
     }
     state.crossCars = state.crossCars.filter(function (c) {
-      // Cull when fully off the opposite edge (account for sprite width)
-      return (c.dir > 0 ? c.x < viewW() + c.w + 50 : c.x > -c.w - 50);
+      // Cull when fully off the opposite edge. Use c.h (post-rotation
+      // visual horizontal extent), NOT c.w (which is the source's
+      // wide axis = visual VERTICAL extent post-rotation).
+      return (c.dir > 0 ? c.x < viewW() + c.h + 50 : c.x > -c.h - 50);
     });
 
     // Collisions.
@@ -1660,18 +1668,21 @@
       }
     }
     // CROSS-TRAFFIC collision — overhead cop cars crossing the road.
-    // Box-vs-box check using the car's actual rect + Mike's lane-X.
+    // Box-vs-box check. POST-ROTATION the visual hitbox is:
+    //   horizontal extent on screen = cc.h (source TALL axis)
+    //   vertical extent on screen   = cc.w (source WIDE axis)
     for (i = 0; i < state.crossCars.length; i++) {
       var cc = state.crossCars[i];
       if (cc.hit) continue;
       // Mike's hitbox center
       var mikeCx = laneX(state.player.targetLane);
       var mikeCy = py - playerSize.h * 0.4;
-      // Car's hitbox center (slightly inset from the sprite for forgiveness)
-      var ccCx = cc.x + cc.w / 2;
-      var ccCy = cc.y + cc.h / 2;
-      var ccHitW = cc.w * 0.75;
-      var ccHitH = cc.h * 0.65;
+      // Car center in screen-coords. cc.x is the LEFT edge of the
+      // visual rect (which spans cc.h horizontally post-rotation).
+      var ccCx = cc.x + cc.h / 2;
+      var ccCy = cc.y + cc.w / 2;
+      var ccHitW = cc.h * 0.75;   // 75% of the visual horizontal extent
+      var ccHitH = cc.w * 0.70;   // 70% of the visual vertical extent
       if (Math.abs(mikeCx - ccCx) < (ccHitW * 0.5 + pHitW * 0.5)
           && Math.abs(mikeCy - ccCy) < (ccHitH * 0.5 + pHitH * 0.5)) {
         cc.hit = true;
@@ -1889,18 +1900,24 @@
       var key = lightFrames[Math.floor(now / CROSS_CAR_FRAME_MS) % lightFrames.length];
       var img = sprites[key];
       if (!img) continue;
+      // After 90deg rotation the source's TALL axis becomes screen-horizontal
+      // (the car's length when viewed from the side). cc.h is sized to be
+      // that on-screen length; the matching scale factor preserves the
+      // source's native aspect ratio so the car doesn't get squashed into
+      // a near-square. Previous version used swapped w/h literally
+      // which gave a 0.97x scale on one axis and 0.28x on the other —
+      // hence the smooshed-into-a-box look.
+      var s = cc.h / img.height;
+      var rw = img.width * s;   // image-x extent (becomes screen-vertical post-rotate)
+      var rh = img.height * s;  // image-y extent (becomes screen-horizontal post-rotate)
       var cx = cc.x + cc.w / 2;
       var cy = cc.y + cc.h / 2;
       ctx.save();
       ctx.translate(cx, cy);
       // Native sprite faces down. dir=+1 (going right) -> rotate -90
-      // (counter-clockwise) so the car points right. dir=-1 (going
-      // left) -> rotate +90 so it points left.
+      // so the car points right. dir=-1 (going left) -> rotate +90.
       ctx.rotate(cc.dir > 0 ? -Math.PI / 2 : Math.PI / 2);
-      // After rotation, the rendered "width" is the source height and
-      // vice versa — but since we sized at CROSS_CAR_HEIGHT_FRAC of
-      // the source TALL dimension, swap w/h on draw.
-      ctx.drawImage(img, -cc.h / 2, -cc.w / 2, cc.h, cc.w);
+      ctx.drawImage(img, -rw / 2, -rh / 2, rw, rh);
       ctx.restore();
     }
   }
@@ -2671,6 +2688,181 @@
     document.body.classList.toggle('phase-playing', state.phase === 'playing');
   }
 
+  // ============================================================
+  // PNG SHARE — composes a 1080x1080 image of the player's run
+  // (title-card art bg + score panel + streamer credit) and downloads
+  // it. Reads the player's submitted handle from RunnerLeaderboard if
+  // they submitted this session; otherwise renders without the credit
+  // line. Pure offscreen canvas; same-origin assets so toDataURL works
+  // without taint.
+  // ============================================================
+  function doSharePng() {
+    var hintEl = document.getElementById('share-hint');
+    var setHint = function (msg, isErr) {
+      if (!hintEl) return;
+      hintEl.textContent = msg;
+      hintEl.classList.toggle('error', !!isErr);
+    };
+    setHint('Building image…');
+    try {
+      var dataUrl = buildSharePng();
+      if (!dataUrl) {
+        setHint('Could not build image (assets not loaded)', true);
+        return;
+      }
+      // Trigger download via temporary link
+      var distance = Math.floor(state.distance);
+      var fname = 'onbaby-run-' + distance + 'm.png';
+      var a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setHint('Saved as ' + fname);
+      ga('share_png_generated', { distance: distance, score: state.coins * state.multiplier * 10 + distance });
+    } catch (err) {
+      console.error('[share] failed:', err);
+      setHint('Couldn\'t build image: ' + (err.message || err), true);
+    }
+  }
+
+  function buildSharePng() {
+    var bg = sprites['titlescreen'];
+    if (!bg) return null;
+    var W = 1080;
+    var H = 1080;
+    var oc = document.createElement('canvas');
+    oc.width = W;
+    oc.height = H;
+    var c = oc.getContext('2d');
+
+    // 1) Background — cover-fit the title art so it fills the square,
+    // anchored to the top so Mike + Ice's faces stay visible (cropping
+    // happens at the bottom which is mostly road).
+    var s = Math.max(W / bg.width, H / bg.height);
+    var bw = bg.width * s;
+    var bh = bg.height * s;
+    c.drawImage(bg, (W - bw) / 2, 0, bw, bh);
+    // Subtle dark vignette at the top + bottom so the text panels read
+    // cleanly against the busy art.
+    var grad = c.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(8, 6, 14, 0.75)');
+    grad.addColorStop(0.18, 'rgba(8, 6, 14, 0.0)');
+    grad.addColorStop(0.55, 'rgba(8, 6, 14, 0.0)');
+    grad.addColorStop(1, 'rgba(8, 6, 14, 0.92)');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, W, H);
+
+    // 2) Top — "ON BABY!" cursive title
+    c.save();
+    c.font = 'bold 90px Pacifico, "VT323", cursive';
+    c.fillStyle = '#C9A4FF';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.shadowColor = 'rgba(142, 92, 203, 0.7)';
+    c.shadowOffsetX = 6;
+    c.shadowOffsetY = 6;
+    c.shadowBlur = 0;
+    c.fillText('On Baby!', W / 2, 90);
+    c.restore();
+
+    // 3) Score panel — semi-opaque card centered lower-third
+    var distance = Math.floor(state.distance);
+    var coins = state.coins;
+    var mult = state.multiplier;
+    var totalScore = distance + coins * mult * 10;
+    var panelW = W * 0.85;
+    var panelH = 320;
+    var panelX = (W - panelW) / 2;
+    var panelY = H - panelH - 110;
+    c.fillStyle = 'rgba(14, 10, 28, 0.86)';
+    c.strokeStyle = 'rgba(201, 164, 255, 0.5)';
+    c.lineWidth = 3;
+    roundedRect(c, panelX, panelY, panelW, panelH, 22);
+    c.fill();
+    c.stroke();
+
+    // 3a) "MY SCORE" label
+    c.fillStyle = 'rgba(201, 164, 255, 0.85)';
+    c.font = '700 28px "VT323", monospace';
+    c.textAlign = 'center';
+    c.fillText('MY SCORE', W / 2, panelY + 42);
+
+    // 3b) Big total
+    c.fillStyle = '#FFD566';
+    c.font = '700 110px "VT323", monospace';
+    c.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    c.shadowOffsetX = 4;
+    c.shadowOffsetY = 4;
+    c.shadowBlur = 0;
+    c.fillText(totalScore.toLocaleString(), W / 2, panelY + 130);
+    c.shadowOffsetX = 0;
+    c.shadowOffsetY = 0;
+
+    // 3c) Distance + Cx breakdown — three columns below the total
+    var rowY = panelY + 215;
+    c.font = '700 30px "VT323", monospace';
+    c.fillStyle = '#fff';
+    c.textAlign = 'center';
+    c.fillText(distance.toLocaleString() + ' m', W / 2 - 280, rowY);
+    c.fillText('Cx ' + coins, W / 2, rowY);
+    c.fillText('×' + mult, W / 2 + 280, rowY);
+    c.fillStyle = 'rgba(201, 164, 255, 0.65)';
+    c.font = '500 17px "VT323", monospace';
+    c.fillText('DISTANCE', W / 2 - 280, rowY + 32);
+    c.fillText('COINS', W / 2, rowY + 32);
+    c.fillText('MULTIPLIER', W / 2 + 280, rowY + 32);
+
+    // 4) Streamer credit (if they submitted this session)
+    var byHandle = window.RunnerLeaderboard && window.RunnerLeaderboard.lastSubmittedIdentity;
+    var byPlatform = window.RunnerLeaderboard && window.RunnerLeaderboard.lastSubmittedPlatform;
+    if (byHandle) {
+      var bottomY = H - 70;
+      c.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      c.font = '500 22px "VT323", monospace';
+      c.textAlign = 'center';
+      var label = 'submitted by';
+      c.fillText(label, W / 2 - 80, bottomY);
+      // Platform icon (simple colored square + letter so we don't have
+      // to await SVG → image conversion)
+      c.fillStyle = byPlatform === 'twitch' ? '#9146ff' : '#53fc18';
+      var iconSize = 28;
+      var iconX = W / 2 - 8;
+      var iconY = bottomY - iconSize / 2 - 4;
+      c.fillRect(iconX, iconY, iconSize, iconSize);
+      c.fillStyle = byPlatform === 'twitch' ? '#fff' : '#000';
+      c.font = '900 20px "VT323", monospace';
+      c.textBaseline = 'middle';
+      c.fillText(byPlatform === 'twitch' ? 'T' : 'K', iconX + iconSize / 2, iconY + iconSize / 2);
+      c.textBaseline = 'alphabetic';
+      // Handle
+      c.fillStyle = '#fff';
+      c.font = '700 26px "VT323", monospace';
+      c.textAlign = 'left';
+      c.fillText(byHandle, iconX + iconSize + 10, bottomY);
+    }
+
+    // 5) URL caption + version pill at the very bottom for branding
+    c.fillStyle = 'rgba(201, 164, 255, 0.85)';
+    c.font = '700 24px "VT323", monospace';
+    c.textAlign = 'center';
+    c.fillText('OUREMPIREX.COM/RUN', W / 2, H - 28);
+
+    return oc.toDataURL('image/png');
+  }
+
+  // Helper for rounded-rect paths — chartcompat path the share PNG uses.
+  function roundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
   function endRun() {
     state.phase = 'gameover';
     syncChromeForPhase();
@@ -2876,6 +3068,14 @@
     if (goQuitBtn) goQuitBtn.addEventListener('click', function (e) {
       e.target.blur();
       quitToTitle();
+    });
+    // SHARE-PNG button on game-over screen — generates a 1080x1080
+    // composite (title art bg + score panel + streamer credit) and
+    // triggers download. Hint shows status feedback.
+    var shareBtn = document.getElementById('btn-share-png');
+    if (shareBtn) shareBtn.addEventListener('click', function (e) {
+      e.target.blur();
+      doSharePng();
     });
     // Cut-scene choice/continue buttons — advances to next panel or
     // finishes the cut scene. Buttons are populated dynamically per
