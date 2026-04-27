@@ -16,6 +16,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### OBS overlay (corner alignment) — 2026-04-26
+
+- **Corner brackets pulled outward + shrunk** from 180×180 at 32px offset → **130×130 at 18px offset**. The old brackets framed an inner box much smaller than where the tile grid actually sits, so content visibly under-filled the gold frame. New brackets sit closer to the viewport edges and embrace the actual content area.
+- **Stage horizontal padding reduced** from 88px → 60px so the tile grid extends further toward the now-outboard corners. Vertical padding nudged 64 → 56.
+- Net effect: the gold corner frame now visually contains the tiles + headers + footer cleanly, no more right-side empty gap.
+
 ### Run v0.18.15 — 2026-04-26
 
 Patch — cut scene image no longer cropped on widescreen.
