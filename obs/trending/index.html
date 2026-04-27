@@ -219,6 +219,43 @@
   .lb-row.top3 .word { color: var(--ink); }
 
   /* FOOTER — connection status + brand */
+  /* Debug overlay — visible by default whenever events are arriving but
+     no chat is matching. Lets you read raw Pusher event names + sample
+     payloads without DevTools (which OBS browser sources don't have). */
+  .debug-panel {
+    position: fixed;
+    bottom: 64px;
+    left: 24px;
+    right: 24px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: rgba(20, 16, 12, 0.92);
+    border: 1px solid var(--gold-dark);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    z-index: 1000;
+  }
+  .debug-panel.hidden { display: none; }
+  .debug-panel h3 {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: .2em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .debug-panel .row {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(212, 169, 74, 0.1);
+    word-break: break-all;
+  }
+  .debug-panel .row:last-child { border-bottom: none; }
+  .debug-panel .name { color: var(--gold-hot); font-weight: 600; }
+  .debug-panel .sample { color: var(--ink-dim); margin-left: 8px; }
+  .debug-panel .err { color: #ff6b6b; }
+
   footer {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -292,6 +329,11 @@
     <div class="center">OUREMPIREX.COM/OBS/TRENDING</div>
     <div class="right" id="msgStats">— · —</div>
   </footer>
+
+  <!-- Debug overlay populated dynamically. Auto-shown when WS events
+       are arriving but no chat is matching (broken pipeline). Force
+       visible with ?debug=1, force hidden with ?debug=0. -->
+  <div class="debug-panel hidden" id="debugPanel"></div>
 
 </div>
 
@@ -506,17 +548,22 @@ const stats = {
   uniqueSpeakersAllTime: new Set(),
   eventsReceived: 0,
   chatEventsMatched: 0,
+  lastSubscriptionError: null,
 };
 
-// First-occurrence logger — prints each unique event name to the
-// console once so you can see what Kick is actually sending if the
-// matcher misses. Open DevTools to inspect.
-const seenEventNames = new Set();
-function noteEventName(name) {
-  if (!seenEventNames.has(name)) {
-    seenEventNames.add(name);
-    console.log('[trending] new event type:', name);
-  }
+// First-occurrence logger — records each unique event name + its first
+// sample payload, both to console AND to an in-page debug overlay so
+// you can see what Kick is sending without opening DevTools (handy for
+// OBS browser source where there's no F12). Add `?debug=1` to the URL
+// to force the overlay visible; otherwise it appears only when the
+// pipeline is broken (events arriving but no chat matched).
+const seenEvents = new Map(); // name -> first sample (JSON string, truncated)
+function noteEventName(name, rawMsg) {
+  if (seenEvents.has(name)) return;
+  let sample = '';
+  try { sample = JSON.stringify(rawMsg).slice(0, 240); } catch {}
+  seenEvents.set(name, sample);
+  console.log('[trending] new event type:', name, rawMsg);
 }
 
 function processMessage(content, userId) {
@@ -568,7 +615,7 @@ class PusherClient {
     stats.eventsReceived++;
     const { event, data, channel } = msg;
     if (!event) return;
-    noteEventName(event);
+    noteEventName(event, msg);
     if (event === 'pusher:connection_established') {
       // Re-subscribe to everything we wanted
       for (const ch of this.subscribed) this._sendSubscribe(ch);
@@ -577,6 +624,12 @@ class PusherClient {
     } else if (event === 'pusher_internal:subscription_succeeded') {
       this.confirmed.add(channel);
       stats.channelsConnected.add(channel);
+    } else if (event === 'pusher:subscription_error' || event === 'pusher:error') {
+      // Pusher is REJECTING our subscribe. This is the most useful
+      // signal — log loudly so we can see the reason (auth required,
+      // channel not found, rate limit, etc.).
+      console.warn('[trending] subscription error:', channel, msg);
+      stats.lastSubscriptionError = JSON.stringify(msg).slice(0, 200);
     } else if (event.indexOf('ChatMessage') !== -1) {
       // Substring match — Kick has used both `App\Events\ChatMessageEvent`
       // and `App\Events\ChatMessageSentEvent` historically. Anything with
@@ -843,6 +896,45 @@ function updateMsgStats() {
     `${stats.uniqueSpeakersAllTime.size.toLocaleString()} speakers`;
 }
 
+// URL-based debug toggle — `?debug=1` forces panel visible, `?debug=0`
+// forces hidden. With nothing specified, it auto-shows whenever the
+// pipeline looks broken (events arriving but no chat matched, OR a
+// subscription error has been logged).
+const DEBUG_FORCE = new URLSearchParams(location.search).get('debug');
+
+function updateDebugPanel() {
+  const el = document.getElementById('debugPanel');
+  if (!el) return;
+  let show;
+  if (DEBUG_FORCE === '1') show = true;
+  else if (DEBUG_FORCE === '0') show = false;
+  else {
+    // Auto-show when something looks off
+    show = (stats.eventsReceived > 5 && stats.chatEventsMatched === 0)
+        || !!stats.lastSubscriptionError
+        || (subscribedSlugs.size > 0 && stats.channelsConnected.size === 0);
+  }
+  if (!show) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+
+  let html = '<h3>Pusher Event Log (debug)</h3>';
+  if (stats.lastSubscriptionError) {
+    html += `<div class="row err"><span class="name">SUBSCRIPTION ERROR:</span><span class="sample">${escapeHtml(stats.lastSubscriptionError)}</span></div>`;
+  }
+  if (subscribedSlugs.size > 0 && stats.channelsConnected.size === 0) {
+    const tried = Array.from(subscribedSlugs).slice(0, 3).map(s => `chatrooms.${slugToChatroom[s]}.v2`).join(', ');
+    html += `<div class="row err"><span class="name">SENT SUBSCRIBE</span> for ${escapeHtml(tried)} but Pusher never confirmed any.</div>`;
+  }
+  if (seenEvents.size === 0) {
+    html += '<div class="row"><span class="sample">No events received yet…</span></div>';
+  } else {
+    for (const [name, sample] of seenEvents) {
+      html += `<div class="row"><span class="name">${escapeHtml(name)}</span><span class="sample">${escapeHtml(sample)}</span></div>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
 function tick() {
   const now = Date.now();
   for (const w of Object.values(windows)) w.prune(now);
@@ -852,6 +944,7 @@ function tick() {
   renderLeaderboard(top.slice(0, 12));
   updateConnStatus();
   updateMsgStats();
+  updateDebugPanel();
 }
 
 setInterval(tick, CONFIG.RENDER_INTERVAL_MS);
