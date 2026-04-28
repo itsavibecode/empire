@@ -1187,13 +1187,14 @@ section{padding:6rem 1.5rem}
         <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
         <div class="streamer-status" id="status-kimmee"><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
       </a><a class="streamer-card" href="https://kick.com/hanridge" target="_blank">
-        <div class="streamer-avatar" id="av-hanridge ">
+        <div class="streamer-just-added" data-added="2026-04-28">JUST ADDED</div>
+        <div class="streamer-avatar" id="av-hanridge">
           <span class="streamer-initials">HR</span>
           <img class="streamer-img" src="/avatars/screenshot-2026-04-28-132027.png" alt="Hanridge" loading="lazy">
         </div>
         <div class="streamer-name">Hanridge</div>
         <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
-        <div class="streamer-status" id="status-hanridge "><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
+        <div class="streamer-status" id="status-hanridge"><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
       </a><a class="streamer-card" href="https://kick.com/ashwilder" target="_blank">
         <div class="streamer-avatar" id="av-ashwilder">
           <span class="streamer-initials">AW</span>
@@ -1646,7 +1647,7 @@ section{padding:6rem 1.5rem}
 
 // Check Kick live status for all streamers
 (function(){
-  const streamers = ["mikesmallsjr", "iceposeidon", "xenathewitch", "woodbaby", "jjstream", "sashawest", "kimmee", "hanridge ", "ashwilder", "shangel", "floridaboy", "taylorstarlight", "feef", "adrianahlee", "blackassdave", "nanapips", "briewylde", "jackie", "saltygummibear", "iamTalanya", "cobbruvs", "kennyhoopz", "kikikrazy", "fanos", "dtanmanb", "riddaw", "ozemi", "lifeismizzy"];
+  const streamers = ["mikesmallsjr", "iceposeidon", "xenathewitch", "woodbaby", "jjstream", "sashawest", "kimmee", "hanridge", "ashwilder", "shangel", "floridaboy", "taylorstarlight", "feef", "adrianahlee", "blackassdave", "nanapips", "briewylde", "jackie", "saltygummibear", "iamTalanya", "cobbruvs", "kennyhoopz", "kikikrazy", "fanos", "dtanmanb", "riddaw", "ozemi", "lifeismizzy"];
   
   streamers.forEach(function(username){
     const statusEl = document.getElementById('status-' + username);
