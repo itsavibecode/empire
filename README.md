@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.60 — 2026-04-28 — Auto-submit fix (was silently NaN-rejecting)
+
+**The auto-submit-to-leaderboard from v0.18.53 was silently failing for every player.** My `endRun` call to `RunnerLeaderboard.submit()` passed `identity / identityType / distance / coins / multiplier / score` but **forgot `durationSec`**. The `submit()` function builds its Firebase entry with `durationSec: Math.floor(scoreData.durationSec)` — `Math.floor(undefined) = NaN`, and Firebase RTDB rejects NaN values, so every push silently rejected. The `.catch()` did log "auto-submit failed" to the console but no UI surfaced the error, so players who entered their kick handle assumed it was working.
+
+Fix: pass `durationSec: Math.floor(state.elapsedMs / 1000)` (same value the GA `game_over` event already records).
+
+The manual SUBMIT SCORE button on game-over still worked correctly the whole time — it routes through `openSubmitDialog` which constructs its own `scoreData` object with `durationSec` filled in. So affected players could (and presumably did) work around by clicking the button manually.
+
+**Re: the Ice cutscene "didn't follow then followed me" report** — that's actually the INTENDED 3-cutscene Ice arc: `first-meet (600m)` → Ice joins → `mike-tells-off (2000m)` → Mike yells at Ice, Ice leaves → `ice-returns (3800m)` → Ice rejoins. The "didn't follow me" stretch was the 1800m of solo gameplay between mike-tells-off and ice-returns. No bug — story working as designed.
+
 ### Run v0.18.59 — 2026-04-27 — Puffin sprites wired into Shoovy boat + sunset celebration
 
 **1. Boat-approach loop swapped to Puffin set.** `SHOOVY_BOAT_FRAMES` was using the original `shoovy-sail-01/05/09/13` (4-frame cycle from the old Shoovy sailboat sheet). Replaced with `shoovy-puffin-13` + `shoovy-puffin-14` — the front-facing standing variant where Shoovy grips the mast facing the camera. Reads as "approaching Mike" much better than the side-view of the original set. 2-frame breathe at 280ms gives a calm "drifting toward you" feel.

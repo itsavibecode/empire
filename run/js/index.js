@@ -5241,6 +5241,11 @@
         distance: Math.floor(state.distance),
         coins: state.coins,
         multiplier: state.multiplier,
+        // v0.18.60 — durationSec was missing, which made submit()
+        // do Math.floor(undefined) = NaN. Firebase rejects NaN, so
+        // every auto-submit was silently failing. Pass it explicitly
+        // (same value endRun's GA event already uses).
+        durationSec: Math.floor(state.elapsedMs / 1000),
         score: finalScore,
       }).then(function () {
         console.log('[run] auto-submitted score for', kickUser);
