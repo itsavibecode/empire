@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.61 — 2026-04-28 — Rain rendered behind Shoovy dialogue + intensity dialed down
+
+Two tweaks to the Shoovy mid-water cutscene rain layer:
+
+1. **`.cutscene-dialogue` z-index bumped 2 → 70** so the `.is-stormy` rain overlay (`::after` at z-index 60) renders BEHIND the dialogue chrome. Pre-fix the rain streaks were painting over the text + buttons, making them noisy to read. The dialogue now sits on top of the rain but still below the lightning-flash overlay (z-index 99) so dramatic strobes still wash everything.
+
+2. **Rain intensity dialed down** per user follow-up. Close-pass streak alpha 0.55 → 0.32 + spacing 18px → 26px; far-pass alpha 0.32 → 0.18 + spacing 32px → 44px. Storm tint alpha 0.22 → 0.14. Reads as background atmosphere now rather than a noisy curtain.
+
 ### Run v0.18.60 — 2026-04-28 — Auto-submit fix (was silently NaN-rejecting)
 
 **The auto-submit-to-leaderboard from v0.18.53 was silently failing for every player.** My `endRun` call to `RunnerLeaderboard.submit()` passed `identity / identityType / distance / coins / multiplier / score` but **forgot `durationSec`**. The `submit()` function builds its Firebase entry with `durationSec: Math.floor(scoreData.durationSec)` — `Math.floor(undefined) = NaN`, and Firebase RTDB rejects NaN values, so every push silently rejected. The `.catch()` did log "auto-submit failed" to the console but no UI surfaced the error, so players who entered their kick handle assumed it was working.

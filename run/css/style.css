@@ -1035,30 +1035,35 @@ html, body {
   inset: 0;
   pointer-events: none;
   z-index: 60;
+  /* v0.18.61 — tuned the rain DOWN per user feedback. Streak alpha
+     reduced (0.55 -> 0.32 for the close pass, 0.32 -> 0.18 for the
+     far pass) + spacing widened (18px -> 26px close, 32px -> 44px
+     far) so the rain reads as background atmosphere rather than
+     a noisy curtain over the dialogue. */
   background:
     repeating-linear-gradient(
       105deg,
       rgba(200, 220, 255, 0)        0px,
-      rgba(200, 220, 255, 0)        7px,
-      rgba(200, 220, 255, 0.55)     7px,
-      rgba(200, 220, 255, 0.55)     9px,
       rgba(200, 220, 255, 0)        9px,
-      rgba(200, 220, 255, 0)        18px
+      rgba(200, 220, 255, 0.32)     9px,
+      rgba(200, 220, 255, 0.32)     11px,
+      rgba(200, 220, 255, 0)        11px,
+      rgba(200, 220, 255, 0)        26px
     ),
     repeating-linear-gradient(
       102deg,
       rgba(200, 220, 255, 0)        0px,
-      rgba(200, 220, 255, 0)        14px,
-      rgba(200, 220, 255, 0.32)     14px,
-      rgba(200, 220, 255, 0.32)     16px,
-      rgba(200, 220, 255, 0)        16px,
-      rgba(200, 220, 255, 0)        32px
+      rgba(200, 220, 255, 0)        18px,
+      rgba(200, 220, 255, 0.18)     18px,
+      rgba(200, 220, 255, 0.18)     20px,
+      rgba(200, 220, 255, 0)        20px,
+      rgba(200, 220, 255, 0)        44px
     );
   background-size: 60px 80px, 90px 120px;
   animation: cs-rain 600ms linear infinite, cs-rain-far 1100ms linear infinite;
-  /* Slight blue-grey storm tint so the bg image reads as overcast,
-     matching the canvas-side `rgba(28, 50, 70, 0.18)` storm tint. */
-  box-shadow: inset 0 0 0 9999px rgba(28, 50, 70, 0.22);
+  /* Storm tint also pulled down (0.22 -> 0.14 alpha) so the chile
+     bg reads more clearly. */
+  box-shadow: inset 0 0 0 9999px rgba(28, 50, 70, 0.14);
 }
 @keyframes cs-rain {
   from { background-position: 0 0, 0 0; }
@@ -1151,7 +1156,12 @@ html, body {
   border: 3px solid rgba(201, 164, 255, .85);
   border-radius: 14px;
   padding: 1.4rem 1.6rem 1.2rem;
-  z-index: 2;
+  /* Bumped 2 -> 70 in v0.18.61 so the .is-stormy rain layer
+     (.overlay-cutscene::after at z-index 60) renders BEHIND the
+     dialogue box during the Shoovy cutscene. Pre-fix the rain was
+     painting OVER the text. Still below the lightning flash overlay
+     (z-index 99) so dramatic strobes still cover everything. */
+  z-index: 70;
   font-family: 'VT323', monospace;
   color: #fff;
   text-align: left;
