@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.59 — 2026-04-27 — Puffin sprites wired into Shoovy boat + sunset celebration
+
+**1. Boat-approach loop swapped to Puffin set.** `SHOOVY_BOAT_FRAMES` was using the original `shoovy-sail-01/05/09/13` (4-frame cycle from the old Shoovy sailboat sheet). Replaced with `shoovy-puffin-13` + `shoovy-puffin-14` — the front-facing standing variant where Shoovy grips the mast facing the camera. Reads as "approaching Mike" much better than the side-view of the original set. 2-frame breathe at 280ms gives a calm "drifting toward you" feel.
+
+**2. NEW: Shoovy sunset celebration.** When the water phase exits and Mike actually MET Shoovy mid-water, a 4-second `puffin-88` overlay (Shoovy sailing into the sunset) now appears in the upper-right corner. Fade-in over the first 25%, hold, fade-out over the last 30%. Soft golden glow + subtle vertical bob so it reads as floating, not stickered on. Storytelling beat: "Shoovy made it out too — off into the distance." Skipped if Shoovy never appeared (e.g., dev-skipped via URL params).
+
+The other 86 Puffin frames remain unused for now — saved for future story beats (the storm-cloud-over-boat, the boat-sinking pose, Shoovy fishing, etc).
+
 ### Run v0.18.58 — 2026-04-27 — Enter-restart bug + brighter Xena grab glow
 
 **1. BUG FIX: Enter restarts game while typing in submit-score / kick-username dialog.** The global keydown listener at `bindInput` had a "press Enter on title or gameover screen to (re)start" shortcut that didn't check if the user was actually typing into a form control. So a player on the gameover screen who opened the SUBMIT SCORE dialog and pressed Enter (intending to submit their handle) was triggering BOTH the form-submit path AND `startRun()` — restarting the game mid-submit. Added a focus-aware guard: if `document.activeElement` is an `INPUT`/`TEXTAREA`/`SELECT`/contenteditable, the global Enter shortcut is suppressed. The form's own Enter handler still works normally.

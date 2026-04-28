@@ -104,7 +104,13 @@
   var SHOOVY_BOAT_HEIGHT_FRAC = 0.32;       // sprite height as frac of viewport (boat is BIG)
   var SHOOVY_BOAT_VY = 150;                 // px/sec UP toward Mike — fast enough to reach the trigger Y before body ends
   var SHOOVY_BOAT_TRIGGER_Y_FRAC = 0.45;    // when boat top reaches this Y frac, fire cutscene
-  var SHOOVY_BOAT_FRAMES = ['shoovy-sail-01', 'shoovy-sail-05', 'shoovy-sail-09', 'shoovy-sail-13'];
+  // v0.18.59 — replaced the old shoovy-sail-* set with the cleaner
+  // Puffin sheets (extract-shoovy-puffin.py, 88 frames). Frames 13
+  // and 14 are the front-facing standing variant (Shoovy gripping
+  // the mast as he sails AT the camera) — reads better than the
+  // side-view sail-* set when he's supposed to be APPROACHING Mike.
+  // 2-frame breathe at 280ms gives a calm "drifting toward you" feel.
+  var SHOOVY_BOAT_FRAMES = ['shoovy-puffin-13', 'shoovy-puffin-14'];
   var SHOOVY_BOAT_FRAME_MS = 280;
 
   // BACKGROUND FAUNA — pigeons/cats/dogs/goats walking the sidewalks.
@@ -326,6 +332,10 @@
   SHOOVY_BOAT_FRAMES.forEach(function (k) {
     SPRITE_PATHS[k] = 'img/sprites/' + k + '.png';
   });
+  // v0.18.59 — sunset celebration sprite (Shoovy sailing into the
+  // sunset post-water). Drawn from drawEffects when shoovySunsetUntil
+  // is in the future.
+  SPRITE_PATHS['shoovy-puffin-88'] = 'img/sprites/shoovy-puffin-88.png';
   // Shoovy's cutscene panels (4 frames including bonus blink)
   ['closed', 'mid', 'open', 'blink'].forEach(function (m) {
     SPRITE_PATHS['cutscene-shoovy-' + m] = 'img/cutscene-shoovy-' + m + '.png';
@@ -1501,6 +1511,10 @@
     xenaStolenCount: 0,       // for stats / future HUD
     // For canvas-side screen-distortion at bail-xena trigger
     xenaBailDistortUntil: 0,
+    // v0.18.59 — Shoovy sunset celebration timer. Set to performance.now() + 4000
+    // when the water phase exits AFTER a successful Shoovy meeting.
+    // drawEffects renders puffin-88 in the corner with fade while > now.
+    shoovySunsetUntil: 0,
     effects: {
       hamFreezeUntil: 0,  // game-world frozen until this timestamp (ms)
       hamBonusUntil: 0,   // coin shower + 4x music until this timestamp
@@ -2027,6 +2041,14 @@
         stopLoop(THUNDER_VARIANTS[ti]);
       }
       if (state.phase === 'playing') startLoop('mob-angry');
+      // v0.18.59 SHOOVY SUNSET CELEBRATION — only fires if Mike
+      // actually met Shoovy mid-water. Brief 4s pose (puffin-88,
+      // Shoovy sailing into the sunset) drawn in the upper-right
+      // canvas corner with fade-in/fade-out. Storytelling beat:
+      // "Shoovy made it out too, sailing off into the distance."
+      if (hadShoovyEncounter) {
+        state.shoovySunsetUntil = performance.now() + 4000;
+      }
       // POST-WATER ADIN REWARD — only if Mike actually met Shoovy
       // (the cutscene fired). Adin pops back in, reneges on the $70k,
       // tosses 10 Cx as a consolation. Fires once per segment via
@@ -3772,6 +3794,50 @@
       ctx.restore();
     }
 
+    // SHOOVY SUNSET CELEBRATION (v0.18.59) — fires for 4s after the
+    // water phase exits IF Mike actually met Shoovy mid-water. Big
+    // puffin-88 sprite (Shoovy sailing into the sunset) anchored
+    // upper-right with fade-in/fade-out + a subtle bob. Reads as
+    // "Shoovy made it out too, off into the distance."
+    if (state.shoovySunsetUntil > 0 && now < state.shoovySunsetUntil) {
+      var ssImg = sprites['shoovy-puffin-88'];
+      if (ssImg) {
+        var ssTotal = 4000;
+        var ssRem = (state.shoovySunsetUntil - now) / ssTotal;     // 1 -> 0
+        var ssElapsed = ssTotal - (state.shoovySunsetUntil - now); // 0 -> 4000
+        // Fade in over first 25%, hold, fade out over last 30%.
+        var ssAlpha;
+        if (ssRem > 0.75) {
+          ssAlpha = (1 - ssRem) / 0.25;
+        } else if (ssRem < 0.30) {
+          ssAlpha = ssRem / 0.30;
+        } else {
+          ssAlpha = 1;
+        }
+        // Sized to ~22% of viewport height, anchored near upper-right.
+        var ssTargetH = h * 0.22;
+        var ssScale = ssTargetH / ssImg.height;
+        var ssW = ssImg.width * ssScale;
+        var ssH = ssTargetH;
+        // Subtle bob so the sunset boat reads as floating, not a sticker.
+        var ssBob = Math.sin(ssElapsed / 320) * (h * 0.008);
+        var ssX = w - ssW - 24;
+        var ssY = 80 + ssBob;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, ssAlpha));
+        // Soft golden glow behind the boat
+        ctx.shadowColor = 'rgba(255, 200, 90, 0.6)';
+        ctx.shadowBlur = 28;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.drawImage(ssImg, ssX, ssY, ssW, ssH);
+        ctx.restore();
+      }
+    } else if (state.shoovySunsetUntil > 0 && now >= state.shoovySunsetUntil) {
+      // Cleanup once the window has passed
+      state.shoovySunsetUntil = 0;
+    }
+
     // BUSTED FLASH OVERLAY (v0.18.52) — drawn DEAD LAST so it covers
     // everything else during the brief siren / freeze sequence before
     // the jail HTML overlay slides in. Big "BUSTED" text alternating
@@ -4786,6 +4852,7 @@
     state.xena.grabFlashUntil = 0;
     state.xenaStolenCount = 0;
     state.xenaBailDistortUntil = 0;
+    state.shoovySunsetUntil = 0;
     // ====================================================
     // NEW-RECORD CELEBRATION (v0.18.51)
     // Cache the leaderboard's current top score at run start.
