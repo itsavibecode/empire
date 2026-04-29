@@ -1,0 +1,24 @@
+{
+  "section_label": "",
+  "title": "Hall of Fame",
+  "subtitle": "Top 17 Most Influential Groups of All Time",
+  "groups": [
+    { "name": "Derrick & Darnel", "abbreviation": "D&D", "url": "", "country": "us", "emoji": "" },
+    { "name": "Sky 9", "abbreviation": "", "url": "", "country": "us", "emoji": "" },
+    { "name": "Blacks United", "abbreviation": "BU", "url": "", "country": "us", "emoji": "" },
+    { "name": "Kozy", "abbreviation": "", "url": "", "country": "us", "emoji": "🧸" },
+    { "name": "Late Night", "abbreviation": "LN/LNK", "url": "", "country": "us", "emoji": "" },
+    { "name": "Mixtapes", "abbreviation": "", "url": "", "country": "us", "emoji": "" },
+    { "name": "Influential", "abbreviation": "", "url": "", "country": "us", "emoji": "" },
+    { "name": "Doing Things Better", "abbreviation": "DTB", "url": "", "country": "us", "emoji": "" },
+    { "name": "Legendary", "abbreviation": "", "url": "", "country": "us", "emoji": "" },
+    { "name": "Self Made", "abbreviation": "SM", "url": "", "country": "us", "emoji": "" },
+    { "name": "TopTier", "abbreviation": "", "url": "", "country": "us", "emoji": "" },
+    { "name": "Money Bag Boys/Bitches", "abbreviation": "MBB", "url": "", "country": "us", "emoji": "" },
+    { "name": "Young Pretty", "abbreviation": "YP", "url": "", "country": "us", "emoji": "" },
+    { "name": "Venin De Serpent", "abbreviation": "VDS", "url": "", "country": "co", "emoji": "" },
+    { "name": "Play Boy Putas", "abbreviation": "PBP", "url": "", "country": "mx", "emoji": "" },
+    { "name": "Beautiful and Damned", "abbreviation": "BD", "url": "", "country": "us", "emoji": "" },
+    { "name": "2Turnt", "abbreviation": "", "url": "", "country": "us", "emoji": "" }
+  ]
+}

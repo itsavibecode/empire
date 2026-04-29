@@ -1,4 +1,4 @@
-name: Sync content (streamers + properties + socials + about + seo + cta + wristband + featured)
+name: Sync content (streamers + properties + socials + about + seo + cta + wristband + featured + hall-of-fame + display)
 
 # When any *.json content file changes (typically from a Decap CMS commit),
 # regenerate the derived blocks in index.html and llms.txt.
@@ -16,6 +16,8 @@ on:
       - cta.json
       - wristband.json
       - featured-group.json
+      - hall-of-fame.json
+      - display.json
 
 permissions:
   contents: write
@@ -73,6 +75,16 @@ jobs:
         env:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-featured-group.py
+
+      - name: Sync Hall of Fame section in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-hall-of-fame.py
+
+      - name: Sync display toggles (streamer grayscale) in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-display.py
 
       - name: Commit and push if changed
         run: |

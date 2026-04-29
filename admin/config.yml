@@ -385,6 +385,122 @@ collections:
             default: 'Our Empire Wristband'
             hint: 'Description of the photo for screen readers. e.g. "Our Empire Wristband".'
 
+  - name: hall_of_fame
+    label: Hall of Fame
+    description: |
+      The "Hall of Fame" ranked list shown above the "Ready to Join Empire X?"
+      footer — three columns of groups with rank number, name, optional
+      abbreviation, optional emoji, optional URL, and a country flag.
+
+      Drag rows to reorder — rank numbers (01, 02, 03 ...) are auto-assigned
+      from the order shown here. Add or remove rows freely; the column split
+      (3 cols on desktop, 2 on tablet, 1 on mobile) auto-adjusts.
+
+      Saving here triggers the GitHub Action that regenerates the section
+      in index.html (~30 seconds after save).
+    files:
+      - file: hall-of-fame.json
+        label: Hall of Fame content
+        name: hall_of_fame_file
+        format: json
+        fields:
+          - name: section_label
+            label: 'Section label (small uppercase pill above the title — optional)'
+            widget: string
+            required: false
+            default: ''
+            hint: 'Optional small uppercase pill above the "Hall of Fame" title (e.g. "The Roster"). Leave blank to hide it entirely.'
+          - name: title
+            label: 'Section title'
+            widget: string
+            default: 'Hall of Fame'
+            hint: 'The big gold heading. e.g. "Hall of Fame".'
+          - name: subtitle
+            label: 'Subtitle (line below the title)'
+            widget: string
+            default: 'Top 17 Most Influential Groups of All Time'
+            hint: 'Shown directly under the title in muted caps.'
+          - name: groups
+            label: Groups
+            label_singular: Group
+            widget: list
+            collapsed: false
+            summary: '{{fields.name}} {{fields.abbreviation}} — {{fields.country}}'
+            hint: 'Drag rows to reorder. Rank numbers (01, 02, 03 ...) auto-assign from this order.'
+            fields:
+              - name: name
+                label: 'Name'
+                widget: string
+                hint: 'Group or person name. Mixed case OK — the site renders it in uppercase. e.g. "Derrick & Darnel", "Kozy".'
+              - name: abbreviation
+                label: 'Abbreviation (optional)'
+                widget: string
+                required: false
+                hint: 'Optional short code shown in muted parentheses next to the name. e.g. "D&D", "BU", "DTB". Leave blank to omit.'
+              - name: url
+                label: 'Link URL (optional)'
+                widget: string
+                required: false
+                hint: 'Optional. If filled in, the name becomes a clickable link to this URL. Leave blank for plain text. Full https://... URL.'
+                pattern: ['^$|^https?://.+', 'Leave blank or enter a full http(s):// URL']
+              - name: emoji
+                label: 'Emoji (optional)'
+                widget: string
+                required: false
+                hint: 'Optional small emoji shown right after the name (e.g. "🧸" for Kozy). Single emoji only. Leave blank to omit.'
+              - name: country
+                label: 'Country flag'
+                widget: select
+                default: 'us'
+                options:
+                  - { label: '🇺🇸 United States', value: 'us' }
+                  - { label: '🇨🇦 Canada', value: 'ca' }
+                  - { label: '🇲🇽 Mexico', value: 'mx' }
+                  - { label: '🇨🇴 Colombia', value: 'co' }
+                  - { label: '🇧🇷 Brazil', value: 'br' }
+                  - { label: '🇦🇷 Argentina', value: 'ar' }
+                  - { label: '🇨🇱 Chile', value: 'cl' }
+                  - { label: '🇵🇪 Peru', value: 'pe' }
+                  - { label: '🇻🇪 Venezuela', value: 've' }
+                  - { label: '🇪🇸 Spain', value: 'es' }
+                  - { label: '🇬🇧 United Kingdom', value: 'gb' }
+                  - { label: '🇮🇪 Ireland', value: 'ie' }
+                  - { label: '🇫🇷 France', value: 'fr' }
+                  - { label: '🇩🇪 Germany', value: 'de' }
+                  - { label: '🇮🇹 Italy', value: 'it' }
+                  - { label: '🇳🇱 Netherlands', value: 'nl' }
+                  - { label: '🇸🇪 Sweden', value: 'se' }
+                  - { label: '🇵🇱 Poland', value: 'pl' }
+                  - { label: '🇯🇵 Japan', value: 'jp' }
+                  - { label: '🇰🇷 South Korea', value: 'kr' }
+                  - { label: '🇨🇳 China', value: 'cn' }
+                  - { label: '🇮🇳 India', value: 'in' }
+                  - { label: '🇵🇭 Philippines', value: 'ph' }
+                  - { label: '🇦🇺 Australia', value: 'au' }
+                hint: 'Pick the country shown as a flag emoji on the right side of the row. Need a flag not in this list? Ask the dev to add it.'
+
+  - name: display
+    label: Display Settings
+    description: |
+      Site-wide display toggles. Right now there's just one switch:
+      whether the Confirmed Streamers avatars render in black-and-white
+      (with a colored hover) or in full color all the time. Applies to
+      ALL streamer avatars at once — there is no per-streamer override.
+
+      Saving here triggers the GitHub Action that updates the relevant
+      attribute in index.html (~30 seconds after save).
+    files:
+      - file: display.json
+        label: Display settings
+        name: display_file
+        format: json
+        fields:
+          - name: streamer_avatars_grayscale
+            label: 'Streamer avatars in black-and-white'
+            widget: boolean
+            default: false
+            hint: 'When ON: streamer avatars are black-and-white by default and turn colored when you hover (the original design). When OFF: avatars are full color all the time. Affects all streamers.'
+
   - name: featured_group
     label: Featured Group Section
     description: |

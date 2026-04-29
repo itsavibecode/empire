@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Ice Poseidon, XenaTheWitch, WoodBaby, JJStream, Sasha West, Kimmee, Hanridge, AshWilder, Shangel, FloridaBoy, Letty , TaylorStarlight, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, KikiKrazy, Fanos, Dtan, RiddaW, Ozemi, lifeismizzy, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.3">
+<meta name="version" content="0.13.4">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -649,6 +649,134 @@ section{padding:6rem 1.5rem}
 }
 
 /* === CTA FOOTER === */
+/* === STREAMER GRAYSCALE TOGGLE ===
+   data-grayscale="false" disables the default grayscale filter on
+   streamer avatars (so they render in full color at rest). The hover
+   filter (sepia + hue-rotate + saturate) is intentionally NOT overridden
+   — the saturated tint on hover stays in both modes for the visual pop. */
+.streamers[data-grayscale="false"] .streamer-img{
+  filter:none;
+}
+
+/* === HALL OF FAME ===
+   Lives inside <section class="cta-footer"> (above the "Ready to Join"
+   block), so it inherits the same dark + gold-radial background.
+   3-column ranked list driven by hall-of-fame.json + sync-hall-of-fame.py.
+   17 entries split column-balanced (~6/6/5) on desktop, 2 cols on tablet,
+   1 col on mobile. */
+.hall-of-fame{
+  text-align:left;
+  padding-bottom:4rem;
+  margin-bottom:3rem;
+  border-bottom:1px solid rgba(245,241,235,0.06);
+}
+.hall-of-fame-header{
+  text-align:center;
+  margin-bottom:2.5rem;
+}
+.hall-of-fame-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.4rem,6vw,4rem);
+  letter-spacing:0.2em;
+  color:var(--gold);
+  margin:0;
+  position:relative;
+  display:inline-block;
+}
+.hall-of-fame-title::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  bottom:-0.4rem;
+  transform:translateX(-50%);
+  width:70px;
+  height:2px;
+  background:var(--gold);
+}
+.hall-of-fame-subtitle{
+  font-family:'Oswald',sans-serif;
+  letter-spacing:0.2em;
+  font-size:0.85rem;
+  color:rgba(245,241,235,0.55);
+  text-transform:uppercase;
+  margin:1.2rem 0 0;
+}
+.hall-of-fame-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  column-count:3;
+  column-gap:2.5rem;
+}
+.hall-of-fame-row{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  padding:0.85rem 0;
+  border-bottom:1px solid rgba(245,241,235,0.08);
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.hall-of-fame-rank{
+  font-family:'Oswald',sans-serif;
+  font-weight:600;
+  color:var(--gold);
+  letter-spacing:0.1em;
+  font-size:0.95rem;
+  flex:0 0 2.6rem;
+}
+.hall-of-fame-name{
+  flex:1 1 auto;
+  min-width:0;
+  font-family:'Oswald',sans-serif;
+  font-weight:400;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  font-size:0.9rem;
+  line-height:1.35;
+  color:rgba(245,241,235,0.85);
+  /* Long names (e.g. "Money Bag Boys/Bitches (MBB)") wrap to a 2nd line
+     rather than ellipsing so the abbreviation isn't truncated.
+     break-inside:avoid on .hall-of-fame-row keeps the wrapped row whole. */
+  word-break:break-word;
+}
+.hall-of-fame-name a{
+  color:inherit;
+  text-decoration:none;
+  border-bottom:1px solid transparent;
+  transition:color 0.2s ease,border-color 0.2s ease;
+}
+.hall-of-fame-name a:hover{
+  color:var(--gold);
+  border-bottom-color:var(--gold);
+}
+.hall-of-fame-abbrev{
+  color:rgba(245,241,235,0.45);
+  font-weight:400;
+  margin-left:0.25rem;
+}
+.hall-of-fame-emoji{
+  margin-left:0.4rem;
+  font-size:1rem;
+  letter-spacing:0;
+}
+.hall-of-fame-flag{
+  flex:0 0 auto;
+  display:block;
+  width:28px;
+  height:21px;
+  border-radius:2px;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.08);
+  object-fit:cover;
+}
+@media (max-width:900px){
+  .hall-of-fame-list{column-count:2;}
+}
+@media (max-width:560px){
+  .hall-of-fame-list{column-count:1;column-gap:0;}
+  .hall-of-fame-name{font-size:0.82rem;letter-spacing:0.12em;}
+}
+
 .cta-footer{
   text-align:center;
   padding:5rem 1.5rem;
@@ -1123,7 +1251,7 @@ section{padding:6rem 1.5rem}
 </div>
 
 <!-- CONFIRMED STREAMERS -->
-<section class="streamers">
+<section class="streamers" data-grayscale="false">
   <div class="container">
     <div class="reveal">
       <div class="section-label">Streaming Live on Kick</div>
@@ -1582,6 +1710,103 @@ section{padding:6rem 1.5rem}
 
 <!-- CTA FOOTER -->
 <section class="cta-footer">
+  <!-- HALL_OF_FAME_BEGIN -->
+  <div class="container">
+    <div class="hall-of-fame reveal">
+      <div class="hall-of-fame-header">
+        <h2 class="hall-of-fame-title">Hall of Fame</h2>
+        <p class="hall-of-fame-subtitle">Top 17 Most Influential Groups of All Time</p>
+      </div>
+      <ol class="hall-of-fame-list">
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">01.</span>
+          <span class="hall-of-fame-name">Derrick &amp; Darnel <span class="hall-of-fame-abbrev">(D&amp;D)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">02.</span>
+          <span class="hall-of-fame-name">Sky 9</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">03.</span>
+          <span class="hall-of-fame-name">Blacks United <span class="hall-of-fame-abbrev">(BU)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">04.</span>
+          <span class="hall-of-fame-name">Kozy<span class="hall-of-fame-emoji">🧸</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">05.</span>
+          <span class="hall-of-fame-name">Late Night <span class="hall-of-fame-abbrev">(LN/LNK)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">06.</span>
+          <span class="hall-of-fame-name">Mixtapes</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">07.</span>
+          <span class="hall-of-fame-name">Influential</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">08.</span>
+          <span class="hall-of-fame-name">Doing Things Better <span class="hall-of-fame-abbrev">(DTB)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">09.</span>
+          <span class="hall-of-fame-name">Legendary</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">10.</span>
+          <span class="hall-of-fame-name">Self Made <span class="hall-of-fame-abbrev">(SM)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">11.</span>
+          <span class="hall-of-fame-name">TopTier</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">12.</span>
+          <span class="hall-of-fame-name">Money Bag Boys/Bitches <span class="hall-of-fame-abbrev">(MBB)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">13.</span>
+          <span class="hall-of-fame-name">Young Pretty <span class="hall-of-fame-abbrev">(YP)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">14.</span>
+          <span class="hall-of-fame-name">Venin De Serpent <span class="hall-of-fame-abbrev">(VDS)</span></span>
+          <img class="hall-of-fame-flag" src="flags/co.svg" alt="Colombia" title="Colombia" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">15.</span>
+          <span class="hall-of-fame-name">Play Boy Putas <span class="hall-of-fame-abbrev">(PBP)</span></span>
+          <img class="hall-of-fame-flag" src="flags/mx.svg" alt="Mexico" title="Mexico" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">16.</span>
+          <span class="hall-of-fame-name">Beautiful and Damned <span class="hall-of-fame-abbrev">(BD)</span></span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+        <li class="hall-of-fame-row">
+          <span class="hall-of-fame-rank">17.</span>
+          <span class="hall-of-fame-name">2Turnt</span>
+          <img class="hall-of-fame-flag" src="flags/us.svg" alt="United States" title="United States" width="28" height="21" loading="lazy">
+        </li>
+      </ol>
+    </div>
+  </div>
+  <!-- HALL_OF_FAME_END -->
   <div class="container reveal">
     <h2 class="section-title">Ready to Join Empire X?</h2>
     <p>Follow @our.empire on Instagram to receive your invite. This is invite-only &mdash; don&rsquo;t miss out.</p>
@@ -1590,7 +1815,7 @@ section{padding:6rem 1.5rem}
 </section>
 
 <div class="footer-bar">
-  &copy; 2026 Our Empire &bull; EmpireX &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.4);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.25);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.3</span>
+  &copy; 2026 Our Empire &bull; EmpireX &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.4);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.25);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.4</span>
 </div>
 
 <script>

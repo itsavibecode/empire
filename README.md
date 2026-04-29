@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.4 — 2026-04-29 — Hall of Fame section + streamer-avatar color toggle
+
+Two client-requested additions:
+
+1. **Hall of Fame section.** New ranked list of the "Top 17 Most Influential Groups of All Time," embedded inside the existing `<section class="cta-footer">` so it sits immediately above "Ready to Join Empire X?" and inherits the same dark + gold-radial backdrop. Three columns on desktop, two on tablet, one on mobile (CSS `column-count` with `break-inside: avoid` so rows never split). Each row: gold rank (`01.`, `02.`, ...), uppercase name with optional muted abbreviation, optional emoji (e.g. 🧸 for Kozy), and a country-flag emoji on the right.
+   - Backed by new `hall-of-fame.json` (the Decap CMS source of truth).
+   - New CMS collection "Hall of Fame" with drag-to-reorder, add/remove rows, optional URL per entry (wraps the name in `<a href>`), optional emoji, and a 24-country flag picker. Rank numbers auto-assign from list order — editors don't manually number anything.
+   - New `.github/scripts/sync-hall-of-fame.py` regenerates the block from JSON between `<!-- HALL_OF_FAME_BEGIN -->` / `<!-- HALL_OF_FAME_END -->` markers. Wired into the existing sync workflow.
+
+2. **Streamer avatars in full color.** The Confirmed Streamers grid was showing avatars in B&W with a colored hover. Client wanted full color always. Added a CSS hook `.streamers[data-grayscale="false"] .streamer-img { filter:none; }` that overrides the existing grayscale filter. Initial state is full color (`data-grayscale="false"`).
+   - Backed by new `display.json` (`streamer_avatars_grayscale: false`).
+   - New CMS collection "Display Settings" exposes a single boolean toggle. Flipping it ON brings back the original B&W-with-color-on-hover treatment site-wide. There is no per-streamer override — it's all-or-nothing by design.
+   - New `.github/scripts/sync-display.py` rewrites the `data-grayscale` attribute on `<section class="streamers">` from JSON.
+
 ### Site v0.13.3 — 2026-04-28 — Bing SEO fixes (meta description + HTML size)
 
 Bing Webmaster's Site Scan flagged two issues for the home page:
