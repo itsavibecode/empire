@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.3 — 2026-04-28 — Bing SEO fixes (meta description + HTML size)
+
+Bing Webmaster's Site Scan flagged two issues for the home page:
+
+1. **Meta description too long.** Was 215 chars (over Bing's ~160-char window) — trimmed to 154 chars while keeping the EmpireX brand prefix, the dates, the location, and the cash-prize/Kick hook. Dropped the redundant "world's first / 5 days / Invite only" filler that wasn't earning its keep.
+
+2. **HTML size too long.** `index.html` was 2.3 MB (!) because two copies of `logo.png` were inlined as base64 `data:` URIs — once as the favicon (line 106) and once as the hero `<img>` (line 1086). Externalized both to `href="logo.png"` / `src="logo.png"` (the file already exists in the repo). New page size: ~72 KB, a 97% reduction. Page should index faster on Bing and load faster for first-time visitors who don't yet have `logo.png` cached.
+
+No visual change — the favicon and hero logo render identically since they were already pointing at the same PNG bytes, just inlined.
+
 ### Run v0.18.61 — 2026-04-28 — Rain rendered behind Shoovy dialogue + intensity dialed down
 
 Two tweaks to the Shoovy mid-water cutscene rain layer:
