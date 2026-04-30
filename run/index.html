@@ -47,7 +47,7 @@
 
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323&family=Pacifico&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=0.18.61">
+  <link rel="stylesheet" href="css/style.css?v=0.18.62">
 </head>
 <body>
   <!-- Game canvas. Resized to viewport via JS on load + resize. -->
@@ -293,16 +293,16 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.61</div>
+  <div class="game-version">Run v0.18.62</div>
 
   <!-- Cache-bust query string follows the meta version above. Bumped
        on every release so browsers/Cloudflare can't serve a stale JS
        against a fresh HTML — that mismatch caused v0.18.61 to ship
        new HTML but old JS to many players (Xena giant + pause broken
        + chile-police bg missing all visible symptoms). -->
-  <script src="js/index.js?v=0.18.61"></script>
+  <script src="js/index.js?v=0.18.62"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
        imports from the gstatic CDN). Exposes window.RunnerLeaderboard. -->
-  <script type="module" src="js/leaderboard.js?v=0.18.61"></script>
+  <script type="module" src="js/leaderboard.js?v=0.18.62"></script>
 </body>
 </html>

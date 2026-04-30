@@ -17,6 +17,22 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.62 — 2026-04-30 — Jump dodges NPCs + positional cop-car siren + jail-door SFX
+
+Three gameplay/audio additions, one balance tweak:
+
+1. **Jump now dodges NPC people (was cop-car-only).** Mike's jump used to be a single-purpose tool: only the parked cop-car (`jumpOnly: true`) checked airborne state during collision; everything else required a lane-swap. Added `jumpAvoid: true` to the two regular pedestrian variants (`walk-hoodie`, `walk-woman`) and all 8 `npc-runner` sprites. The collision gate at the obstacle loop now treats `jumpOnly || jumpAvoid` identically while airborne. Phone-thief variants (`walk-reaching`, `walk-reaching-flipped`) intentionally stay grounded — their job is to punish greedy pickups and they need to remain a real threat in your lane. Cop cars stay `jumpOnly` (mandatory jump). Net effect: jump is a real second tool with a real cost, and late-game survivability against NPC-runner clusters jumps without trivializing the game.
+
+2. **Post-land cooldown on jump (150 ms).** New `JUMP_LANDING_COOLDOWN_MS = 150` keeps panic-spamming honest. Previously you could re-press the instant the 700 ms arc finished; now there's a brief grace window where you're back to lane-swap-only. With NPC dodging on the table this matters — without the gate, the jump button becomes a get-out-of-jail card for sloppy positioning.
+
+3. **Positional cop-car siren via Web Audio.** Cross-traffic cop cars now wail. Routed through a Web Audio graph (decode `audio/police-siren.mp3` once into an `AudioBuffer`, spawn a fresh `BufferSourceNode → StereoPannerNode → GainNode → destination` per cross-car) so each car gets its own pan + gain pair updated every frame from its on-screen X. Pan ranges -1 (full left) → +1 (full right) relative to the viewport center, so a car crossing left-to-right travels through your stereo field. Gain falls off with X-distance from Mike's lane, peaks at a deliberately low max (`SIREN_BASE_VOL = 0.18`) per the user spec — the user wants subtle proximity ambience, not a scream. Multiplied by the SFX channel volume so the existing mixer slider still controls it. AudioContext is suspended on pause and resumed on unpause (silences every live siren in one shot). Cleanup hooks detach Web Audio nodes on cull, hit, and every `state.crossCars = []` reset path. StereoPanner is feature-detected — pre-Safari 14.1 falls back to mono gain-only and the rest of the game keeps working.
+
+4. **Jail-door clang on jail-cell entry.** New `audio/jail-door-close.mp3` plays as a one-shot the moment `state.jail.phase` becomes `'cell'`. Wired into both code paths: the direct transition (Ice wasn't tagging along when Mike got busted) AND the post-cutscene transition inside `ice-bails-on-mike`'s `onComplete` (Ice was around → "I'll call you" panel runs first → cell). Plays before `showJailOverlay()` + the jail loops start, so the door slams as the overlay fades in.
+
+Bonus: jump SFX swapped from the generic `audio/Jump/MP3/Jump1.mp3` (sound-pack file) to a hand-picked `audio/cartoon-jump.mp3` that fits the comedy tone better. The `playSfx('jump')` call at the start of `triggerJump` was already wired in; only the `AUDIO_DEFS['jump'].src` path changed.
+
+Cache-bust query strings on `js/index.js` and `css/style.css` bumped from `?v=0.18.61` to `?v=0.18.62` so browsers/CF don't serve stale JS against fresh HTML (the same trap that bit v0.18.55).
+
 ### Site v0.13.4 — 2026-04-29 — Hall of Fame section + streamer-avatar color toggle
 
 Two client-requested additions:

@@ -160,6 +160,9 @@
   var PHONE_THIEF_PARTICLE_COUNT = 10;   // one coin sprite per stolen coin
   var JUMP_DURATION = 0.7;         // total seconds for a full jump arc
   var JUMP_HEIGHT_FRAC = 0.18;     // peak jump height as fraction of viewH
+  // Brief grace period AFTER landing before another jump can fire — keeps
+  // panic-spamming honest now that jump dodges most NPCs (v0.18.62).
+  var JUMP_LANDING_COOLDOWN_MS = 150;
   // Ice side-kick — once joined (post-cutscene), Ice runs alongside
   // Mike at this lateral pixel offset and auto-grabs nearby coins.
   var ICE_OFFSET_X_FRAC = 0.13;    // distance from Mike's center, as fraction of viewport width
@@ -267,9 +270,13 @@
     // Walking pedestrians — sprites are clean (no ground shadow), so
     // bottomCropFrac was lowered from 0.06 to 0 in v0.18.51 (the crop
     // was slicing the shoes off).
-    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22 },
-    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22 },
+    // jumpAvoid: jumping dodges them (v0.18.62). Phone thieves
+    // intentionally are NOT jumpAvoid — their job is to punish greedy
+    // pickups and they need to remain a real threat in your lane.
+    { id: 'walk-hoodie',  frames: ['npc-pedestrian-01','npc-pedestrian-02','npc-pedestrian-03','npc-pedestrian-04'], frameMs: 160, bobPx: 22, jumpAvoid: true },
+    { id: 'walk-woman',   frames: ['npc-pedestrian-05','npc-pedestrian-06','npc-pedestrian-07','npc-pedestrian-08'], frameMs: 160, bobPx: 22, jumpAvoid: true },
     // PHONE THIEF — reaching dude lunges for Mike's selfie stick.
+    // NOT jumpAvoid: snatchers stay scary, force a lane-swap.
     { id: 'walk-reaching', frames: ['npc-pedestrian-09','npc-pedestrian-10','npc-pedestrian-11','npc-pedestrian-12'], frameMs: 130, bobPx: 14, phoneThief: true },
     // PHONE THIEF (flipped) — same mechanic, mirrored sprite reaching
     // from the OPPOSITE side. Spawn pool now has phone-snatchers
@@ -283,14 +290,17 @@
     // granny, sports fans, flag wavers, cowboys, punks).
     // Picked 8 visually distinctive characters across the 7 source
     // sheets — extracted via extract-npc-runners.py.
-    { id: 'npc-runner', frames: _seqDash('npc-runner-01-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-02-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-03-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-04-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-14-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-15-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-16-', 6),  frameMs: 110, bobPx: 0 },
-    { id: 'npc-runner', frames: _seqDash('npc-runner-25-', 6),  frameMs: 110, bobPx: 0 },
+    // jumpAvoid: true (v0.18.62) — these were the densest late-game
+    // obstacle and lane-swap-only; jump now gives a second tool with a
+    // real cost (700ms + 150ms cooldown, can't lane-swap mid-air).
+    { id: 'npc-runner', frames: _seqDash('npc-runner-01-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-02-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-03-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-04-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-14-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-15-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-16-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
+    { id: 'npc-runner', frames: _seqDash('npc-runner-25-', 6),  frameMs: 110, bobPx: 0, jumpAvoid: true },
     // COP CAR — jump-only. Animates through 4 light-bar variants at
     // 180ms for R-B-R-B flashing. Previously had bottomCropFrac 0.12
     // to hide an iso ground-shadow, but the chroma-keyed sprites are
@@ -467,7 +477,9 @@
     'ham-pickup':          { src: 'audio/1up/MP3/1up3.mp3',        channel: 'sfx' },
     'bonus-end':           { src: 'audio/Blip/MP3/Blip2.mp3',      channel: 'sfx' },
     'dialogue-beep':       { src: 'audio/Blip/MP3/Blip3.mp3',      channel: 'dialogue' },
-    'jump':                { src: 'audio/Jump/MP3/Jump1.mp3',      channel: 'sfx' },
+    // v0.18.62 — swapped from audio/Jump/MP3/Jump1.mp3 (generic pack
+    // sound) to a hand-picked cartoon-y file that fits the comedy tone.
+    'jump':                { src: 'audio/cartoon-jump.mp3',         channel: 'sfx' },
     // Hurricane segment audio. Ocean + rain are loops that play side
     // by side during the entire phase; 3 thunder variants are one-shots
     // picked at random per lightning flash for variety.
@@ -494,6 +506,9 @@
     'bailed-out':          { src: 'audio/bailed-out.mp3',          channel: 'sfx' },
     'xena-bailed-out':     { src: 'audio/xena-bailed-out.mp3',     channel: 'sfx' },
     'xena-coin-pickup':    { src: 'audio/xena-coin-pickup.mp3',    channel: 'sfx' },
+    // v0.18.62 — door-clang one-shot played on entry to the jail-cell
+    // overlay (both the direct path and the post-ice-bails path).
+    'jail-door-close':     { src: 'audio/jail-door-close.mp3',     channel: 'sfx' },
   };
   // Pool of thunder variants — picked randomly per flash so the same
   // crack doesn't repeat back-to-back during the segment.
@@ -589,6 +604,125 @@
     if (!a) return;
     a.pause();
     a.currentTime = 0;
+  }
+
+  // === CROSS-CAR POSITIONAL SIREN (v0.18.62) ===
+  // Per-cross-car looping siren with stereo pan + distance-based volume.
+  // Routed through Web Audio because HTMLAudioElement has no per-instance
+  // panning/gain. We decode police-siren.mp3 ONCE into an AudioBuffer and
+  // spawn a fresh BufferSource (loop=true) per cross-car. Each car owns
+  // its own StereoPanner + Gain pair updated each frame from the car's
+  // screen-space position. Detached on cull / hit / phase reset / pause.
+  var sirenAudio = {
+    ctx: null,
+    buffer: null,
+    loaded: false,
+    loading: false,
+  };
+  // Base max gain for the siren — the user asked for "really low in
+  // volume" so even at peak proximity the siren stays subdued. Multiplied
+  // by the SFX channel volume + a distance-falloff factor each frame.
+  var SIREN_BASE_VOL = 0.18;
+  // Distance falloff cutoff: gain reaches 0 when the car center is this
+  // many viewport widths away from Mike's lane center.
+  var SIREN_FALLOFF_VW = 0.6;
+
+  function ensureSirenAudio() {
+    if (sirenAudio.ctx) return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return; // browser too old — skip silently, gameplay unaffected
+    try { sirenAudio.ctx = new Ctx(); } catch (e) { return; }
+    if (sirenAudio.loading) return;
+    sirenAudio.loading = true;
+    fetch('audio/police-siren.mp3')
+      .then(function (r) { return r.arrayBuffer(); })
+      .then(function (buf) {
+        return new Promise(function (resolve, reject) {
+          // Use the callback form for older Safari that didn't return
+          // a promise from decodeAudioData.
+          sirenAudio.ctx.decodeAudioData(buf, resolve, reject);
+        });
+      })
+      .then(function (decoded) {
+        sirenAudio.buffer = decoded;
+        sirenAudio.loaded = true;
+      })
+      .catch(function () {
+        // Decode or fetch failed — leave loaded=false; attach() will
+        // no-op for the rest of the session and gameplay continues.
+        sirenAudio.loading = false;
+      });
+  }
+
+  function attachSirenToCrossCar(car) {
+    ensureSirenAudio();
+    if (!sirenAudio.ctx || !sirenAudio.loaded) return;
+    if (sirenAudio.ctx.state === 'suspended') {
+      sirenAudio.ctx.resume().catch(function () {});
+    }
+    try {
+      var src = sirenAudio.ctx.createBufferSource();
+      src.buffer = sirenAudio.buffer;
+      src.loop = true;
+      var gain = sirenAudio.ctx.createGain();
+      gain.gain.value = 0; // ramps up via per-frame updateCrossCarSiren
+      // StereoPannerNode unavailable in old Safari < 14.1 — fall back to
+      // gain-only (mono) on those, the user still hears proximity but
+      // not direction.
+      var panner = null;
+      if (typeof sirenAudio.ctx.createStereoPanner === 'function') {
+        panner = sirenAudio.ctx.createStereoPanner();
+        src.connect(panner).connect(gain).connect(sirenAudio.ctx.destination);
+      } else {
+        src.connect(gain).connect(sirenAudio.ctx.destination);
+      }
+      src.start(0);
+      car.sirenSrc = src;
+      car.sirenPanner = panner;
+      car.sirenGain = gain;
+    } catch (e) {
+      // Anything blew up — make sure stale handles aren't left on the car.
+      car.sirenSrc = null; car.sirenPanner = null; car.sirenGain = null;
+    }
+  }
+
+  function updateCrossCarSiren(car) {
+    if (!car.sirenGain) return;
+    var sfxVol = effectiveVolume('sfx');
+    var w = viewW();
+    if (w <= 0) return;
+    var ccCx = car.x + car.h / 2;
+    // Pan: -1 (full left) … 0 (center) … +1 (full right) in viewport space.
+    var pan = (ccCx - w * 0.5) / (w * 0.5);
+    if (pan < -1) pan = -1; else if (pan > 1) pan = 1;
+    // Distance-from-Mike falloff for gain (X-only — cross cars stay
+    // near Mike's foot line on Y by design).
+    var mikeCx = laneX(state.player.targetLane);
+    var distX = Math.abs(ccCx - mikeCx);
+    var maxDist = w * SIREN_FALLOFF_VW;
+    var distGain = maxDist > 0 ? Math.max(0, 1 - distX / maxDist) : 0;
+    car.sirenGain.gain.value = SIREN_BASE_VOL * sfxVol * distGain;
+    if (car.sirenPanner) car.sirenPanner.pan.value = pan;
+  }
+
+  function detachSirenFromCrossCar(car) {
+    if (!car || !car.sirenSrc) return;
+    try {
+      car.sirenSrc.stop();
+      car.sirenSrc.disconnect();
+      if (car.sirenPanner) car.sirenPanner.disconnect();
+      car.sirenGain.disconnect();
+    } catch (e) {}
+    car.sirenSrc = null;
+    car.sirenPanner = null;
+    car.sirenGain = null;
+  }
+
+  function clearAllCrossCarSirens() {
+    if (!state || !state.crossCars) return;
+    for (var i = 0; i < state.crossCars.length; i++) {
+      detachSirenFromCrossCar(state.crossCars[i]);
+    }
   }
 
   function pickRandomMusic() {
@@ -839,6 +973,7 @@
         // hold while this cutscene played).
         state.jail.phase = 'cell';
         state.jail.startedAt = performance.now();
+        playSfx('jail-door-close');
         showJailOverlay();
         startLoop('jailed');
         startLoop('policejail');
@@ -1363,6 +1498,18 @@
       pauseStartedAt = 0;
     }
 
+    // v0.18.62 — also suspend/resume the Web Audio context that owns the
+    // cross-car sirens. Suspending stops every BufferSource connected to
+    // it, so all live sirens go silent on pause and resume seamlessly
+    // (their pan/gain pick back up next frame from updateCrossCarSiren).
+    if (sirenAudio.ctx) {
+      if (state.paused && sirenAudio.ctx.state === 'running') {
+        sirenAudio.ctx.suspend().catch(function () {});
+      } else if (!state.paused && sirenAudio.ctx.state === 'suspended') {
+        sirenAudio.ctx.resume().catch(function () {});
+      }
+    }
+
     // Pause/resume looping audio. SFX (one-shot) don't need to be touched.
     Object.keys(AUDIO_DEFS).forEach(function (k) {
       var def = AUDIO_DEFS[k];
@@ -1707,8 +1854,8 @@
     if (state.phase !== 'playing' || state.paused) return;
     if (state.jail && state.jail.phase !== 'none') return; // no jumping in jail
     var now = performance.now();
-    // Block re-jumping mid-air (force a clean landing first)
-    if (now - state.player.jumpStart < JUMP_DURATION * 1000) return;
+    // Block re-jumping mid-air AND during the post-land cooldown.
+    if (now - state.player.jumpStart < JUMP_DURATION * 1000 + JUMP_LANDING_COOLDOWN_MS) return;
     state.player.jumpStart = now;
     playSfx('jump');
     ga('jump', { at_distance: Math.floor(state.distance) });
@@ -1992,7 +2139,7 @@
     state.obstacles = [];
     state.coinsArr = [];
     state.pickups = [];
-    state.crossCars = [];
+    clearAllCrossCarSirens(); state.crossCars = []; // v0.18.62 — release siren handles before clearing
     state.fauna = [];
     state.chaseOfficers = [];
     // Ice does not exist in the water — Mike's solo on the mattress.
@@ -2276,7 +2423,7 @@
     // don't all cross at the exact same Y. size.w is the visual
     // vertical extent post-rotation.
     var y = playerY() - size.w * 0.85 + (Math.random() * 0.04 - 0.02) * viewH();
-    state.crossCars.push({
+    var car = {
       x: startX,
       y: y,
       baseY: y,           // original Y line — swerve oscillates around this
@@ -2287,7 +2434,11 @@
       spawnedAt: performance.now(),
       hit: false,
       swerveStartedAt: 0, // set when the car triggers its feint near Mike
-    });
+      // Web Audio handles attached on spawn (see attachSirenToCrossCar).
+      sirenSrc: null, sirenPanner: null, sirenGain: null,
+    };
+    state.crossCars.push(car);
+    attachSirenToCrossCar(car);
   }
 
   function getObstacleSprite(o, now) {
@@ -2440,6 +2591,7 @@
         } else {
           state.jail.phase = 'cell';
           state.jail.startedAt = now;
+          playSfx('jail-door-close');
           showJailOverlay();
           startLoop('jailed');
           startLoop('policejail');
@@ -2489,7 +2641,7 @@
     state.obstacles = [];
     state.coinsArr = [];
     state.pickups = [];
-    state.crossCars = [];
+    clearAllCrossCarSirens(); state.crossCars = []; // v0.18.62 — release siren handles before clearing
     state.fauna = [];
     state.chaseOfficers = [];
     state.coinParticles = [];
@@ -2536,7 +2688,7 @@
     state.obstacles = [];
     state.coinsArr = [];
     state.pickups = [];
-    state.crossCars = [];
+    clearAllCrossCarSirens(); state.crossCars = []; // v0.18.62 — release siren handles before clearing
     state.fauna = [];
     state.chaseOfficers = [];
     state.coinParticles = [];
@@ -3079,12 +3231,17 @@
           ccc.y = ccc.baseY;
         }
       }
+      // v0.18.62 — update positional siren AFTER position+swerve resolve
+      // so pan/volume reflect this frame's true on-screen position.
+      updateCrossCarSiren(ccc);
     }
     state.crossCars = state.crossCars.filter(function (c) {
       // Cull when fully off the opposite edge. Use c.h (post-rotation
       // visual horizontal extent), NOT c.w (which is the source's
       // wide axis = visual VERTICAL extent post-rotation).
-      return (c.dir > 0 ? c.x < viewW() + c.h + 50 : c.x > -c.h - 50);
+      var keep = (c.dir > 0 ? c.x < viewW() + c.h + 50 : c.x > -c.h - 50);
+      if (!keep) detachSirenFromCrossCar(c); // v0.18.62 — release Web Audio nodes
+      return keep;
     });
 
     // Collisions.
@@ -3104,8 +3261,15 @@
       var oCenterY = oy + o.h / 2;
       var pCenterY = py - playerSize.h * 0.4;
       if (Math.abs(oCenterY - pCenterY) < (o.h * 0.4 + pHitH * 0.5)) {
-        // Jump-only obstacles (cop cars) don't register if Mike is mid-jump
-        if (o.type && o.type.jumpOnly && isAirborne(now)) {
+        // Mid-jump grants invuln on:
+        //   jumpOnly  — must-jump obstacles (cop cars). Lane-swap can't
+        //               dodge them; jumping is the only counter.
+        //   jumpAvoid — optional jump-dodgeable obstacles (regular
+        //               pedestrians + npc-runners, v0.18.62). Lane-swap
+        //               still works; jump is a second tool.
+        // Phone thieves (no flag) and any future hazard left unflagged
+        // stay grounded — jumping doesn't save you.
+        if (o.type && (o.type.jumpOnly || o.type.jumpAvoid) && isAirborne(now)) {
           // mark "skipped" so we don't re-check next frame and ding again
           o.hit = true;
           continue;
@@ -3176,9 +3340,11 @@
         // skip the damage. Same pattern as jumpOnly cop cars.
         if (isAirborne(now)) {
           cc.hit = true;
+          detachSirenFromCrossCar(cc); // v0.18.62 — chase resolved, kill the wail
           continue;
         }
         cc.hit = true;
+        detachSirenFromCrossCar(cc); // v0.18.62 — contact made, kill the wail
         if (now > state.invulnUntil) {
           // JAIL — cross-traffic cop cars also count as cop touches.
           if (handleCopHit(now)) return;
@@ -4822,7 +4988,7 @@
     state.pickups = [];
     state.coinParticles = [];
     state.coinRewardFlash = null;
-    state.crossCars = [];
+    clearAllCrossCarSirens(); state.crossCars = []; // v0.18.62 — release siren handles before clearing
     state.crossCarSpawnTimer = 0;
     state.crossCarNextSpawnMs = CROSS_CAR_SPAWN_MS_FAR;
     state.fauna = [];
