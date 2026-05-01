@@ -5740,6 +5740,32 @@
       if (!window.RunnerLeaderboard) return;
       window.RunnerLeaderboard.openLeaderboard();
     });
+
+    // v0.18.63 — show the "best on desktop" notice on touch devices
+    // that haven't dismissed it before. Uses pointer:coarse rather than
+    // a width breakpoint because we care about INPUT TYPE (finger vs
+    // mouse), not viewport size — a Surface Pro with a stylus, an iPad
+    // with keyboard, or a small desktop window all behave correctly.
+    // Dismiss is sticky via localStorage so returning mobile players
+    // aren't nagged.
+    (function setupMobileHint() {
+      var hint = document.getElementById('hint-mobile');
+      var closeBtn = document.getElementById('hint-mobile-close');
+      if (!hint || !closeBtn) return;
+      var DISMISS_KEY = 'runner-mobile-hint-dismissed-v1';
+      var dismissed = false;
+      try { dismissed = localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
+      var isCoarse = false;
+      try { isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+      if (isCoarse && !dismissed) {
+        hint.removeAttribute('hidden');
+      }
+      closeBtn.addEventListener('click', function (e) {
+        e.target.blur();
+        hint.setAttribute('hidden', '');
+        try { localStorage.setItem(DISMISS_KEY, '1'); } catch (e2) {}
+      });
+    })();
     // QUIT-TO-TITLE button in pause menu — resets to menu phase
     var quitBtn = document.getElementById('btn-pause-quit');
     if (quitBtn) quitBtn.addEventListener('click', function (e) {

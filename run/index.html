@@ -47,7 +47,7 @@
 
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323&family=Pacifico&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=0.18.62">
+  <link rel="stylesheet" href="css/style.css?v=0.18.63">
 </head>
 <body>
   <!-- Game canvas. Resized to viewport via JS on load + resize. -->
@@ -161,6 +161,14 @@
     <h1 class="title-cursive"><span class="big">O</span>n <span class="big">B</span>aby!</h1>
     <p>Mike Smalls Jr is being chased through Chile.<br>Help him outrun the mob.</p>
     <p class="hint">⬅ ➡ arrow keys or tap left / right to dodge<br>SPACE / ⬆ / W = jump · P / ESC / right-click = pause<br>5 lanes — collect Cx coins for score multiplier</p>
+    <!-- v0.18.63 — mobile-only "best on desktop" notice. Hidden by
+         default; shown by JS on init when the device reports a coarse
+         primary pointer (touch) AND the user hasn't dismissed it
+         before. Localstorage key: runner-mobile-hint-dismissed-v1. -->
+    <div class="hint-mobile" id="hint-mobile" hidden>
+      <span class="hint-mobile-text">Plays best on desktop &mdash; bigger screen, sharper controls.</span>
+      <button type="button" class="hint-mobile-close" id="hint-mobile-close" aria-label="Dismiss">&times;</button>
+    </div>
     <div class="title-buttons">
       <button type="button" id="btn-start">START</button>
       <button type="button" id="btn-title-leaderboard">LEADERBOARD</button>
@@ -293,16 +301,16 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.62</div>
+  <div class="game-version">Run v0.18.63</div>
 
   <!-- Cache-bust query string follows the meta version above. Bumped
        on every release so browsers/Cloudflare can't serve a stale JS
        against a fresh HTML — that mismatch caused v0.18.61 to ship
        new HTML but old JS to many players (Xena giant + pause broken
        + chile-police bg missing all visible symptoms). -->
-  <script src="js/index.js?v=0.18.62"></script>
+  <script src="js/index.js?v=0.18.63"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
        imports from the gstatic CDN). Exposes window.RunnerLeaderboard. -->
-  <script type="module" src="js/leaderboard.js?v=0.18.62"></script>
+  <script type="module" src="js/leaderboard.js?v=0.18.63"></script>
 </body>
 </html>

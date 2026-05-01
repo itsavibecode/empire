@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Run v0.18.63 — 2026-04-30 — Mobile-only "best on desktop" notice on title screen
+
+Small UX addition: a pill-shaped tip on the title overlay tells touch-device players the runner plays better on desktop. Hidden by default; revealed by JS on init via `window.matchMedia('(pointer: coarse)')` so it only appears when the user's primary input is a finger (a Surface with mouse, or a desktop browser at narrow width, won't see it). Dismissible via a `×` button that sets `localStorage['runner-mobile-hint-dismissed-v1'] = '1'` so returning mobile players aren't nagged.
+
+`pointer: coarse` was chosen over a width breakpoint because what we actually care about is INPUT TYPE (lane-swap by tap is genuinely jankier than arrow keys), not viewport size. iPad-with-keyboard, Surface-with-stylus, and small desktop windows all get the right behavior automatically.
+
+Cache-bust + version bumped to `v0.18.63`.
+
 ### Run v0.18.62 — 2026-04-30 — Jump dodges NPCs + positional cop-car siren + jail-door SFX
 
 Three gameplay/audio additions, one balance tweak:
