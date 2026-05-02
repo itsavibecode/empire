@@ -3,18 +3,18 @@
     {
       "id": "the-baddest-tb",
       "title": "Townhouse in Kissimmee",
-      "host_group": "The Baddest (TB)",
-      "date_range": "Jun 12-16",
+      "host_group": "Doing Things Better (DTB) ",
+      "date_range": "",
       "badge": "Booked",
-      "image": "houses/the-baddest-tb.png"
+      "image": "/houses/screenshot-2026-05-02-184857.png"
     },
     {
       "id": "the-vibe-gate-way",
-      "title": "Home in Davenport",
-      "host_group": "The Vibe Gate Way",
+      "title": "Home in Kissimmee ",
+      "host_group": "Mixtapes",
       "date_range": "",
       "badge": "Booked",
-      "image": "houses/the-vibe-gate-way.png"
+      "image": "/houses/screenshot-2026-05-02-184917.png"
     },
     {
       "id": "dtb-part-2",
@@ -27,10 +27,10 @@
     {
       "id": "the-twinz",
       "title": "Home in Kissimmee",
-      "host_group": "The Twinz",
+      "host_group": "Da Nati ",
       "date_range": "",
       "badge": "Booked",
-      "image": "houses/the-twinz.png"
+      "image": "/houses/screenshot-2026-05-02-185356.png"
     },
     {
       "id": "blacks-united-bu",
