@@ -17,6 +17,27 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.5 / Slots v0.14.1 / Trending v0.1.8 / Run v0.18.64 — 2026-04-30 — Brand rename: "EmpireX" → "Empire X"
+
+Coordinated rename across every visible touchpoint of the brand. The wordmark is two words now: "Empire X." Per-scope summary:
+
+- **Site v0.13.5** — main `index.html` (meta description via `seo.json`, OG/Twitter titles, JSON-LD `name`, hero `<h1>` wordmark `EMPIREX → EMPIRE X`, "Official Empire X Wristbands" h3 via `wristband.json`, Sky9 featured-group description via `featured-group.json`, alt text, footer ©), `404.html`, `disclaimer.html`, `privacy.html`, `admin/index.html` + `admin/config.yml` hint text, `llms.txt`, `obs/index.html` BRB-screen wordmark, `obs/add/index.html` h1 + footer wordmark.
+
+- **Slots v0.14.1** — `game/index.html` page title + meta description + OG/Twitter titles/descriptions/alts + og:site_name + footer "Slots v0.14.1" label.
+
+- **Trending v0.1.8** — `obs/trending/index.html` page title, mark wordmark `EMPIREX → EMPIRE X`, runtime `document.title` setter, `TRENDING_VERSION` const.
+
+- **Run v0.18.64** — `run/index.html` page title, OG/Twitter titles, image alts, og:site_name. Cache-bust on `index.js` + `style.css` bumped `?v=0.18.63 → ?v=0.18.64`. Visible footer "Run v0.18.64." Plus `run/index.html`'s `<meta name="version">` tag was stale at `0.18.61` (hadn't been bumped alongside the visible label in v0.18.62 / .63) — now caught up to `0.18.64`.
+
+- **`promo/`** subtree (covered under Site scope) — all four pages (`promo/index.html`, `promo/404.html`, `promo/overlay.html`, `promo/overlay-creator.html`) updated. The two stream-overlay pages had a split-span wordmark `<div class="brand">EMPIRE<span class="x">X</span></div>` for stylized X rendering — added a literal space inside (`EMPIRE <span class="x">X</span>`) so the broadcast-visible mark reads "EMPIRE X" with the styled X kept intact.
+
+**Intentionally NOT touched** (out of scope — not "visible type stuff"):
+- All domain references (`ourempirex.com`, `OUREMPIREX.COM`) — domain stays.
+- Source-code comments, file-header docstrings, `run/IDEAS.md`, `game/README.txt` — internal dev surface.
+- `index.html` keywords meta — kept "EmpireX" alongside "Empire X" as alt SEO terms so old search results / referrals still match.
+- `index.html` JSON-LD `alternateName` — kept "EmpireX" as an alternate name (was previously "Empire X" alongside ECX; now flipped so the canonical form is `name: "Empire X"` and the alt is `["EmpireX", "ECX"]`) for SEO continuity during the transition.
+- README historical changelog entries — past releases describe what the brand was called at the time. Future entries say "Empire X."
+
 ### Run v0.18.63 — 2026-04-30 — Mobile-only "best on desktop" notice on title screen
 
 Small UX addition: a pill-shaped tip on the title overlay tells touch-device players the runner plays better on desktop. Hidden by default; revealed by JS on init via `window.matchMedia('(pointer: coarse)')` so it only appears when the user's primary input is a finger (a Surface with mouse, or a desktop browser at narrow width, won't see it). Dismissible via a `×` button that sets `localStorage['runner-mobile-hint-dismissed-v1'] = '1'` so returning mobile players aren't nagged.

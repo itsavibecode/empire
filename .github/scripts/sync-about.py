@@ -51,7 +51,7 @@ def main():
         f'      <p class="section-desc">{description}</p>\n'
         '    </div>\n'
         '    <div class="about-grid reveal">\n'
-        f'      <img src="{image}" alt="EmpireX flyer" class="about-flyer" loading="lazy">\n'
+        f'      <img src="{image}" alt="Empire X flyer" class="about-flyer" loading="lazy">\n'
         '      <div class="about-details">\n'
         + ''.join(detail_html(d) for d in details)
         + '      </div>\n'

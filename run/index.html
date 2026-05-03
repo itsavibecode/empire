@@ -16,38 +16,38 @@
   <meta name="description" content="On Baby! — Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins, survive the storm, see how far you get.">
   <link rel="canonical" href="https://ourempirex.com/run/">
   <meta name="author" content="Our Empire">
-  <meta name="version" content="0.18.61">
+  <meta name="version" content="0.18.64">
   <!-- Mobile chrome theme color (matches the game's purple palette) -->
   <meta name="theme-color" content="#8E5CCB">
-  <title>On Baby! — EmpireX Runner</title>
+  <title>On Baby! — Empire X Runner</title>
 
   <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord, etc.).
        og:image is rebuilt by .github/scripts/build-runner-og.py;
        re-run that script after any title-art or tagline change. -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ourempirex.com/run/">
-  <meta property="og:title" content="On Baby! — EmpireX Runner">
+  <meta property="og:title" content="On Baby! — Empire X Runner">
   <meta property="og:description" content="Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins. How far can you get?">
   <meta property="og:image" content="https://ourempirex.com/run/og-runner.jpg">
   <meta property="og:image:secure_url" content="https://ourempirex.com/run/og-runner.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="On Baby! — Mike Smalls Jr and Ice Poseidon on a Chilean street, with the EmpireX URL caption">
-  <meta property="og:site_name" content="EmpireX by Our Empire">
+  <meta property="og:image:alt" content="On Baby! — Mike Smalls Jr and Ice Poseidon on a Chilean street, with the Empire X URL caption">
+  <meta property="og:site_name" content="Empire X by Our Empire">
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter Card — large image variant so the share preview is the
        full og-runner.jpg, not a thumbnail. -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="On Baby! — EmpireX Runner">
+  <meta name="twitter:title" content="On Baby! — Empire X Runner">
   <meta name="twitter:description" content="Mike Smalls Jr's endless runner through Chile. Dodge cop cars + stream snipers + the hurricane. Collect Cx coins. How far can you get?">
   <meta name="twitter:image" content="https://ourempirex.com/run/og-runner.jpg">
-  <meta name="twitter:image:alt" content="On Baby! — Mike Smalls Jr and Ice Poseidon on a Chilean street, with the EmpireX URL caption">
+  <meta name="twitter:image:alt" content="On Baby! — Mike Smalls Jr and Ice Poseidon on a Chilean street, with the Empire X URL caption">
 
   <link rel="icon" href="/logo.png">
   <link href="https://fonts.googleapis.com/css?family=VT323&family=Pacifico&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=0.18.63">
+  <link rel="stylesheet" href="css/style.css?v=0.18.64">
 </head>
 <body>
   <!-- Game canvas. Resized to viewport via JS on load + resize. -->
@@ -301,16 +301,16 @@
 
   <!-- URL caption + version (matches /game/ pattern, captured into share PNGs in future) -->
   <div class="game-url">ourempirex.com/run</div>
-  <div class="game-version">Run v0.18.63</div>
+  <div class="game-version">Run v0.18.64</div>
 
   <!-- Cache-bust query string follows the meta version above. Bumped
        on every release so browsers/Cloudflare can't serve a stale JS
        against a fresh HTML — that mismatch caused v0.18.61 to ship
        new HTML but old JS to many players (Xena giant + pause broken
        + chile-police bg missing all visible symptoms). -->
-  <script src="js/index.js?v=0.18.63"></script>
+  <script src="js/index.js?v=0.18.64"></script>
   <!-- Leaderboard module loads as an ES module (uses Firebase v12 ESM
        imports from the gstatic CDN). Exposes window.RunnerLeaderboard. -->
-  <script type="module" src="js/leaderboard.js?v=0.18.63"></script>
+  <script type="module" src="js/leaderboard.js?v=0.18.64"></script>
 </body>
 </html>

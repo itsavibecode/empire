@@ -343,7 +343,7 @@ collections:
   - name: wristband
     label: Wristband Section
     description: |
-      The "Official EmpireX Wristbands" section just above the Featured
+      The "Official Empire X Wristbands" section just above the Featured
       Group on the homepage — small uppercase pill, headline, paragraph,
       red warning line, and the wristband photo.
 
@@ -362,7 +362,7 @@ collections:
           - name: title
             label: 'Headline'
             widget: string
-            hint: 'The big bold heading next to the photo. e.g. "Official EmpireX Wristbands"'
+            hint: 'The big bold heading next to the photo. e.g. "Official Empire X Wristbands"'
           - name: description
             label: 'Description paragraph'
             widget: text
