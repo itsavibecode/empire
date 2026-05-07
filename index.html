@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Ice Poseidon, XenaTheWitch, Marky , WoodBaby, JJStream, Sasha West,   Dejayboss, Kimmee, Hanridge, AshWilder, Shangel, Nick Lee, FloridaBoy, Letty , TaylorStarlight, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, KikiKrazy, Fanos, Dtan, RiddaW, Ozemi, lifeismizzy, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.9">
+<meta name="version" content="0.13.10">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -868,11 +868,13 @@ section{padding:6rem 1.5rem}
 }
 .featured-streamers .streamer-card:hover .streamer-img{
   /* Yellow analogue of the Kick section's hue-rotate(80deg) green
-     punch. Stronger sepia (yellow base) + larger negative hue-rotate
-     to pull warm tones toward yellow + heavy saturation boost so the
-     hover tint reads as intense as the green does on the other
-     section. */
-  filter:grayscale(0%) brightness(1.1) sepia(0.6) hue-rotate(-30deg) saturate(2);
+     punch. CSS sepia outputs hues centered around ~36° (yellow-
+     brown); a +20° rotation lands on ~56° which is true yellow.
+     My v0.13.9 used -30deg which mistakenly shifted toward red/orange
+     instead. Lowered brightness slightly + bumped sepia + saturate
+     for a deeper, more confident yellow that reads as intense as the
+     Kick green does on the other section. */
+  filter:grayscale(0%) brightness(0.95) sepia(0.85) hue-rotate(20deg) saturate(2.3);
 }
 
 .cta-footer{
@@ -2070,7 +2072,7 @@ section{padding:6rem 1.5rem}
 </section>
 
 <div class="footer-bar">
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.4);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.25);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.9</span>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.4);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.4);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.4)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.25);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.10</span>
 </div>
 
 <script>

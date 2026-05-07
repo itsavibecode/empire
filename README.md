@@ -17,6 +17,12 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.10 — 2026-05-07 — Yellow hover tint actually-yellow this time
+
+v0.13.9's tint was reading as warm-orange rather than yellow. Bug was in the hue-rotate direction: CSS sepia centers around ~36° (yellow-brown); my `-30deg` rotation shifted it to ~6° (red-orange) instead of toward yellow. Flipping to `+20deg` lands at ~56° = true yellow. Also dropped brightness from 1.1 → 0.95 and bumped sepia 0.6 → 0.85 + saturate 2 → 2.3 for a deeper, more confident yellow.
+
+New filter: `brightness(0.95) sepia(0.85) hue-rotate(20deg) saturate(2.3)`.
+
 ### Site v0.13.9 — 2026-05-07 — Two follow-ups on the v0.13.8 yellow-hover work
 
 Client reported the YUBO badge text was rendering green and the yellow hover tint was visibly weaker than the Kick section's green. Two CSS fixes:
