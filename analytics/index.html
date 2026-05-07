@@ -6,7 +6,7 @@
 <!-- Internal client dashboard. Don't index, don't leak referrer. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.3.1">
+<meta name="version" content="0.3.2">
 <title>Empire X — Site Analytics</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -117,10 +117,11 @@
   .frame-wrap iframe {
     display: block;
     width: 100%;
-    /* Measured the rendered report at 1037px tall (v0.2.1); 1100 gives
-       ~60px buffer for any small reflow without leaving the giant
-       white gap the previous 1600 created. Adjust if charts get added/
-       removed and content height drifts. */
+    /* Desktop default — measured the rendered report at 1037px tall;
+       1100 gives ~60px buffer for any small reflow. Below the 1200px
+       Looker-canvas-width breakpoint, the iframe scales proportionally
+       (see media query further down) so the dashboard's auto-shrunk
+       content matches the iframe height. */
     height: 1100px;
     border: 0;
   }
@@ -225,6 +226,20 @@
     .portrait-notice { display: flex; }
   }
 
+  /* Responsive iframe height for landscape phones / tablets / narrow
+     desktop windows. Below the Looker canvas's native 1200px width,
+     the dashboard auto-scales to fit, dropping its rendered height
+     proportionally. We track that with `width × 0.864` (Looker
+     aspect ratio measured at 1200×1037). Without this, a 812px-wide
+     landscape phone iframe stayed at 1100px tall while the actual
+     dashboard rendered at ~702px — leaving ~400px of empty space
+     below the content. */
+  @media (max-width: 1200px) {
+    .frame-wrap iframe {
+      height: calc(100vw * 0.864);
+    }
+  }
+
   /* === MOBILE TWEAKS (landscape phones, narrow desktops) === */
   @media (max-width: 600px) {
     header { padding: 1.2rem 1rem 0.9rem; }
@@ -288,7 +303,7 @@
     &copy; 2026 Our Empire &bull; Empire X &bull;
     <a href="https://ourempirex.com">ourempirex.com</a>
   </div>
-  <div class="footer-version">Analytics v0.3.1</div>
+  <div class="footer-version">Analytics v0.3.2</div>
 </footer>
 
 </body>

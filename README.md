@@ -17,6 +17,22 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.3.2 — 2026-05-07 — Iframe height scales proportionally below 1200px
+
+Landscape phones (and narrow desktop windows) had a large gap between the iframe content and the page footer. Cause: Looker auto-scales the dashboard down at iframe widths below its native 1200px canvas, but my fixed 1100px iframe height didn't shrink with it. At 812px wide the dashboard was ~702px tall, leaving ~400px of empty space.
+
+Fix: scale iframe height proportionally for viewports below 1200px:
+
+```css
+@media (max-width: 1200px) {
+  .frame-wrap iframe {
+    height: calc(100vw * 0.864);  /* 0.864 = 1037/1200, the Looker canvas aspect ratio */
+  }
+}
+```
+
+Verified at 813px viewport: iframe height resolves to 702px, matching the scaled dashboard exactly. Desktop (>=1200px) still 1100px.
+
 ### Analytics v0.3.1 — 2026-05-07 — "Even better on desktop" hint on the portrait notice
 
 Tiny copy add. Below the "Rotate to Landscape" body paragraph the portrait notice now shows an italic muted line: *"Even better on desktop."* Lets the visitor know the dashboard's optimal home is desktop without nagging them about it. Styled via new `.portrait-aside` class (DM Sans italic 0.9rem, muted ink color).
