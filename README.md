@@ -17,6 +17,14 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.9 — 2026-05-07 — Two follow-ups on the v0.13.8 yellow-hover work
+
+Client reported the YUBO badge text was rendering green and the yellow hover tint was visibly weaker than the Kick section's green. Two CSS fixes:
+
+1. **YUBO text was green.** `.streamer-platform-yubo { color: var(--yellow-yubo) }` (line 833) had the same specificity (0,1,0) as the existing `.streamer-platform { color: var(--green-kick) }` rule (line 1014). Same specificity → source order decides → green won because it came later. Bumped the selector to `.streamer-platform.streamer-platform-yubo` (specificity 0,2,0) so it beats the generic rule regardless of order. Verified: YUBO text now computes to `rgb(255, 221, 0)`.
+
+2. **Yellow hover tint not as intense as green.** The Kick filter is `sepia(0.15) hue-rotate(80deg) saturate(1.3)` — most of its punch comes from the dramatic 80° hue rotation, which radically shifts every color in the photo toward green. My v0.13.8 yellow filter (`sepia(0.45) hue-rotate(-10deg) saturate(1.5)`) was too gentle. Re-tuned to `brightness(1.1) sepia(0.6) hue-rotate(-30deg) saturate(2)` — more sepia (warmer base), bigger negative hue-rotate (real warm-yellow shift), much higher saturation. Now reads as a confident yellow tint of comparable visual weight to the green on the Kick cards.
+
 ### Site v0.13.8 — 2026-05-07 — Yellow hover accents on Featured Our.Empire cards (was Kick green)
 
 Three hover-state styles on the cards in the new section were inheriting the Kick-green treatment from the shared `.streamer-card` rules — visually misleading since these creators aren't on Kick. Overrode them with Yubo yellow:
