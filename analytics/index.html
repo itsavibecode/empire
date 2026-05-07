@@ -6,7 +6,7 @@
 <!-- Internal client dashboard. Don't index, don't leak referrer. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.2.1">
+<meta name="version" content="0.3.0">
 <title>Empire X — Site Analytics</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -152,14 +152,78 @@
     color: rgba(26,26,26,0.30);
   }
 
-  /* === MOBILE TWEAKS === */
+  /* === PORTRAIT NOTICE (phones held vertically) ===
+     The Looker dashboard has a fixed ~1200px-wide canvas — cramming
+     it into a 375px portrait phone screen is unreadable. Easier to
+     ask the visitor to rotate to landscape (where 800-900px width is
+     close enough that the dashboard reads cleanly).
+     Hidden by default; revealed by the (orientation: portrait) +
+     (pointer: coarse) media query so a desktop with a narrow window
+     never sees this notice. */
+  .portrait-notice {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1.5rem 4rem;
+    min-height: 60vh;
+  }
+  .portrait-icon {
+    font-size: 4.5rem;
+    margin-bottom: 1.5rem;
+    /* Subtle rotation animation hints what to do. */
+    animation: rotateHint 2.4s ease-in-out infinite;
+    transform-origin: center;
+    line-height: 1;
+  }
+  @keyframes rotateHint {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    20%, 40%      { transform: rotate(-90deg); }
+  }
+  .portrait-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 0.6rem;
+  }
+  .portrait-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 26em;
+    margin: 0 auto 0.4rem;
+  }
+  .portrait-sub {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 1.2rem;
+  }
+
+  /* Show portrait notice + hide the iframe on phone-shaped devices in
+     portrait. (pointer: coarse) restricts this to actual touch devices
+     so a desktop user dragging their browser window narrow doesn't get
+     told to rotate their phone. */
+  @media (orientation: portrait) and (max-width: 900px) and (pointer: coarse) {
+    .frame-wrap { display: none; }
+    .portrait-notice { display: flex; }
+  }
+
+  /* === MOBILE TWEAKS (landscape phones, narrow desktops) === */
   @media (max-width: 600px) {
     header { padding: 1.2rem 1rem 0.9rem; }
     .header-inner { gap: 0.8rem; }
     .header-logo { width: 44px; height: 44px; }
     .header-text { text-align: center; }
     main { padding: 0.5rem 0 0; }
-    .frame-wrap iframe { height: 1600px; }
     footer { padding: 1.2rem 1rem 1.6rem; }
   }
 </style>
@@ -191,6 +255,21 @@
       loading="eager"
       referrerpolicy="no-referrer"></iframe>
   </div>
+
+  <!-- Shown only on phone-shaped portrait viewports (see CSS). The
+       Looker canvas is too wide to be useful in a 375px portrait
+       window; rotating to landscape gives ~800px which is close enough
+       to read the charts. Auto-dismisses when the user rotates because
+       the orientation media query re-evaluates. -->
+  <section class="portrait-notice" aria-live="polite">
+    <div class="portrait-icon" role="img" aria-label="Rotate phone">📱</div>
+    <h2 class="portrait-title">Rotate to Landscape</h2>
+    <p class="portrait-body">
+      This dashboard reads best when your phone is held sideways.
+      Rotate to landscape and it'll fit cleanly on screen.
+    </p>
+    <div class="portrait-sub">Empire X &bull; Site Analytics</div>
+  </section>
 </main>
 
 <footer>
@@ -198,7 +277,7 @@
     &copy; 2026 Our Empire &bull; Empire X &bull;
     <a href="https://ourempirex.com">ourempirex.com</a>
   </div>
-  <div class="footer-version">Analytics v0.2.1</div>
+  <div class="footer-version">Analytics v0.3.0</div>
 </footer>
 
 </body>

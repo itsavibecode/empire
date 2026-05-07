@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.3.0 — 2026-05-07 — Portrait-phone "rotate to landscape" notice
+
+The Looker dashboard has a fixed ~1200px-wide canvas — squeezing it into a 375px portrait phone screen is unreadable. Rather than fight the responsive sizing problem, ship a "rotate your phone" pattern: portrait phones see a friendly notice; landscape phones (and all desktops) see the dashboard normally.
+
+- New `.portrait-notice` block (hidden by default) with an animated phone emoji that rocks 90° on a 2.4s loop, gold "Rotate to Landscape" Playfair title, body copy, Empire X branded subtitle.
+- Visibility gated by `@media (orientation: portrait) and (max-width: 900px) and (pointer: coarse)`. `pointer: coarse` is the key bit — restricts the notice to actual touch devices so a desktop user with a narrow browser window doesn't get told to rotate their phone. Iframe is `display: none` in the same condition.
+- Auto-resolves on rotation: when the user flips landscape, the orientation media query re-evaluates and the dashboard re-renders. No refresh needed.
+
+Footer label bumped to `Analytics v0.3.0`.
+
 ### Analytics v0.2.1 — 2026-05-07 — Iframe height tuned to actual dashboard size
 
 v0.2.0's `height: 1600px` was generous enough to fit the dashboard without inner-scrolling but left a ~560px stretch of empty white between the last chart and the footer. Measured the rendered report at **1037px** tall via DOM inspection on the public viewer URL — set the iframe to **1100px** (1037 + ~60px buffer for any reflow). Footer now sits right below the last chart.
