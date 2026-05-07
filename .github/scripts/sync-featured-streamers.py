@@ -18,6 +18,7 @@ import re
 import json
 import os
 import sys
+from datetime import date, datetime, timedelta
 from html import escape
 
 
@@ -27,6 +28,46 @@ REPO = os.environ.get(
 )
 INDEX = os.path.join(REPO, 'index.html')
 DATA = os.path.join(REPO, 'featured-streamers.json')
+
+# JUST ADDED corner ribbon — same 5-day window as Featured Kick
+# Streamers (sync-streamers.py). Mirrors that script's logic so editors
+# get the same behavior across both sections: add a row, save, the
+# next sync stamps `added_at` to today, badge appears for 5 days.
+JUST_ADDED_TTL_DAYS = 5
+
+
+def is_just_added(s, today=None):
+    raw = s.get('added_at')
+    if not raw:
+        return False
+    try:
+        if 'T' in raw:
+            d = datetime.fromisoformat(raw.replace('Z', '+00:00')).date()
+        else:
+            d = date.fromisoformat(raw)
+    except ValueError:
+        return False
+    if today is None:
+        today = date.today()
+    return (today - d) <= timedelta(days=JUST_ADDED_TTL_DAYS) and d <= today
+
+
+def ensure_added_at_dates(streamers, today=None):
+    """Auto-fill `added_at` with today's ISO date for any streamer
+    missing one. Returns True if any rows were modified (so caller
+    knows to write featured-streamers.json back). Editors don't need
+    to think about this — adding a row in Decap and saving auto-stamps
+    the date on the next sync run, and the JUST ADDED badge appears
+    for the next 5 days."""
+    if today is None:
+        today = date.today()
+    today_iso = today.isoformat()
+    changed = False
+    for s in streamers:
+        if not s.get('added_at'):
+            s['added_at'] = today_iso
+            changed = True
+    return changed
 
 
 def slugify(s):
@@ -55,12 +96,13 @@ def platform_badge_html(platform):
     return ''
 
 
-def card_html(streamer):
+def card_html(streamer, today=None):
     """One card — <a> when URL provided, plain <div> when not. Same
     .streamer-card class as Featured Kick Streamers so the existing avatar
     / name styling applies. The .featured-streamers selector hides the
     live-status dot (no Yubo live status) but allows .streamer-platform
-    so the optional Yubo badge can render."""
+    so the optional Yubo badge can render. JUST ADDED corner ribbon
+    appears when added_at is within the last 5 days."""
     name = streamer.get('name', '').strip()
     description = streamer.get('description', '').strip()
     group = streamer.get('group', '').strip()
@@ -77,6 +119,17 @@ def card_html(streamer):
             f'alt="{escape(name, quote=True)}" loading="lazy">\n'
         )
 
+    # JUST ADDED corner ribbon — only on cards added within the last 5
+    # days. data-added timestamps the badge so a future JS-side decay
+    # check could hide it before the next sync runs (mirrors the Kick
+    # section's pattern).
+    just_added_html = ''
+    if is_just_added(streamer, today):
+        just_added_html = (
+            f'        <div class="streamer-just-added" '
+            f'data-added="{streamer["added_at"]}">JUST ADDED</div>\n'
+        )
+
     # description (always shown) + optional group line below it for the
     # cleaner two-line layout.
     desc_html = f'        <div class="streamer-description">{escape(description)}</div>\n'
@@ -88,7 +141,8 @@ def card_html(streamer):
     badge_html = f'        {badge}\n' if badge else ''
 
     inner = (
-        f'        <div class="streamer-avatar" id="fs-avatar-{sid}">\n'
+        just_added_html
+        + f'        <div class="streamer-avatar" id="fs-avatar-{sid}">\n'
         f'          <span class="streamer-initials">{escape(initials)}</span>\n'
         + img_html
         + '        </div>\n'
@@ -121,6 +175,17 @@ def main():
     title = data.get('title', 'Featured Our.Empire Streamers').strip()
     subtitle = data.get('subtitle', '').strip()
     streamers = data.get('streamers', [])
+
+    # AUTO-FILL added_at for any streamer missing one. Same flow as
+    # sync-streamers.py — editor adds a row in Decap, saves, the next
+    # sync stamps today's date and the JUST ADDED badge appears for
+    # the next 5 days. The workflow's commit step adds
+    # featured-streamers.json so the auto-filled date persists.
+    if ensure_added_at_dates(streamers):
+        with open(DATA, 'w', encoding='utf-8', newline='') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+        print('Auto-filled added_at for new featured streamers; wrote featured-streamers.json back')
 
     cards = '\n'.join(card_html(s) for s in streamers)
 

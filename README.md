@@ -17,6 +17,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.7 — 2026-05-07 — JUST ADDED ribbon on Featured Our.Empire Streamers + 12 entries backdated
+
+Mirrors the same "JUST ADDED" 5-day-corner-ribbon system from the Featured Kick Streamers section onto the new Featured Our.Empire Streamers section, so when the client adds a creator via the CMS they'll get a temporary badge for 5 days.
+
+- **`sync-featured-streamers.py`** ports `is_just_added()` and `ensure_added_at_dates()` from `sync-streamers.py`. Same `JUST_ADDED_TTL_DAYS = 5` window, same date format (`YYYY-MM-DD`), same auto-fill on save: a new card without an `added_at` field gets stamped with today's date by the next sync run, and the script writes `featured-streamers.json` back so the date persists. The corner ribbon renders inside the card markup with `data-added="<iso-date>"` so a future JS-side decay check can hide it client-side before the next sync.
+- **The 12 seeded entries are backdated to `2026-04-29`** (8 days ago — outside the 5-day window) so no badges show on the initial deploy. The client wanted them to look "established" rather than freshly-added.
+- **CSS** — dropped the `.featured-streamers .streamer-just-added { display:none }` rule from v0.13.6 that was hiding the badge in this section. The shared `.streamer-just-added` styling (gold pill, top-right corner, pulsing animation) now applies here too.
+- **Workflow commit step** — added `featured-streamers.json` to the auto-commit so the auto-filled `added_at` dates from `sync-featured-streamers.py` persist back into the source of truth (mirrors the existing `streamers.json` handling).
+- **CMS** — `added_at` intentionally NOT exposed in the Decap UI (same as Kick streamers). The editor adds a row, saves, and the workflow stamps the date automatically. No daily-rotation logic for editors to worry about.
+
+Driven by `featured-streamers.json` + `sync-featured-streamers.py`. Visible site footer label: Site v0.13.7.
+
 ### Site v0.13.6 — 2026-04-30 — New "Featured Our.Empire Streamers" section + Confirmed Streamers renamed
 
 Adds the second streamer-card section the client asked for, immediately below the renamed "Featured Kick Streamers" section. Same dark-card visual style as the Kick section but with two-line description/group caption + optional Yubo platform badge.

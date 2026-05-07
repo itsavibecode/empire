@@ -96,11 +96,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Include streamers.json so the auto-filled `added_at` dates
-          # from sync-streamers.py persist back into the source of
+          # Include streamers.json + featured-streamers.json so the
+          # auto-filled `added_at` dates from sync-streamers.py and
+          # sync-featured-streamers.py persist back into the source of
           # truth (otherwise next sync would re-generate them and we'd
           # have inconsistent dates).
-          git add index.html llms.txt streamers.json
+          git add index.html llms.txt streamers.json featured-streamers.json
           if git diff --cached --quiet; then
             echo "Nothing to sync."
           else
