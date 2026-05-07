@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Internal client dashboard. Don't index, don't leak referrer. -->
+<!-- Light-theme variant of /analytics/. Preview-only for theme A/B
+     comparison. Same iframe + privacy posture as the dark version;
+     only the chrome colors and typography weights differ. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.1.0-light">
 <title>Empire X — Site Analytics</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,20 +16,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --gold:        #D4A843;
-    --gold-light:  #F0D68A;
-    --gold-dark:   #A17A28;
-    --black:       #0A0A0A;
-    --black-card:  #111111;
-    --black-lighter:#1A1A1A;
-    --white:       #F5F1EB;
+    --gold:        #B58831;  /* slightly darker gold so it reads on white */
+    --gold-light:  #D4A843;
+    --gold-dark:   #8B6620;
+    --paper:       #FFFFFF;
+    --ink:         #1A1A1A;
+    --ink-soft:    #444444;
+    --ink-muted:   #757575;
+    --hairline:    rgba(26,26,26,0.10);
   }
   *, *::before, *::after { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    background: var(--black);
-    color: var(--white);
+    background: var(--paper);
+    color: var(--ink);
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
@@ -37,13 +40,15 @@
     flex-direction: column;
   }
 
-  /* === HEADER === */
+  /* === HEADER ===
+     Same Empire X chrome — gold eyebrow + Playfair gold-gradient title
+     + Oswald subtitle — but on white with darker ink for body text. */
   header {
-    padding: 1.4rem 1.5rem 1rem;
+    padding: 1.6rem 1.5rem 1.2rem;
     background:
-      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.10) 0%, transparent 70%),
-      var(--black);
-    border-bottom: 1px solid rgba(245,241,235,0.08);
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.08) 0%, transparent 70%),
+      var(--paper);
+    border-bottom: 1px solid var(--hairline);
     text-align: center;
   }
   .header-inner {
@@ -77,7 +82,9 @@
     font-weight: 900;
     font-size: clamp(1.6rem, 3vw, 2.4rem);
     letter-spacing: -0.01em;
-    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--gold-dark) 100%);
+    /* On white, a gold gradient on the headline retains the brand cue
+       without becoming an eye-watering yellow blast. */
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -85,17 +92,15 @@
   }
   .header-subtitle {
     font-family: 'Oswald', sans-serif;
-    font-weight: 300;
+    font-weight: 400;
     font-size: 0.85rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(245,241,235,0.55);
-    margin-top: 0.25rem;
+    color: var(--ink-muted);
+    margin-top: 0.3rem;
   }
 
-  /* === IFRAME WRAPPER ===
-     White Looker Studio iframe sits inside a subtle gold border on the
-     dark page so the contrast is intentional, not an accident. */
+  /* === IFRAME WRAPPER === */
   main {
     flex: 1 0 auto;
     padding: 1.5rem;
@@ -105,21 +110,16 @@
   .frame-wrap {
     width: 100%;
     max-width: 1400px;
-    border: 1px solid rgba(212,168,67,0.20);
+    border: 1px solid var(--hairline);
     border-radius: 6px;
     overflow: hidden;
-    background: #FFFFFF;     /* matches the iframe content's white so any flash on load is invisible */
-    box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+    background: var(--paper);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.06);
   }
   .frame-wrap iframe {
     display: block;
     width: 100%;
-    /* Fixed tall height so the Looker dashboard's vertical content
-       (scorecards + line + 3 chart rows + traffic-sources donut) fits
-       without inner-iframe scrolling. The outer page scrolls instead.
-       Pre-fix this was 80vh / min-height 720px which clipped the lower
-       half of the dashboard on every viewport short of 4K. */
-    height: 1600px;
+    height: 1600px;            /* matches the dark version — no inner scroll */
     border: 0;
   }
 
@@ -127,17 +127,17 @@
   footer {
     padding: 1.6rem 1.5rem 2rem;
     text-align: center;
-    border-top: 1px solid rgba(245,241,235,0.06);
+    border-top: 1px solid var(--hairline);
   }
   .footer-line {
     font-family: 'Oswald', sans-serif;
     font-size: 0.72rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(245,241,235,0.35);
+    color: var(--ink-muted);
   }
   .footer-line a {
-    color: rgba(245,241,235,0.55);
+    color: var(--ink-soft);
     text-decoration: none;
     transition: color 0.2s ease;
   }
@@ -146,18 +146,16 @@
     margin-top: 0.6rem;
     font-size: 0.6rem;
     letter-spacing: 0.25em;
-    color: rgba(245,241,235,0.20);
+    color: rgba(26,26,26,0.30);
   }
 
   /* === MOBILE TWEAKS === */
   @media (max-width: 600px) {
-    header { padding: 1rem 1rem 0.8rem; }
+    header { padding: 1.2rem 1rem 0.9rem; }
     .header-inner { gap: 0.8rem; }
     .header-logo { width: 44px; height: 44px; }
     .header-text { text-align: center; }
     main { padding: 0.8rem; }
-    /* Mobile: the dashboard reflows narrower so vertical extent grows.
-       Keep at 1600 — outer page scrolling is acceptable on phones. */
     .frame-wrap iframe { height: 1600px; }
     footer { padding: 1.2rem 1rem 1.6rem; }
   }
@@ -178,9 +176,6 @@
 
 <main>
   <div class="frame-wrap">
-    <!-- Looker Studio embed. Source of truth for the report config lives in
-         Looker Studio (file: "Empire X — Site Analytics"); this page is
-         just chrome + iframe. To replace the report, swap the src below. -->
     <iframe
       src="https://datastudio.google.com/embed/reporting/92547b50-c208-4893-b91f-f0fd1ac2bdeb/page/MXYxF"
       title="Empire X site analytics dashboard"
@@ -197,7 +192,7 @@
     &copy; 2026 Our Empire &bull; Empire X &bull;
     <a href="https://ourempirex.com">ourempirex.com</a>
   </div>
-  <div class="footer-version">Analytics v0.1.0</div>
+  <div class="footer-version">Analytics v0.1.0 (light)</div>
 </footer>
 
 </body>
