@@ -41,14 +41,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "sashawest",
-      "name": "Sasha West",
-      "url": "https://kick.com/sashawest",
-      "initials": "SW",
-      "avatar": "/avatars/screenshot-2026-04-26-151109.png",
-      "added_at": "2026-04-26"
-    },
-    {
       "slug": "Blame ",
       "name": "Blame ",
       "url": "https://kick.com/blame",
@@ -57,12 +49,12 @@
       "added_at": "2026-05-07"
     },
     {
-      "slug": "  Dejayboss",
-      "name": "  Dejayboss",
-      "url": "https://kick.com/Dejayboss",
-      "initials": "DJB",
-      "avatar": "/avatars/screenshot-2026-05-06-162442.png",
-      "added_at": "2026-05-06"
+      "slug": "sashawest",
+      "name": "Sasha West",
+      "url": "https://kick.com/sashawest",
+      "initials": "SW",
+      "avatar": "/avatars/screenshot-2026-04-26-151109.png",
+      "added_at": "2026-04-26"
     },
     {
       "slug": "kimmee",
@@ -87,6 +79,14 @@
       "initials": "AW",
       "avatar": "avatars/ashwilder.jpg",
       "added_at": "2026-04-20"
+    },
+    {
+      "slug": "  Dejayboss",
+      "name": "  Dejayboss",
+      "url": "https://kick.com/Dejayboss",
+      "initials": "DJB",
+      "avatar": "/avatars/screenshot-2026-05-06-162442.png",
+      "added_at": "2026-05-06"
     },
     {
       "slug": "jjstream",
@@ -233,6 +233,14 @@
       "added_at": "2026-04-20"
     },
     {
+      "slug": "kikikrazy",
+      "name": "KikiKrazy",
+      "url": "https://kick.com/kikikrazy",
+      "initials": "KK",
+      "avatar": "/avatars/allat.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
       "slug": "dtanmanb",
       "name": "Dtan",
       "url": "https://kick.com/dtanmanb",
@@ -246,14 +254,6 @@
       "url": "https://kick.com/riddaw",
       "initials": "RW",
       "avatar": "avatars/riddaw.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
-      "slug": "kikikrazy",
-      "name": "KikiKrazy",
-      "url": "https://kick.com/kikikrazy",
-      "initials": "KK",
-      "avatar": "avatars/kikikrazy.jpg",
       "added_at": "2026-04-20"
     },
     {
