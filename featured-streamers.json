@@ -1,0 +1,19 @@
+{
+  "section_label": "From the Our.Empire community",
+  "title": "Featured Our.Empire Streamers",
+  "subtitle": "Top influential creators from the Our.Empire community on Yubo.",
+  "streamers": [
+    { "name": "Mike Smalls",     "description": "Founder & CEO of @Our.Empire", "group": "",                       "url": "", "platform": "yubo", "initials": "MS",  "avatar": "/avatars/featured/00-mike-smalls.jpg" },
+    { "name": "Ridda",            "description": "Member of Hall of Fame group", "group": "Blacks United (BU)",     "url": "", "platform": "yubo", "initials": "R",   "avatar": "/avatars/featured/01-ridda.jpg" },
+    { "name": "Juice",            "description": "Member of Hall of Fame group", "group": "Kozy",                   "url": "", "platform": "yubo", "initials": "J",   "avatar": "/avatars/featured/02-juice.jpg" },
+    { "name": "Derrick & Darnel", "description": "Member of Hall of Fame group", "group": "Blacks United (BU)",     "url": "", "platform": "yubo", "initials": "D&D", "avatar": "/avatars/featured/03-derrick-darnel.jpg" },
+    { "name": "Linda",            "description": "Member of Hall of Fame group", "group": "Mixtapes",               "url": "", "platform": "yubo", "initials": "L",   "avatar": "/avatars/featured/04-linda.jpg" },
+    { "name": "Corie",            "description": "Member of Empire Team",        "group": "",                       "url": "", "platform": "yubo", "initials": "C",   "avatar": "/avatars/featured/05-corie.jpg" },
+    { "name": "Esteez",           "description": "Member of Empire Team",        "group": "",                       "url": "", "platform": "yubo", "initials": "E",   "avatar": "/avatars/featured/06-esteez.jpg" },
+    { "name": "TeeTee",           "description": "Member of Hall of Fame group", "group": "Money Bag Girls (MBB)",  "url": "", "platform": "yubo", "initials": "TT",  "avatar": "/avatars/featured/07-teetee.jpg" },
+    { "name": "Dylan",            "description": "Member of Hall of Fame group", "group": "Sky9",                   "url": "", "platform": "yubo", "initials": "D",   "avatar": "/avatars/featured/08-dylan.jpg" },
+    { "name": "Humza",            "description": "Member of Hall of Fame group", "group": "Blacks United (BU)",     "url": "", "platform": "yubo", "initials": "H",   "avatar": "/avatars/featured/09-humza.jpg" },
+    { "name": "Layla",            "description": "Member of Hall of Fame group", "group": "Late Night",             "url": "", "platform": "yubo", "initials": "L",   "avatar": "/avatars/featured/10-layla.jpg" },
+    { "name": "G",                "description": "Member of Hall of Fame group", "group": "Mixtapes",               "url": "", "platform": "yubo", "initials": "G",   "avatar": "/avatars/featured/11-g.jpg" }
+  ]
+}

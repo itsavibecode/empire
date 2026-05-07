@@ -18,6 +18,7 @@ on:
       - featured-group.json
       - hall-of-fame.json
       - display.json
+      - featured-streamers.json
 
 permissions:
   contents: write
@@ -85,6 +86,11 @@ jobs:
         env:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-display.py
+
+      - name: Sync Featured Our.Empire Streamers section in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-featured-streamers.py
 
       - name: Commit and push if changed
         run: |

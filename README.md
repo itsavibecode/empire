@@ -17,6 +17,21 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.6 — 2026-04-30 — New "Featured Our.Empire Streamers" section + Confirmed Streamers renamed
+
+Adds the second streamer-card section the client asked for, immediately below the renamed "Featured Kick Streamers" section. Same dark-card visual style as the Kick section but with two-line description/group caption + optional Yubo platform badge.
+
+- **Renamed** `<h2>Confirmed Streamers</h2>` → `<h2>Featured Kick Streamers</h2>`. CMS collection label also updated ("Confirmed Streamers" → "Featured Kick Streamers"). Copy under it kept ("...streaming the entire event live. Follow them on Kick to catch every moment.") since it still describes the Kick crew.
+- **New section** `<section class="streamers featured-streamers">` rendered between "Featured Kick Streamers" and "Promo Video." Reuses the existing `.streamer-card` / `.streamer-avatar` / `.streamer-img` CSS for visual parity, hiding the live-status dot and the just-added ribbon (Yubo creators don't get either). The platform badge IS allowed — it renders the official Yubo logo + "YUBO" text in brand yellow (`#FFDD00`), mirroring the green KICK badge on the other section.
+- **Per-card layout** (top-to-bottom): avatar → name → `.streamer-description` (line 1) → optional `.streamer-group` (line 2, slightly bolder cream) → optional `.streamer-platform-yubo` badge. Splitting description vs group means the longer Hall-of-Fame mentions read on two clean lines instead of one cramped line.
+- Cards with no `url` render as a plain `<div class="streamer-card streamer-card-static">` rather than `<a>` — same hover lift, no link affordance. URL is optional in the CMS so the client can fill in profile links piecemeal as creators provide them.
+- **12 seeded entries with real photos** scraped from the client-supplied Evernote share (Mike Smalls, Ridda, Juice, Derrick & Darnel, Linda, Corie, Esteez, TeeTee, Dylan, Humza, Layla, G). Photos saved to `/avatars/featured/00-mike-smalls.jpg` … `/avatars/featured/11-g.jpg`. Each card carries 1–3-letter initials as the avatar fallback (renders if a photo ever fails to load).
+- **New CMS collection** "Featured Our.Empire Streamers" with: name (required), description (required, line 1), group (optional, line 2 — e.g. "Blacks United (BU)"), profile URL (optional), platform select ("Yubo" / "Hide badge — no logo, no text"; default Yubo, per-streamer toggle), initials (required, 1–3 chars), avatar (optional image, saved to `/avatars/featured/`).
+- **New `.github/scripts/sync-featured-streamers.py`** regenerates the section from JSON between `<!-- FEATURED_STREAMERS_BEGIN/END -->` markers. Wired into the existing sync workflow.
+- **Yubo logo** added at `/yubo-logo.jpg` (the official Yubo brand mark — yellow square with smile/wink). Used by the platform badge `<img>` tag.
+
+Driven by `featured-streamers.json` (the CMS source of truth).
+
 ### Site v0.13.5 / Slots v0.14.1 / Trending v0.1.8 / Run v0.18.64 — 2026-04-30 — Brand rename: "EmpireX" → "Empire X"
 
 Coordinated rename across every visible touchpoint of the brand. The wordmark is two words now: "Empire X." Per-scope summary:

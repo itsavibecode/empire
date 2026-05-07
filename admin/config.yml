@@ -53,13 +53,14 @@ logo_url: https://ourempirex.com/logo.png
 
 collections:
   - name: roster
-    label: Confirmed Streamers
+    label: Featured Kick Streamers
     description: |
-      The single source of truth for the streamer list shown across
-      ourempirex.com, /obs/ (BRB scene), /promo/, and the SEO data.
-      Saving here triggers a GitHub Action that regenerates the visible
-      cards, JSON-LD performer list, keywords meta, and live-status JS
-      automatically (~30 seconds after save).
+      The single source of truth for the Kick-streamer list shown across
+      ourempirex.com (the "Featured Kick Streamers" section), /obs/ (BRB
+      scene), /promo/, and the SEO data. Saving here triggers a GitHub
+      Action that regenerates the visible cards, JSON-LD performer list,
+      keywords meta, and live-status JS automatically (~30 seconds after
+      save).
 
       Drag rows to reorder — order shown here is the order on the site.
     files:
@@ -105,6 +106,90 @@ collections:
               # back. Editors don't need to think about it — adding a
               # streamer just gets them a 5-day "JUST ADDED" badge
               # automatically, dated to the day of save.
+
+  - name: featured_streamers
+    label: Featured Our.Empire Streamers
+    description: |
+      The "Featured Our.Empire Streamers" section directly below
+      Featured Kick Streamers — Yubo creators from the Our.Empire
+      community, shown as cards with name + description + group + photo.
+      Unlike the Kick section, these cards have NO live-status indicator.
+      A platform badge (Yubo) renders under the name when set; profile
+      URL is optional and turns the card into a clickable link.
+
+      Saving here triggers the GitHub Action that regenerates the section
+      in index.html (~30 seconds after save).
+
+      Drag rows to reorder — order shown here is the order on the site.
+    files:
+      - file: featured-streamers.json
+        label: Featured Our.Empire Streamers content
+        name: featured_streamers_file
+        format: json
+        fields:
+          - name: section_label
+            label: 'Section label (small uppercase pill above the title)'
+            widget: string
+            default: 'From the Our.Empire community'
+            hint: 'Small uppercase pill above the section title. e.g. "From the Our.Empire community".'
+          - name: title
+            label: 'Section title'
+            widget: string
+            default: 'Featured Our.Empire Streamers'
+            hint: 'The big bold heading.'
+          - name: subtitle
+            label: 'Subtitle paragraph'
+            widget: text
+            default: 'Top influential creators from the Our.Empire community on Yubo.'
+            hint: 'Short paragraph below the title.'
+          - name: streamers
+            label: Streamers
+            label_singular: Streamer
+            widget: list
+            collapsed: false
+            summary: '{{fields.name}} — {{fields.group}}'
+            hint: 'Drag rows to reorder. Add or remove rows freely.'
+            fields:
+              - name: name
+                label: 'Display name'
+                widget: string
+                hint: 'Shown on the card. Use their preferred capitalization (e.g. "Mike Smalls", "Derrick & Darnel").'
+              - name: description
+                label: 'Description (line 1)'
+                widget: string
+                hint: 'First line of the caption. e.g. "Founder & CEO of @Our.Empire", "Member of Hall of Fame group", "Member of Empire Team".'
+              - name: group
+                label: 'Group name + abbreviation (line 2, optional)'
+                widget: string
+                required: false
+                hint: 'Optional second line shown below the description in slightly bolder cream type. e.g. "Blacks United (BU)", "Sky9", "Money Bag Girls (MBB)". Leave blank if there is no specific group (e.g. for Empire Team members or the founder).'
+              - name: url
+                label: 'Profile link (optional)'
+                widget: string
+                required: false
+                hint: 'Optional. If filled in, the card becomes a clickable link (e.g. their Yubo profile, Instagram, etc.). Leave blank for a plain (non-clickable) card. Full https://... URL.'
+                pattern: ['^$|^https?://.+', 'Leave blank or enter a full http(s):// URL']
+              - name: platform
+                label: 'Platform badge (under name)'
+                widget: select
+                default: 'yubo'
+                options:
+                  - { label: 'Yubo (yellow logo + YUBO text)', value: 'yubo' }
+                  - { label: 'Hide badge — no logo, no text',  value: '' }
+                hint: 'Per-streamer toggle. "Yubo" shows the yellow Yubo logo + "YUBO" text under the name (matches the green KICK badge on the Kick section). "Hide badge" removes the icon AND text entirely for that one streamer — useful if a creator isn''t on Yubo or you don''t want a platform badge for them. Default is Yubo since these are Yubo creators.'
+              - name: initials
+                label: 'Initials'
+                widget: string
+                hint: '1–3 letters shown as a fallback if no avatar photo is uploaded (or while it loads). e.g. "MS" for Mike Smalls, "D&D" for Derrick & Darnel.'
+                pattern: ['^.{1,3}$', '1 to 3 characters']
+              - name: avatar
+                label: 'Avatar photo (optional)'
+                widget: image
+                choose_url: false
+                required: false
+                media_folder: '/avatars/featured'
+                public_folder: '/avatars/featured'
+                hint: 'Square works best. JPG or PNG. Saved under /avatars/featured/. Leave empty if you don''t have a photo yet — the initials show as a fallback.'
 
   - name: properties
     label: The Properties
