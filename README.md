@@ -17,6 +17,10 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.3.1 — 2026-05-07 — "Even better on desktop" hint on the portrait notice
+
+Tiny copy add. Below the "Rotate to Landscape" body paragraph the portrait notice now shows an italic muted line: *"Even better on desktop."* Lets the visitor know the dashboard's optimal home is desktop without nagging them about it. Styled via new `.portrait-aside` class (DM Sans italic 0.9rem, muted ink color).
+
 ### Analytics v0.3.0 — 2026-05-07 — Portrait-phone "rotate to landscape" notice
 
 The Looker dashboard has a fixed ~1200px-wide canvas — squeezing it into a 375px portrait phone screen is unreadable. Rather than fight the responsive sizing problem, ship a "rotate your phone" pattern: portrait phones see a friendly notice; landscape phones (and all desktops) see the dashboard normally.
