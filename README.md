@@ -17,6 +17,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.8 — 2026-05-07 — Yellow hover accents on Featured Our.Empire cards (was Kick green)
+
+Three hover-state styles on the cards in the new section were inheriting the Kick-green treatment from the shared `.streamer-card` rules — visually misleading since these creators aren't on Kick. Overrode them with Yubo yellow:
+
+- **Card hover border + glow** — `border-color: var(--yellow-yubo)` + `box-shadow rgba(255,221,0,0.12)` instead of the green `rgba(83,252,24,0.1)`.
+- **Avatar circle border on hover** — same yellow swap.
+- **Image hover tint filter** — re-tuned the existing `sepia + hue-rotate + saturate` filter to land on yellow rather than green. Now `sepia(0.45) hue-rotate(-10deg) saturate(1.5)` — the negative rotation + stronger sepia keeps the tint warm rather than shifting toward green.
+
+Added a new `--yellow-yubo: #FFDD00` CSS variable at `:root` so the brand color has a single source of truth (mirrors `--green-kick`). The existing `.streamer-platform-yubo` text-color also moved over to the variable for consistency.
+
+Visible footer label: Site v0.13.8.
+
 ### Site v0.13.7 — 2026-05-07 — JUST ADDED ribbon on Featured Our.Empire Streamers + 12 entries backdated
 
 Mirrors the same "JUST ADDED" 5-day-corner-ribbon system from the Featured Kick Streamers section onto the new Featured Our.Empire Streamers section, so when the client adds a creator via the CMS they'll get a temporary badge for 5 days.
