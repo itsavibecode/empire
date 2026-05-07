@@ -41,20 +41,19 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "jjstream",
-      "name": "JJStream",
-      "url": "https://kick.com/jjstream",
-      "initials": "JJ",
-      "avatar": "avatars/jjstream.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
       "slug": "sashawest",
       "name": "Sasha West",
       "url": "https://kick.com/sashawest",
       "initials": "SW",
       "avatar": "/avatars/screenshot-2026-04-26-151109.png",
       "added_at": "2026-04-26"
+    },
+    {
+      "slug": "Blame ",
+      "name": "Blame ",
+      "url": "https://kick.com/blame",
+      "initials": "BL",
+      "avatar": "/avatars/screenshot-2026-05-07-163638.png"
     },
     {
       "slug": "  Dejayboss",
@@ -86,6 +85,14 @@
       "url": "https://kick.com/ashwilder",
       "initials": "AW",
       "avatar": "avatars/ashwilder.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
+      "slug": "jjstream",
+      "name": "JJStream",
+      "url": "https://kick.com/jjstream",
+      "initials": "JJ",
+      "avatar": "avatars/jjstream.jpg",
       "added_at": "2026-04-20"
     },
     {
@@ -209,11 +216,11 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "kikikrazy",
-      "name": "KikiKrazy",
-      "url": "https://kick.com/kikikrazy",
-      "initials": "KK",
-      "avatar": "avatars/kikikrazy.jpg",
+      "slug": "lifeismizzy",
+      "name": "lifeismizzy",
+      "url": "https://kick.com/lifeismizzy",
+      "initials": "LM",
+      "avatar": "/avatars/screenshot-2026-04-26-151507.png",
       "added_at": "2026-04-20"
     },
     {
@@ -241,19 +248,19 @@
       "added_at": "2026-04-20"
     },
     {
+      "slug": "kikikrazy",
+      "name": "KikiKrazy",
+      "url": "https://kick.com/kikikrazy",
+      "initials": "KK",
+      "avatar": "avatars/kikikrazy.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
       "slug": "ozemi",
       "name": "Ozemi",
       "url": "https://kick.com/ozemi",
       "initials": "OZ",
       "avatar": "avatars/ozemi.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
-      "slug": "lifeismizzy",
-      "name": "lifeismizzy",
-      "url": "https://kick.com/lifeismizzy",
-      "initials": "LM",
-      "avatar": "/avatars/screenshot-2026-04-26-151507.png",
       "added_at": "2026-04-20"
     }
   ]
