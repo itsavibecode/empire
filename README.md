@@ -17,6 +17,19 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.2.0 — 2026-05-07 — Light theme is the default + seamless iframe
+
+Light theme won the A/B comparison. Dark `/analytics/` chrome replaced with the white-background variant we previewed at `/analytics/light/`, then a couple of polish tweaks on top:
+
+- **Drop shadow under the iframe gone.** The 0 14px 40px rgba(0,0,0,0.06) shadow that sat behind the iframe card visually fenced the dashboard off from the page. Removed.
+- **Border + rounded corners gone.** The 1px hairline border + 6px border-radius that wrapped the iframe also created a "card edge." Both removed so the iframe's white interior flows directly into the page's white background — no visible seam between the Empire X chrome and the embedded Looker Studio dashboard.
+- **Horizontal padding on `main` removed.** The previous 1.5rem left/right padding on the iframe wrapper meant the dashboard didn't span the full content width. Set to 0 horizontally so the iframe runs flush at the wrapper's max-width (1400px).
+- The `.frame-wrap` div now exists only to enforce the 1400px centering — visually it's invisible.
+
+`/analytics/light/` folder removed (it was a temporary preview).
+
+Page version bumped to `Analytics v0.2.0` (visible in the footer).
+
 ### Analytics v0.1.0 — 2026-05-07 — Branded `/analytics/` page wrapping the Looker Studio dashboard
 
 New subpage at `ourempirex.com/analytics/` that embeds the Empire X Looker Studio site-analytics dashboard inside an Empire X-branded chrome. Built so the client can be sent one branded URL instead of a raw `datastudio.google.com` link.
