@@ -17,6 +17,10 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.2.1 — 2026-05-07 — Iframe height tuned to actual dashboard size
+
+v0.2.0's `height: 1600px` was generous enough to fit the dashboard without inner-scrolling but left a ~560px stretch of empty white between the last chart and the footer. Measured the rendered report at **1037px** tall via DOM inspection on the public viewer URL — set the iframe to **1100px** (1037 + ~60px buffer for any reflow). Footer now sits right below the last chart.
+
 ### Analytics v0.2.0 — 2026-05-07 — Light theme is the default + seamless iframe
 
 Light theme won the A/B comparison. Dark `/analytics/` chrome replaced with the white-background variant we previewed at `/analytics/light/`, then a couple of polish tweaks on top:

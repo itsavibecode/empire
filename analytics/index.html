@@ -6,7 +6,7 @@
 <!-- Internal client dashboard. Don't index, don't leak referrer. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.2.0">
+<meta name="version" content="0.2.1">
 <title>Empire X — Site Analytics</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -117,7 +117,11 @@
   .frame-wrap iframe {
     display: block;
     width: 100%;
-    height: 1600px;          /* fits the full Looker dashboard without inner scroll */
+    /* Measured the rendered report at 1037px tall (v0.2.1); 1100 gives
+       ~60px buffer for any small reflow without leaving the giant
+       white gap the previous 1600 created. Adjust if charts get added/
+       removed and content height drifts. */
+    height: 1100px;
     border: 0;
   }
 
@@ -194,7 +198,7 @@
     &copy; 2026 Our Empire &bull; Empire X &bull;
     <a href="https://ourempirex.com">ourempirex.com</a>
   </div>
-  <div class="footer-version">Analytics v0.2.0</div>
+  <div class="footer-version">Analytics v0.2.1</div>
 </footer>
 
 </body>
