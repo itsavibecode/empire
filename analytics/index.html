@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Internal client dashboard. Don't index, don't leak referrer. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X — Site Analytics</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:        #D4A843;
+    --gold-light:  #F0D68A;
+    --gold-dark:   #A17A28;
+    --black:       #0A0A0A;
+    --black-card:  #111111;
+    --black-lighter:#1A1A1A;
+    --white:       #F5F1EB;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--black);
+    color: var(--white);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === HEADER === */
+  header {
+    padding: 1.4rem 1.5rem 1rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.10) 0%, transparent 70%),
+      var(--black);
+    border-bottom: 1px solid rgba(245,241,235,0.08);
+    text-align: center;
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .header-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+  .header-text {
+    text-align: left;
+    line-height: 1.1;
+  }
+  .header-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.45em;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
+  }
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+  }
+  .header-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245,241,235,0.55);
+    margin-top: 0.25rem;
+  }
+
+  /* === IFRAME WRAPPER ===
+     White Looker Studio iframe sits inside a subtle gold border on the
+     dark page so the contrast is intentional, not an accident. */
+  main {
+    flex: 1 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: center;
+  }
+  .frame-wrap {
+    width: 100%;
+    max-width: 1400px;
+    border: 1px solid rgba(212,168,67,0.20);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #FFFFFF;     /* matches the iframe content's white so any flash on load is invisible */
+    box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+  }
+  .frame-wrap iframe {
+    display: block;
+    width: 100%;
+    height: 80vh;
+    min-height: 720px;        /* keeps charts legible on shorter laptops */
+    border: 0;
+  }
+
+  /* === FOOTER === */
+  footer {
+    padding: 1.6rem 1.5rem 2rem;
+    text-align: center;
+    border-top: 1px solid rgba(245,241,235,0.06);
+  }
+  .footer-line {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(245,241,235,0.35);
+  }
+  .footer-line a {
+    color: rgba(245,241,235,0.55);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .footer-line a:hover { color: var(--gold); }
+  .footer-version {
+    margin-top: 0.6rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: rgba(245,241,235,0.20);
+  }
+
+  /* === MOBILE TWEAKS === */
+  @media (max-width: 600px) {
+    header { padding: 1rem 1rem 0.8rem; }
+    .header-inner { gap: 0.8rem; }
+    .header-logo { width: 44px; height: 44px; }
+    .header-text { text-align: center; }
+    main { padding: 0.8rem; }
+    .frame-wrap iframe { height: 78vh; min-height: 560px; }
+    footer { padding: 1.2rem 1rem 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <img class="header-logo" src="/logo.png" alt="Empire X" loading="eager">
+    <div class="header-text">
+      <div class="header-eyebrow">Empire X</div>
+      <h1 class="header-title">Site Analytics</h1>
+      <div class="header-subtitle">Live data from ourempirex.com</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="frame-wrap">
+    <!-- Looker Studio embed. Source of truth for the report config lives in
+         Looker Studio (file: "Empire X — Site Analytics"); this page is
+         just chrome + iframe. To replace the report, swap the src below. -->
+    <iframe
+      src="https://datastudio.google.com/embed/reporting/92547b50-c208-4893-b91f-f0fd1ac2bdeb/page/MXYxF"
+      title="Empire X site analytics dashboard"
+      frameborder="0"
+      allowfullscreen
+      sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      loading="eager"
+      referrerpolicy="no-referrer"></iframe>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-line">
+    &copy; 2026 Our Empire &bull; Empire X &bull;
+    <a href="https://ourempirex.com">ourempirex.com</a>
+  </div>
+  <div class="footer-version">Analytics v0.1.0</div>
+</footer>
+
+</body>
+</html>

@@ -17,6 +17,16 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Analytics v0.1.0 — 2026-05-07 — Branded `/analytics/` page wrapping the Looker Studio dashboard
+
+New subpage at `ourempirex.com/analytics/` that embeds the Empire X Looker Studio site-analytics dashboard inside an Empire X-branded chrome. Built so the client can be sent one branded URL instead of a raw `datastudio.google.com` link.
+
+- **Layout:** dark Empire X header (crown+handshake logo, gold "Site Analytics" Playfair title, "Live data from ourempirex.com" subtitle) → white Looker Studio iframe in a gold-bordered card → subtle dark footer with version tag.
+- **Iframe:** points at the embed URL (`https://datastudio.google.com/embed/reporting/92547b50-c208-4893-b91f-f0fd1ac2bdeb/page/MXYxF`). Embed mode was enabled inside Looker Studio first. White iframe content sits intentionally on dark page — reads as "report card inside Empire X frame," not "uniform dark dashboard."
+- **Privacy:** `<meta name="robots" content="noindex, nofollow">` + `<meta name="referrer" content="no-referrer">` so search engines skip it and Looker doesn't get our referrer. Iframe also carries `referrerpolicy="no-referrer"` for the same reason. URL itself isn't secret — anyone with the link can view the dashboard.
+- **Source of truth:** the report config (charts, metrics, layout) lives in Looker Studio. This page is just chrome + iframe — to swap or redesign the dashboard, do it in Looker Studio and the page picks up the change automatically.
+- Dropped a `<meta name="version">` of 0.1.0 + a footer label so future tweaks have a place to bump.
+
 ### Site v0.13.10 — 2026-05-07 — Yellow hover tint actually-yellow this time
 
 v0.13.9's tint was reading as warm-orange rather than yellow. Bug was in the hue-rotate direction: CSS sepia centers around ~36° (yellow-brown); my `-30deg` rotation shifted it to ~6° (red-orange) instead of toward yellow. Flipping to `+20deg` lands at ~56° = true yellow. Also dropped brightness from 1.1 → 0.95 and bumped sepia 0.6 → 0.85 + saturate 2 → 2.3 for a deeper, more confident yellow.
