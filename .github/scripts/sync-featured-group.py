@@ -33,7 +33,7 @@ def detail_html(d):
         '        <div class="dtb-detail">\n'
         f'          <div class="dtb-detail-icon">{escape(icon)}</div>\n'
         '          <div class="dtb-detail-text">\n'
-        f'            <h4>{escape(heading)}</h4>\n'
+        f'            <h3>{escape(heading)}</h3>\n'
         f'            <p>{escape(body)}</p>\n'
         '          </div>\n'
         '        </div>\n'

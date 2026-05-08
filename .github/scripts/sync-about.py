@@ -24,7 +24,7 @@ ABOUT = os.path.join(REPO, 'about.json')
 def detail_html(d):
     return (
         '        <div class="about-detail">\n'
-        f'          <h4>{d["heading"]}</h4>\n'
+        f'          <h3>{d["heading"]}</h3>\n'
         f'          <p>{d["body"]}</p>\n'
         '        </div>\n'
     )

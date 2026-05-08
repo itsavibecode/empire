@@ -17,6 +17,20 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.11 — 2026-05-08 — PageSpeed audit pass: LCP, fonts, accessibility, 404 cleanup
+
+Lighthouse mobile audit on `ourempirex.com` came back at Performance 68 / Accessibility 89 / SEO 100. Worked through the actionable items:
+
+- **Hero logo: 845KB PNG → 102KB WebP.** The hero crown+handshake mark was the LCP element and the single biggest payload on the page. Resized the source 1024×1024 → 800×800 (still oversampled for the ~300px render slot but kept high-DPI safe), then encoded a 512×512 WebP at q85 (102KB, transparency preserved). Hero now uses `<picture><source srcset="logo.webp" type="image/webp"><img src="logo.png" ... fetchpriority="high"></picture>` — modern browsers fetch the WebP, anything pre-2020 falls back to the smaller-but-still-PNG. `fetchpriority="high"` tells the browser the LCP image matters more than other paint work.
+- **Non-blocking Google Fonts.** Swapped the render-blocking `<link rel="stylesheet" href="fonts.googleapis.com...">` for the standard preload-then-swap pattern: `<link rel="preload" as="style" href="..." onload="this.rel='stylesheet'">` plus `<noscript>` fallback for JS-disabled clients. Also added `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>` so the TLS handshake to the font host happens during HTML parse rather than after CSS arrives. Saves ~300ms on 4G.
+- **Avatar screenshots: 13 PNGs → JPGs (3.4MB → ~330KB).** The streamer-photo screenshots that landed in `/avatars/screenshot-*.png` were 24-bit PNGs at full resolution. None of them needed transparency (they're all opaque photos). Re-encoded them as JPG q85 max 480px square. `streamers.json` references all updated to `.jpg`. ~90% smaller per avatar.
+- **Heading order fix (H4 → H3).** Lighthouse flagged `<h4>` elements appearing without an `<h3>` ancestor inside the About / Featured / Safety section cards. Bumped them to `<h3>` in both the rendered HTML and in `.github/scripts/sync-about.py` + `sync-featured-group.py` so the next CMS regeneration doesn't undo the fix. CSS selectors followed.
+- **Footer color contrast (WCAG AA).** Footer copy + link text was using `rgba(245,241,235, 0.4)` over the dark background — measured at ~3.8:1, below the 4.5:1 floor for normal text. Bumped four alpha levels (0.3 → 0.6, 0.4 → 0.65 in six places, 0.25 → 0.5). Now passes 4.5:1.
+- **Hero unmute button: removed mismatched aria-label.** The button has visible text "TAP FOR SOUND" but carried `aria-label="Toggle video audio"` — the accessibility tree announced "Toggle video audio" while screen readers expecting `accessible-name == visible-text` flagged it as a label-content-name-mismatch. Dropped the `aria-label`; visible text becomes the accessible name automatically.
+- **404 cleanup in `streamers.json`.** Three entries had whitespace in their slugs/names: `"  Dejayboss"` (two leading spaces), `"Blame "`, `"Letty "`. The leading spaces in particular were causing `kick.com/api/v2/channels/%20%20Dejayboss` 404s on every page load. Trimmed all three.
+
+Footer label bumped to `Site v0.13.11`.
+
 ### Analytics v0.3.2 — 2026-05-07 — Iframe height scales proportionally below 1200px
 
 Landscape phones (and narrow desktop windows) had a large gap between the iframe content and the page footer. Cause: Looker auto-scales the dashboard down at iframe widths below its native 1200px canvas, but my fixed 1100px iframe height didn't shrink with it. At 812px wide the dashboard was ~702px tall, leaving ~400px of empty space.
