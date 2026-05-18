@@ -129,8 +129,24 @@
       "description": "Member of Hall of Fame Group",
       "group": "Sky9",
       "initials": "GM",
-      "avatar": "/avatars/featured/germ.jpg",
-      "added_at": "2026-05-18"
+      "avatar": "/avatars/featured/germ.jpg"
+    },
+    {
+      "platform": "yubo",
+      "name": "Qhuizz ",
+      "description": "Member of Empire Group",
+      "group": "Northstar",
+      "initials": "QZ",
+      "avatar": "/avatars/featured/screenshot-2026-05-18-152821.png",
+      "url": "https://www.twitch.tv/qhuizz"
+    },
+    {
+      "platform": "yubo",
+      "name": "China ",
+      "description": "Member of Hall of Fame Group",
+      "group": "Mixtapes",
+      "initials": "CH",
+      "avatar": "/avatars/featured/screenshot-2026-05-18-153224.png"
     }
   ]
 }
