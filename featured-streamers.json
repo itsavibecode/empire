@@ -64,6 +64,25 @@
       "added_at": "2026-04-29"
     },
     {
+      "platform": "yubo",
+      "name": "China ",
+      "description": "Member of Hall of Fame Group",
+      "group": "Late Night ",
+      "initials": "CH",
+      "avatar": "/avatars/featured/screenshot-2026-05-18-153224.png",
+      "added_at": "2026-05-18"
+    },
+    {
+      "name": "Dylan",
+      "description": "Member of Hall of Fame group",
+      "group": "Sky9",
+      "url": "",
+      "platform": "yubo",
+      "initials": "D",
+      "avatar": "/avatars/featured/08-dylan.jpg",
+      "added_at": "2026-04-29"
+    },
+    {
       "name": "Linda",
       "description": "Member of Hall of Fame group",
       "group": "Mixtapes",
@@ -81,16 +100,6 @@
       "platform": "yubo",
       "initials": "TT",
       "avatar": "/avatars/featured/07-teetee.jpg",
-      "added_at": "2026-04-29"
-    },
-    {
-      "name": "Dylan",
-      "description": "Member of Hall of Fame group",
-      "group": "Sky9",
-      "url": "",
-      "platform": "yubo",
-      "initials": "D",
-      "avatar": "/avatars/featured/08-dylan.jpg",
       "added_at": "2026-04-29"
     },
     {
@@ -140,15 +149,6 @@
       "initials": "QZ",
       "avatar": "/avatars/featured/screenshot-2026-05-18-152821.png",
       "url": "https://www.twitch.tv/qhuizz",
-      "added_at": "2026-05-18"
-    },
-    {
-      "platform": "yubo",
-      "name": "China ",
-      "description": "Member of Hall of Fame Group",
-      "group": "Mixtapes",
-      "initials": "CH",
-      "avatar": "/avatars/featured/screenshot-2026-05-18-153224.png",
       "added_at": "2026-05-18"
     }
   ]
