@@ -30,7 +30,7 @@
       "url": "",
       "platform": "yubo",
       "initials": "C",
-      "avatar": "/avatars/featured/05-corie.jpg",
+      "avatar": "/avatars/featured/corie.jpg",
       "added_at": "2026-04-29"
     },
     {
@@ -57,7 +57,7 @@
       "name": "Derrick & Darnel",
       "description": "Member of Hall of Fame group",
       "group": "Blacks United (BU)",
-      "url": "",
+      "url": "https://www.twitch.tv/knownasdd",
       "platform": "yubo",
       "initials": "D&D",
       "avatar": "/avatars/featured/03-derrick-darnel.jpg",
@@ -122,6 +122,14 @@
       "initials": "G",
       "avatar": "/avatars/featured/11-g.jpg",
       "added_at": "2026-04-29"
+    },
+    {
+      "platform": "yubo",
+      "name": "Germ ",
+      "description": "Member of Hall of Fame Group",
+      "group": "Sky9",
+      "initials": "GM",
+      "avatar": "/avatars/featured/germ.jpg"
     }
   ]
 }
