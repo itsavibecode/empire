@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Internal client log. Don't index, don't leak referrer. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X &mdash; Activity</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"></noscript>
+<style>
+  :root {
+    --gold:        #B58831;
+    --gold-light:  #D4A843;
+    --gold-dark:   #8B6620;
+    --paper:       #FFFFFF;
+    --ink:         #1A1A1A;
+    --ink-soft:    #444444;
+    --ink-muted:   #757575;
+    --hairline:    rgba(26,26,26,0.10);
+    --added-bg:    #E8F4EA;
+    --added-fg:    #1F6B33;
+    --removed-bg:  #F8E2DF;
+    --removed-fg:  #92291D;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    padding: 1.6rem 1.5rem 1.2rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.08) 0%, transparent 70%),
+      var(--paper);
+    border-bottom: 1px solid var(--hairline);
+    text-align: center;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .header-logo { width: 56px; height: 56px; object-fit: contain; flex: 0 0 auto; }
+  .header-text { text-align: left; line-height: 1.1; }
+  .header-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.45em;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
+  }
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+  }
+  .header-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 400;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 0.3rem;
+  }
+
+  main {
+    flex: 1 0 auto;
+    padding: 1.5rem 1.5rem 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .meta {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 1rem;
+  }
+
+  /* Event list — left-aligned, dense, no fancy timeline rail so it
+     stays scannable. Each row: date (small, gray) on the left, ADDED/
+     REMOVED pill, section pill, then name + sub-line on the right. */
+  .evt-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .evt {
+    display: grid;
+    grid-template-columns: 110px 90px 90px 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding: 1rem 0.5rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .evt-date {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    padding-top: 0.15rem;
+  }
+  .evt-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    height: 1.6rem;
+    text-transform: uppercase;
+  }
+  .evt-pill-added   { background: var(--added-bg);   color: var(--added-fg); }
+  .evt-pill-removed { background: var(--removed-bg); color: var(--removed-fg); }
+  .evt-section {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+    border: 1px solid var(--hairline);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    height: 1.6rem;
+    text-transform: uppercase;
+  }
+  .evt-body { min-width: 0; }
+  .evt-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .evt-name a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted var(--ink-muted);
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .evt-name a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+  .evt-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    margin-top: 0.2rem;
+    line-height: 1.4;
+  }
+  .evt-empty {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--ink-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-style: italic;
+  }
+
+  /* Narrow viewports: drop the rigid grid and let things stack. */
+  @media (max-width: 640px) {
+    .evt {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+      padding: 1rem 0.25rem;
+    }
+    .evt-date { padding-top: 0; }
+    .evt-pill, .evt-section { align-self: flex-start; }
+  }
+
+  footer {
+    padding: 1.6rem 1.5rem 2rem;
+    margin-top: 2rem;
+    text-align: center;
+    border-top: 1px solid var(--hairline);
+  }
+  .footer-line {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .footer-line a { color: var(--ink-soft); text-decoration: none; transition: color 0.2s ease; }
+  .footer-line a:hover { color: var(--gold); }
+  .footer-version {
+    margin-top: 0.6rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: rgba(26,26,26,0.30);
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 1.2rem 1rem 0.9rem; }
+    .header-inner { gap: 0.8rem; }
+    .header-logo { width: 44px; height: 44px; }
+    .header-text { text-align: center; }
+    main { padding: 1rem 1rem 0; }
+    footer { padding: 1.2rem 1rem 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <img class="header-logo" src="/logo.png" alt="Empire X" loading="eager">
+    <div class="header-text">
+      <div class="header-eyebrow">Empire X</div>
+      <h1 class="header-title">Activity</h1>
+      <div class="header-subtitle">Creators added &amp; removed</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="meta">53 events &middot; 51 added &middot; 2 removed &middot; updated May 19, 2026 at 22:32 UTC</div>
+
+  <ul class="evt-list">
+      <li class="evt">
+        <div class="evt-date">May 18, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/diamondthebarbie" target="_blank" rel="noopener noreferrer">Diamond</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 18, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://www.twitch.tv/qhuizz" target="_blank" rel="noopener noreferrer">Qhuizz</a></div>
+          <div class="evt-sub">Member of Empire Group &middot; Northstar</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 18, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">China</div>
+          <div class="evt-sub">Member of Hall of Fame Group &middot; Mixtapes</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 18, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Germ</div>
+          <div class="evt-sub">Member of Hall of Fame Group &middot; Sky9</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 8, 2026</div>
+        <div class="evt-pill evt-pill-removed">REMOVED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/Dejayboss" target="_blank" rel="noopener noreferrer">Dejayboss</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 8, 2026</div>
+        <div class="evt-pill evt-pill-removed">REMOVED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/blame" target="_blank" rel="noopener noreferrer">Blame</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 8, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/Dejayboss" target="_blank" rel="noopener noreferrer">Dejayboss</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 8, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/blame" target="_blank" rel="noopener noreferrer">Blame</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/blame" target="_blank" rel="noopener noreferrer">Blame</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">TeeTee</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Money Bag Girls (MBB)</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Ridda</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Blacks United (BU)</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Mike Smalls</div>
+          <div class="evt-sub">Founder &amp; CEO of @Our.Empire</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Linda</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Mixtapes</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Layla</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Late Night</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Juice</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Kozy</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Humza</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Blacks United (BU)</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">G</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Mixtapes</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Esteez</div>
+          <div class="evt-sub">Member of Empire Team</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Dylan</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Sky9</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Derrick &amp; Darnel</div>
+          <div class="evt-sub">Member of Hall of Fame group &middot; Blacks United (BU)</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 7, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">FEATURED</div>
+        <div class="evt-body">
+          <div class="evt-name">Corie</div>
+          <div class="evt-sub">Member of Empire Team</div>
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 6, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/Dejayboss" target="_blank" rel="noopener noreferrer">Dejayboss</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 5, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/nicklee" target="_blank" rel="noopener noreferrer">Nick Lee</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">May 2, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/markynextdoor" target="_blank" rel="noopener noreferrer">Marky</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 29, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/lettyvision" target="_blank" rel="noopener noreferrer">Letty</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 28, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/hanridge" target="_blank" rel="noopener noreferrer">Hanridge</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 26, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/shashawest" target="_blank" rel="noopener noreferrer">Sasha West</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/xenathewitch" target="_blank" rel="noopener noreferrer">XenaTheWitch</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/woodbaby" target="_blank" rel="noopener noreferrer">WoodBaby</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/taylorstarlight" target="_blank" rel="noopener noreferrer">TaylorStarlight</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/shangel" target="_blank" rel="noopener noreferrer">Shangel</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/saltygummibear" target="_blank" rel="noopener noreferrer">SaltyGummiBear</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/riddaw" target="_blank" rel="noopener noreferrer">RiddaW</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/ozemi" target="_blank" rel="noopener noreferrer">Ozemi</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/nanapips" target="_blank" rel="noopener noreferrer">NanaPips</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/mikesmallsjr" target="_blank" rel="noopener noreferrer">MikeSmallsJr</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/lifeismizzy" target="_blank" rel="noopener noreferrer">lifeismizzy</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/kimmee" target="_blank" rel="noopener noreferrer">Kimmee</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/kikikrazy" target="_blank" rel="noopener noreferrer">KikiKrazy</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/kennyhoopz" target="_blank" rel="noopener noreferrer">KennyHoopz</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/jjstream" target="_blank" rel="noopener noreferrer">JJStream</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/jackie" target="_blank" rel="noopener noreferrer">Jackie</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/iceposeidon" target="_blank" rel="noopener noreferrer">Ice Poseidon</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/iamTalanya" target="_blank" rel="noopener noreferrer">IamTalanya</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/floridaboy" target="_blank" rel="noopener noreferrer">FloridaBoy</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/feef" target="_blank" rel="noopener noreferrer">Feef</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/fanos" target="_blank" rel="noopener noreferrer">Fanos</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/dtanmanb" target="_blank" rel="noopener noreferrer">Dtan</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/cobbruvs" target="_blank" rel="noopener noreferrer">Cobbruvs</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/briewylde" target="_blank" rel="noopener noreferrer">BrieWylde</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/blackassdave" target="_blank" rel="noopener noreferrer">BlackAssDave</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/ashwilder" target="_blank" rel="noopener noreferrer">AshWilder</a></div>
+          
+        </div>
+      </li>
+      <li class="evt">
+        <div class="evt-date">Apr 25, 2026</div>
+        <div class="evt-pill evt-pill-added">ADDED</div>
+        <div class="evt-section">KICK</div>
+        <div class="evt-body">
+          <div class="evt-name"><a href="https://kick.com/adrianahlee" target="_blank" rel="noopener noreferrer">AdrianahLee</a></div>
+          
+        </div>
+      </li>
+  </ul>
+</main>
+
+<footer>
+  <div class="footer-line">
+    &copy; 2026 Our Empire &bull; Empire X &bull;
+    <a href="https://ourempirex.com">ourempirex.com</a>
+  </div>
+  <div class="footer-version">Activity v0.1.0</div>
+</footer>
+
+</body>
+</html>

@@ -2,5 +2,9 @@
 User-agent: *
 Allow: /
 Disallow: /game/
+# Internal pages (already meta-noindex'd; belt + suspenders).
+Disallow: /analytics/
+Disallow: /analytics/activity/
+Disallow: /multi/
 
 Sitemap: https://ourempirex.com/sitemap.xml

@@ -27,10 +27,11 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (full history — needed by build-activity-log.py)
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -92,6 +93,11 @@ jobs:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-featured-streamers.py
 
+      - name: Build Activity changelog at /analytics/activity/
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/build-activity-log.py
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
@@ -101,7 +107,9 @@ jobs:
           # sync-featured-streamers.py persist back into the source of
           # truth (otherwise next sync would re-generate them and we'd
           # have inconsistent dates).
-          git add index.html llms.txt streamers.json featured-streamers.json
+          # Also include analytics/activity/index.html (rebuilt every
+          # run from git log) so the changelog stays current.
+          git add index.html llms.txt streamers.json featured-streamers.json analytics/activity/index.html
           if git diff --cached --quiet; then
             echo "Nothing to sync."
           else

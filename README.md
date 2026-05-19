@@ -17,6 +17,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.13 — 2026-05-19 — Hidden /analytics/activity/ changelog + /multi/ MultiKick shortcut
+
+Two new hidden pages for internal/operator use. Neither is in the sitemap; both carry `<meta name="robots" content="noindex, nofollow">` and are blocked in `robots.txt` as a belt-and-suspenders measure.
+
+**`/analytics/activity/`** — a creator changelog for the client. Same Empire X light-theme chrome as `/analytics/`, but the body is a timeline of every streamer added or removed from either the Featured Kick Streamers roster or the Featured Our.Empire Creators list. Built from git history: `.github/scripts/build-activity-log.py` walks every commit that touched `streamers.json` or `featured-streamers.json`, diffs each one against its parent, and bakes the timeline directly into the page HTML (no client-side fetch). Each event shows date, ADDED/REMOVED pill, section pill (KICK / FEATURED), name, and the description/group context as it existed at the time of the change. Linked names point to the creator's profile when one was set. Capped at 200 most recent events.
+
+Wired into the sync workflow (`sync-streamers.yml`) so it regenerates on every push that touches a content file. Workflow checkout switched to `fetch-depth: 0` so the script can read the full history.
+
+**`/multi/`** — operator shortcut that mirrors the "Failing? Load MultiKick" escape-hatch button at the bottom of `/obs/`. Visiting `/multi/` runs the same Kick live-check logic the OBS page uses (three CORS proxies racing in parallel against `kick.com/api/v2/channels/{slug}` with a 6s per-channel timeout), then `location.replace()`s to `https://multikick.com/<live-slug-1>/<live-slug-2>/...` with the top 6 currently-live slugs. The URL the button points to is dynamic — it depends on who is live right now — so the only way to "mirror" it is to recompute it the same way. Two query bypasses: `/multi/?all` skips the live-check and uses every configured slug; `/multi/?bare` goes straight to plain `https://multikick.com/`. Hard 12-second safety timeout falls back to bare MultiKick if everything hangs.
+
+Side cleanup: added `Disallow: /analytics/`, `/analytics/activity/`, `/multi/` to `robots.txt`.
+
 ### Site v0.13.12 — 2026-05-08 — Featured creators badge: Empire logo by default + CMS controls
 
 The "Featured Our.Empire Creators" section previously hard-coded the Yubo yellow logo + "YUBO" text under every card. Two things changed:

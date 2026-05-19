@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Internal operator shortcut. Don't index. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X &mdash; MultiKick</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0A0A0A;
+    color: #F5F1EB;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .wrap {
+    padding: 2rem 1.5rem;
+    max-width: 480px;
+  }
+  .logo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 1.2rem;
+    opacity: 0.95;
+  }
+  .title {
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    color: #D4A843;
+    margin: 0 0 0.4rem;
+    font-weight: 800;
+  }
+  .body {
+    font-size: 0.95rem;
+    color: rgba(245,241,235,0.7);
+    line-height: 1.5;
+    margin: 0 0 1.4rem;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(212,168,67,0.25);
+    border-top-color: #D4A843;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fallback {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: rgba(245,241,235,0.55);
+  }
+  .fallback a {
+    color: #D4A843;
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(212,168,67,0.5);
+  }
+  .fallback a:hover { color: #F0D68A; border-bottom-color: #F0D68A; }
+  .target {
+    margin-top: 0.8rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: rgba(245,241,235,0.45);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="/logo.png" alt="Empire X">
+  <div class="spinner" id="spinner"></div>
+  <h1 class="title">Loading MultiKick</h1>
+  <p class="body" id="status">Checking which Empire X streamers are live&hellip;</p>
+  <div class="fallback">
+    Not redirecting?
+    <a id="fallbackLink" href="https://multikick.com/" target="_blank" rel="noopener">Open MultiKick</a>
+  </div>
+  <div class="target" id="targetUrl"></div>
+</div>
+
+<script>
+/* ====================================================================
+   /multi/ — operator shortcut that mirrors the "Failing? Load
+   MultiKick" button on /obs/. It loads the current streamer list from
+   /streamers.json, runs the same Kick API live-check the OBS page uses
+   (via CORS proxies racing in parallel), and redirects to
+   https://multikick.com/<slug>/<slug>/... with the currently-live
+   slugs in the path.
+
+   Why a live-check at all? MultiKick's grid only makes sense when at
+   least some channels are actually live. If we redirected to a path
+   built from the whole configured roster, MultiKick would show a wall
+   of "offline" tiles. Same behavior as the OBS button.
+
+   Caps at 6 slugs (same as the OBS button — MultiKick gets
+   uncomfortable past that).
+
+   Bypass: /multi/?all redirects with EVERY configured slug regardless
+   of live state. /multi/?bare sends straight to https://multikick.com/.
+==================================================================== */
+(function () {
+  const STATUS = document.getElementById('status');
+  const TARGET = document.getElementById('targetUrl');
+  const SPINNER = document.getElementById('spinner');
+  const FALLBACK = document.getElementById('fallbackLink');
+  const params = new URLSearchParams(location.search);
+  const MAX_SLUGS = 6;
+
+  function showTarget(href) {
+    TARGET.textContent = href;
+    FALLBACK.href = href;
+  }
+  function done(href, label) {
+    SPINNER.style.display = 'none';
+    STATUS.textContent = label || 'Redirecting to MultiKick…';
+    showTarget(href);
+    // Use replace() so the back button skips this loading page.
+    location.replace(href);
+  }
+  function bare(reason) {
+    done('https://multikick.com/', reason || 'No streamers live. Sending you to MultiKick.');
+  }
+
+  // ?bare — straight to multikick.com with no slugs.
+  if (params.has('bare')) {
+    bare('Opening MultiKick…');
+    return;
+  }
+
+  fetch('/streamers.json', { cache: 'no-cache' })
+    .then(r => r.json())
+    .then(async (data) => {
+      const all = (data.streamers || [])
+        .map(s => (s.slug || '').trim().toLowerCase())
+        .filter(Boolean);
+
+      if (all.length === 0) {
+        bare('No streamers configured. Sending you to MultiKick.');
+        return;
+      }
+
+      // ?all — skip the live check and use every configured slug.
+      if (params.has('all')) {
+        const href = 'https://multikick.com/' + all.slice(0, MAX_SLUGS).join('/');
+        done(href, `Opening ${Math.min(all.length, MAX_SLUGS)} channels on MultiKick…`);
+        return;
+      }
+
+      STATUS.textContent = `Checking ${all.length} streamers…`;
+
+      // Same proxy stack as /obs/. Race all three and take the first
+      // one to return a valid Kick channel response. Per-channel
+      // timeout 6s — anything slower is almost certainly dead.
+      const PROXIES = [
+        s => ({ url: `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`, wrapped: false }),
+        s => ({ url: `https://corsproxy.io/?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,        wrapped: false }),
+        s => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`, wrapped: true  }),
+      ];
+      async function tryProxy(build, slug) {
+        const { url, wrapped } = build(slug);
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        if (!res.ok) throw new Error('http ' + res.status);
+        const text = await res.text();
+        if (!text) throw new Error('empty');
+        const d = wrapped ? JSON.parse(JSON.parse(text).contents || '{}') : JSON.parse(text);
+        if (d.id == null && d.slug == null && d.user_id == null) throw new Error('not a kick channel');
+        const ls = d.livestream;
+        const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
+        return { slug, isLive, viewers: isLive ? Number(ls.viewer_count || 0) : 0 };
+      }
+      async function checkSlug(slug) {
+        try {
+          return await Promise.any(PROXIES.map(p => tryProxy(p, slug)));
+        } catch (_e) {
+          return { slug, isLive: false, viewers: 0 };
+        }
+      }
+
+      // Don't wait for the whole roster — once we have enough live
+      // slugs to fill the multikick path, fire off the redirect. But
+      // also bound the total wait so a stuck proxy can't strand us.
+      const results = await Promise.all(all.map(checkSlug));
+      const live = results
+        .filter(r => r.isLive)
+        .sort((a, b) => (b.viewers || 0) - (a.viewers || 0))
+        .slice(0, MAX_SLUGS)
+        .map(r => r.slug);
+
+      if (live.length === 0) {
+        bare('No Empire X streamers are live right now. Opening MultiKick…');
+        return;
+      }
+
+      const href = 'https://multikick.com/' + live.join('/');
+      done(href, `Opening ${live.length} live channel${live.length === 1 ? '' : 's'} on MultiKick…`);
+    })
+    .catch(err => {
+      console.warn('[multi] roster fetch failed:', err);
+      bare('Couldn’t load the streamer list. Sending you to MultiKick.');
+    });
+
+  // Hard safety net — if everything hangs, fall back to bare multikick
+  // after 12 seconds. The user shouldn't sit on a "loading" screen.
+  setTimeout(() => {
+    if (!document.hidden && STATUS.textContent.includes('Checking')) {
+      bare('Live check is taking too long. Sending you to MultiKick.');
+    }
+  }, 12000);
+})();
+</script>
+</body>
+</html>
