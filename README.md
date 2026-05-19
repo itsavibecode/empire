@@ -17,6 +17,25 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.14 — 2026-05-19 — empire-worker live-status proxy
+
+`/obs/` and `/multi/` were racing three public CORS proxies (`allorigins.win`, `corsproxy.io`) to read `kick.com/api/v2/channels/<slug>` because Kick doesn't send CORS headers. Two compounding problems made that approach fall apart:
+
+1. **Public proxies degraded.** allorigins started returning Cloudflare 520s for kick.com, and corsproxy.io moved to a paid plan for any server-side request. The free path through the public proxies was missing ~75% of channels under load.
+2. **Kick added Cloudflare bot protection.** Direct requests now return 403 unless they look like a real Chrome browser AND don't arrive in a burst. The `/obs/` poll pattern (34 channels in parallel × 3 proxies) was triggering the burst detector instantly.
+
+Fix: built a dedicated Cloudflare Worker — [`empire-worker`](https://github.com/itsavibecode/empire-worker) — that owns the Kick proxy job and pre-warms a Workers KV cache once a minute:
+
+- **Cron every 60s** walks the configured roster (read from `https://ourempirex.com/streamers.json`) one slug at a time with 500ms pacing. Each hit spoofs a full Chrome browser header set (User-Agent, sec-ch-ua-*, Referer matching the channel) so Kick's anti-bot is satisfied. Each successful response lands in KV under `channel:<slug>`.
+- **`GET /channel/<slug>` from clients** serves straight from KV. No upstream call on the hot path — 0 rate-limit risk, ~2s wall-clock for the whole 34-slug roster, edge-cached globally. Cold-start (KV not propagated yet) falls back to a direct upstream fetch.
+- **CORS allowlisted** to `ourempirex.com` so the endpoint isn't a free CORS proxy.
+
+Client-side updates:
+- `/multi/` now races the worker against allorigins (worker wins ~always, but keeping allorigins as a safety net if CF deploys broken). Concurrency bumped from 6 to 10 since the worker can handle the burst.
+- `/obs/` adds the worker as the first entry in its `PROXIES` race list. Public proxies stay for safety.
+
+Verified: 34/34 channels return valid Kick data in 2.25s wall-clock, 6 live channels detected during testing (cobbruvs 1000 / shangel 768 / markynextdoor 523 / ozemi 444 / nicklee 253 / dtanmanb 170). Zero errors.
+
 ### Site v0.13.13 — 2026-05-19 — Hidden /analytics/activity/ changelog + /multi/ MultiKick shortcut
 
 Two new hidden pages for internal/operator use. Neither is in the sitemap; both carry `<meta name="robots" content="noindex, nofollow">` and are blocked in `robots.txt` as a belt-and-suspenders measure.

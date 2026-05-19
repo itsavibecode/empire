@@ -973,7 +973,23 @@
      through a public CORS proxy. The response has a `livestream` object
      (null if offline) with `viewer_count`, `session_title`, etc.
   ================================================================== */
+  // Live-status fetch stack (v0.13.13+):
+  //   1. PRIMARY — empire-worker (Cloudflare Worker we control).
+  //      Single trusted endpoint, 10s edge cache, CORS-allowed for
+  //      ourempirex.com. Replaces the public CORS proxies that were
+  //      missing 75%+ of channels under load.
+  //   2. FALLBACKS — kept the previous public-proxy stack as a safety
+  //      net so a bad CF deploy doesn't strand /obs/. They race the
+  //      worker via Promise.any; first to return a valid Kick channel
+  //      response wins.
   const PROXIES = [
+    // empire-worker — our Cloudflare Worker. Faster + far more reliable
+    // than the public proxies; the 10s edge cache means once one operator
+    // has polled, subsequent polls are essentially free.
+    s => ({
+      url: `https://empire-worker.sevendwarfs.workers.dev/channel/${encodeURIComponent(s)}`,
+      wrapped: false,
+    }),
     // allorigins /raw — returns the target response directly (no JSON wrapper).
     // More reliable than /get when the response is already JSON.
     s => ({

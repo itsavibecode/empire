@@ -179,40 +179,53 @@
 
       STATUS.textContent = `Checking ${all.length} streamers…`;
 
-      // Same proxy stack as /obs/. Race all three and take the first
-      // one to return a valid Kick channel response. Per-channel
-      // timeout 6s — anything slower is almost certainly dead.
-      const PROXIES = [
-        s => ({ url: `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`, wrapped: false }),
-        s => ({ url: `https://corsproxy.io/?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,        wrapped: false }),
-        s => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`, wrapped: true  }),
-      ];
-      async function tryProxy(build, slug) {
-        const { url, wrapped } = build(slug);
-        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      // Live check via empire-worker (our Cloudflare Worker that
+      // proxies kick.com/api/v2/channels/<slug> from a single trusted
+      // endpoint with a 10s edge cache). Replaces the unreliable
+      // public CORS proxies that were missing 75%+ of channels under
+      // load. The worker handles fallback / caching / CORS for us, so
+      // the client-side becomes a single fetch per slug.
+      //
+      // Public-proxy fallback kept as a safety net in case the worker
+      // itself is down — race the worker against allorigins so one
+      // bad CF deploy can't strand the page.
+      const WORKER = 'https://empire-worker.sevendwarfs.workers.dev/channel/';
+      const FALLBACK_PROXY = s =>
+        `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`;
+
+      async function fetchFrom(url, parseWrapped = false) {
+        const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
         if (!res.ok) throw new Error('http ' + res.status);
         const text = await res.text();
         if (!text) throw new Error('empty');
-        const d = wrapped ? JSON.parse(JSON.parse(text).contents || '{}') : JSON.parse(text);
+        const d = parseWrapped ? JSON.parse(JSON.parse(text).contents || '{}') : JSON.parse(text);
         if (d.id == null && d.slug == null && d.user_id == null) throw new Error('not a kick channel');
         const ls = d.livestream;
-        const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
-        return { slug, isLive, viewers: isLive ? Number(ls.viewer_count || 0) : 0 };
+        return {
+          isLive: !!ls && (ls.is_live === true || ls.viewer_count != null),
+          viewers: ls ? Number(ls.viewer_count || 0) : 0,
+        };
       }
       async function checkSlug(slug) {
         try {
-          return await Promise.any(PROXIES.map(p => tryProxy(p, slug)));
+          const r = await Promise.any([
+            fetchFrom(WORKER + encodeURIComponent(slug)),
+            fetchFrom(FALLBACK_PROXY(slug)),
+          ]);
+          return { slug, ...r };
         } catch (_e) {
           return { slug, isLive: false, viewers: 0 };
         }
       }
 
-      // Throttled concurrency. Firing 34 channels × 3 proxies = 102
-      // simultaneous CORS-proxy requests gets the public proxies rate-
-      // limited fast (observed: ~75% of channels timed out under full
-      // parallel load). Limit to 6 channels in flight at a time — still
-      // races all 3 proxies per channel, just paces the overall throughput.
-      const CONCURRENCY = 6;
+      // Throttled concurrency. Our empire-worker can handle full
+      // parallel load (and edge-caches each slug for 10s, so polling
+      // the same roster is essentially free after the first hit). The
+      // public-proxy fallback can't, so we still throttle modestly —
+      // 10 in flight is a good middle ground: fast wall-clock when the
+      // worker is up (~3s for the whole roster), not catastrophic if
+      // we have to fall back to allorigins.
+      const CONCURRENCY = 10;
       const results = new Array(all.length);
       let cursor = 0;
       async function worker() {
