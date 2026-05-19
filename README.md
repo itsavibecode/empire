@@ -17,6 +17,19 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.12 — 2026-05-08 — Featured creators badge: Empire logo by default + CMS controls
+
+The "Featured Our.Empire Creators" section previously hard-coded the Yubo yellow logo + "YUBO" text under every card. Two things changed:
+
+1. **Default brand is now Empire, not Yubo.** Every card shows the Our.Empire crown+handshake logo (in gold, from `/logo.png`) with the text "OUR.EMPIRE" underneath. Reads as the section's own identity rather than a third-party platform tag.
+2. **The badge is now fully client-editable from Decap.** Under "Featured Our.Empire Streamers" in the CMS there are four new section-wide controls:
+   - **Badge icon** — dropdown picks the logo: Empire (default) / Kick / Yubo / Twitch / TikTok / Custom. Each preset has its own brand color (gold / green / yellow / purple / pink) so the badge always matches the brand it represents.
+   - **Badge text** — optional override. Leave blank to use the preset's default text ("OUR.EMPIRE", "KICK", "YUBO", "TWITCH", "TIKTOK"). Fill it in to type anything custom — e.g. "FEATURED" or "OUR.EMPIRE COMMUNITY".
+   - **Custom badge logo** — image upload, used only when the dropdown is set to "Custom". Pair with the Badge text field to ship a fully bespoke badge.
+   - **Hide badge entirely** — single checkbox. When checked, no badge renders on any card in the section.
+
+Implementation: moved the badge from a per-card setting (every row redundantly stored `"platform": "yubo"`) to one section-level config block in `featured-streamers.json` (`badge_icon` / `badge_text` / `badge_custom_icon` / `badge_hidden`). `sync-featured-streamers.py` builds the badge HTML once and injects it into every card. Inline SVG icons for Kick / Twitch / TikTok with `fill="currentColor"` so the brand color flows through naturally; raster images for Yubo (existing `/yubo-logo.jpg`) and Empire (reuses `/logo.png`).
+
 ### Site v0.13.11 — 2026-05-08 — PageSpeed audit pass: LCP, fonts, accessibility, 404 cleanup
 
 Lighthouse mobile audit on `ourempirex.com` came back at Performance 68 / Accessibility 89 / SEO 100. Worked through the actionable items:

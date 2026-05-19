@@ -110,12 +110,17 @@ collections:
   - name: featured_streamers
     label: Featured Our.Empire Streamers
     description: |
-      The "Featured Our.Empire Streamers" section directly below
-      Featured Kick Streamers — Yubo creators from the Our.Empire
-      community, shown as cards with name + description + group + photo.
+      The "Featured Our.Empire Creators" section directly below the
+      Featured Kick Streamers section — creators from the Our.Empire
+      community shown as cards with name + description + group + photo.
       Unlike the Kick section, these cards have NO live-status indicator.
-      A platform badge (Yubo) renders under the name when set; profile
-      URL is optional and turns the card into a clickable link.
+
+      A single section-wide badge (icon + text) renders under each card's
+      name — set it once in the "Badge under each card" group below and
+      every card in this section gets the same badge. Pick from preset
+      platforms (Kick / Yubo / Twitch / TikTok / Empire) or upload your
+      own logo for "Custom". Toggle "Hide badge entirely" to drop the
+      icon + text from every card with one click.
 
       Saving here triggers the GitHub Action that regenerates the section
       in index.html (~30 seconds after save).
@@ -135,13 +140,44 @@ collections:
           - name: title
             label: 'Section title'
             widget: string
-            default: 'Featured Our.Empire Streamers'
+            default: 'Featured Our.Empire Creators'
             hint: 'The big bold heading.'
           - name: subtitle
             label: 'Subtitle paragraph'
             widget: text
-            default: 'Top influential creators from the Our.Empire community on Yubo.'
+            default: 'Top influential creators from the Our.Empire community attending the event.'
             hint: 'Short paragraph below the title.'
+          - name: badge_hidden
+            label: 'Hide badge entirely (no icon, no text on any card)'
+            widget: boolean
+            default: false
+            hint: 'When ON: no badge appears on any card in this section. When OFF: the badge below renders on every card.'
+          - name: badge_icon
+            label: 'Badge icon'
+            widget: select
+            default: 'empire'
+            options:
+              - { label: 'Empire (gold Our.Empire crown+handshake logo)', value: 'empire' }
+              - { label: 'Kick (green, three bars)', value: 'kick' }
+              - { label: 'Yubo (yellow square smile)', value: 'yubo' }
+              - { label: 'Twitch (purple glitch)', value: 'twitch' }
+              - { label: 'TikTok (pink/red note)', value: 'tiktok' }
+              - { label: 'Custom — upload your own (uses the image below)', value: 'custom' }
+            hint: 'Which logo appears on every card in this section. Pick "Custom" to upload your own image in the "Custom badge logo" field below.'
+          - name: badge_text
+            label: 'Badge text (optional override)'
+            widget: string
+            required: false
+            default: ''
+            hint: 'Leave blank to use the default text for the selected icon ("OUR.EMPIRE", "KICK", "YUBO", "TWITCH", "TIKTOK"). Type something here to override — e.g. "FEATURED" or "OUR.EMPIRE COMMUNITY". For Custom badges, this is the only way to set the text.'
+          - name: badge_custom_icon
+            label: 'Custom badge logo (only used when "Badge icon" is set to Custom)'
+            widget: image
+            choose_url: false
+            required: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'Upload a small square logo (around 32×32 to 64×64 px). Used only when the Badge icon dropdown is set to "Custom". Saved at the repo root.'
           - name: streamers
             label: Streamers
             label_singular: Streamer
@@ -169,14 +205,6 @@ collections:
                 required: false
                 hint: 'Optional. If filled in, the card becomes a clickable link (e.g. their Yubo profile, Instagram, etc.). Leave blank for a plain (non-clickable) card. Full https://... URL.'
                 pattern: ['^$|^https?://.+', 'Leave blank or enter a full http(s):// URL']
-              - name: platform
-                label: 'Platform badge (under name)'
-                widget: select
-                default: 'yubo'
-                options:
-                  - { label: 'Yubo (yellow logo + YUBO text)', value: 'yubo' }
-                  - { label: 'Hide badge — no logo, no text',  value: '' }
-                hint: 'Per-streamer toggle. "Yubo" shows the yellow Yubo logo + "YUBO" text under the name (matches the green KICK badge on the Kick section). "Hide badge" removes the icon AND text entirely for that one streamer — useful if a creator isn''t on Yubo or you don''t want a platform badge for them. Default is Yubo since these are Yubo creators.'
               - name: initials
                 label: 'Initials'
                 widget: string

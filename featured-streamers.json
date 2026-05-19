@@ -1,14 +1,17 @@
 {
   "section_label": "From the Our.Empire community",
   "title": "Featured Our.Empire Creators",
-  "subtitle": "Top influential creators from the Our.Empire community on Yubo attending the event. ",
+  "subtitle": "Top influential creators from the Our.Empire community attending the event.",
+  "badge_hidden": false,
+  "badge_icon": "empire",
+  "badge_text": "",
+  "badge_custom_icon": "",
   "streamers": [
     {
       "name": "Mike Smalls",
       "description": "Founder & CEO of @Our.Empire",
       "group": "",
       "url": "https://instagram.com/our.empire",
-      "platform": "yubo",
       "initials": "MS",
       "avatar": "/avatars/featured/00-mike-smalls.jpg",
       "added_at": "2026-04-29"
@@ -18,7 +21,6 @@
       "description": "Member of Empire Team",
       "group": "",
       "url": "",
-      "platform": "yubo",
       "initials": "E",
       "avatar": "/avatars/featured/06-esteez.jpg",
       "added_at": "2026-04-29"
@@ -28,7 +30,6 @@
       "description": "Member of Empire Team",
       "group": "",
       "url": "",
-      "platform": "yubo",
       "initials": "C",
       "avatar": "/avatars/featured/corie.jpg",
       "added_at": "2026-04-29"
@@ -38,7 +39,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Blacks United (BU)",
       "url": "",
-      "platform": "yubo",
       "initials": "R",
       "avatar": "/avatars/featured/01-ridda.jpg",
       "added_at": "2026-04-29"
@@ -48,7 +48,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Kozy",
       "url": "",
-      "platform": "yubo",
       "initials": "J",
       "avatar": "/avatars/featured/02-juice.jpg",
       "added_at": "2026-04-29"
@@ -58,16 +57,15 @@
       "description": "Member of Hall of Fame group",
       "group": "Blacks United (BU)",
       "url": "https://www.twitch.tv/knownasdd",
-      "platform": "yubo",
       "initials": "D&D",
       "avatar": "/avatars/featured/03-derrick-darnel.jpg",
       "added_at": "2026-04-29"
     },
     {
-      "platform": "yubo",
-      "name": "China ",
+      "name": "China",
       "description": "Member of Hall of Fame Group",
-      "group": "Late Night ",
+      "group": "Late Night",
+      "url": "",
       "initials": "CH",
       "avatar": "/avatars/featured/screenshot-2026-05-18-153224.png",
       "added_at": "2026-05-18"
@@ -77,7 +75,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Sky9",
       "url": "",
-      "platform": "yubo",
       "initials": "D",
       "avatar": "/avatars/featured/08-dylan.jpg",
       "added_at": "2026-04-29"
@@ -87,7 +84,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Mixtapes",
       "url": "",
-      "platform": "yubo",
       "initials": "L",
       "avatar": "/avatars/featured/04-linda.jpg",
       "added_at": "2026-04-29"
@@ -97,7 +93,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Money Bag Girls (MBB)",
       "url": "",
-      "platform": "yubo",
       "initials": "TT",
       "avatar": "/avatars/featured/07-teetee.jpg",
       "added_at": "2026-04-29"
@@ -107,7 +102,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Blacks United (BU)",
       "url": "",
-      "platform": "yubo",
       "initials": "H",
       "avatar": "/avatars/featured/09-humza.jpg",
       "added_at": "2026-04-29"
@@ -117,7 +111,6 @@
       "description": "Member of Hall of Fame group",
       "group": "Late Night",
       "url": "",
-      "platform": "yubo",
       "initials": "L",
       "avatar": "/avatars/featured/10-layla.jpg",
       "added_at": "2026-04-29"
@@ -127,28 +120,26 @@
       "description": "Member of Hall of Fame group",
       "group": "Mixtapes",
       "url": "",
-      "platform": "yubo",
       "initials": "G",
       "avatar": "/avatars/featured/11-g.jpg",
       "added_at": "2026-04-29"
     },
     {
-      "platform": "yubo",
-      "name": "Germ ",
+      "name": "Germ",
       "description": "Member of Hall of Fame Group",
       "group": "Sky9",
+      "url": "",
       "initials": "GM",
       "avatar": "/avatars/featured/germ.jpg",
       "added_at": "2026-05-18"
     },
     {
-      "platform": "yubo",
-      "name": "Qhuizz ",
+      "name": "Qhuizz",
       "description": "Member of Empire Group",
       "group": "Northstar",
+      "url": "https://www.twitch.tv/qhuizz",
       "initials": "QZ",
       "avatar": "/avatars/featured/screenshot-2026-05-18-152821.png",
-      "url": "https://www.twitch.tv/qhuizz",
       "added_at": "2026-05-18"
     }
   ]

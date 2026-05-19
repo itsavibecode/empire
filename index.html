@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Ice Poseidon, XenaTheWitch, MarkyNextDoor, WoodBaby, Blame, Sasha West, Kimmee, Hanridge, AshWilder, Dejayboss, JJStream, Shangel, Diamond, Nick Lee, FloridaBoy, Letty, TaylorStarlight, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, lifeismizzy, Fanos, KikiKrazy, Dtan, RiddaW, Ozemi, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.11">
+<meta name="version" content="0.13.12">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -830,33 +830,56 @@ section{padding:6rem 1.5rem}
   line-height:1.3;
   padding:0 0.4rem;
 }
-/* Yubo platform badge — same shape as the existing KICK badge. Brand
-   color is yellow (#FFDD00) per the official logo (yellow square with
-   black smile mark). Image is the official Yubo wordmark/icon at
-   /yubo-logo.jpg. */
-/* Bumped specificity to .streamer-platform.streamer-platform-yubo
-   (both classes on the same <div>) so this beats the generic
-   .streamer-platform rule's `color: var(--green-kick)` further down
-   the file. Without the doubled-class selector the YUBO text would
-   render in Kick green because the rules have equal specificity and
-   the green rule comes later in source order. */
-.streamer-platform.streamer-platform-yubo{
+/* Featured Our.Empire Streamers section-wide badge (v0.13.12+).
+   One badge config per section drives the brand color + icon; the
+   badge_icon dropdown in Decap picks Kick / Yubo / Twitch / TikTok /
+   Empire / Custom and this CSS gives each its own brand color.
+   Specificity is bumped to .streamer-platform.streamer-platform-<brand>
+   so each beats the generic .streamer-platform { color: var(--green-kick) }
+   rule further down the file. */
+.streamer-platform.streamer-platform-yubo,
+.streamer-platform.streamer-platform-kick,
+.streamer-platform.streamer-platform-twitch,
+.streamer-platform.streamer-platform-tiktok,
+.streamer-platform.streamer-platform-empire,
+.streamer-platform.streamer-platform-custom{
   font-family:'Oswald',sans-serif;
   font-weight:500;
   font-size:0.72rem;
   letter-spacing:0.18em;
-  color:var(--yellow-yubo);
   display:inline-flex;
   align-items:center;
   gap:0.35rem;
   margin-top:0.4rem;
 }
+.streamer-platform.streamer-platform-kick{   color:var(--green-kick); }
+.streamer-platform.streamer-platform-yubo{   color:var(--yellow-yubo); }
+.streamer-platform.streamer-platform-twitch{ color:#9146FF; }
+.streamer-platform.streamer-platform-tiktok{ color:#FE2C55; }
+.streamer-platform.streamer-platform-empire{ color:var(--gold); }
+.streamer-platform.streamer-platform-custom{ color:var(--white); }
+
+/* Inline SVG icon (Kick/Twitch/TikTok presets) — inherits the brand
+   color above via fill="currentColor". */
+.streamer-platform-svg{
+  width:14px;
+  height:14px;
+  flex:0 0 auto;
+  display:inline-block;
+}
+/* Raster icons (Yubo .jpg, Empire .png, Custom uploads). Yubo's source
+   is a rounded yellow square so the radius matches the asset; the
+   Empire crown+handshake logo benefits from no radius (vector shape on
+   a transparent background). */
 .streamer-platform-icon{
   width:16px;
   height:16px;
-  border-radius:3px;  /* the source is a rounded yellow square; keep that */
+  border-radius:3px;
   flex:0 0 auto;
   display:inline-block;
+}
+.streamer-platform-icon-empire{
+  border-radius:0;
 }
 
 /* Featured Our.Empire Streamers cards use Yubo yellow on hover instead
@@ -1648,7 +1671,7 @@ section{padding:6rem 1.5rem}
     <div class="reveal">
       <div class="section-label">From the Our.Empire community</div>
       <h2 class="section-title">Featured Our.Empire Creators</h2>
-      <p class="section-desc">Top influential creators from the Our.Empire community on Yubo attending the event.</p>
+      <p class="section-desc">Top influential creators from the Our.Empire community attending the event.</p>
     </div>
     <div class="streamers-grid reveal">
     <div class="streamers-regular-grid">
@@ -1659,7 +1682,7 @@ section{padding:6rem 1.5rem}
         </div>
         <div class="streamer-name">Mike Smalls</div>
         <div class="streamer-description">Founder &amp; CEO of @Our.Empire</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </a>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-esteez">
@@ -1668,7 +1691,7 @@ section{padding:6rem 1.5rem}
         </div>
         <div class="streamer-name">Esteez</div>
         <div class="streamer-description">Member of Empire Team</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-corie">
@@ -1677,7 +1700,7 @@ section{padding:6rem 1.5rem}
         </div>
         <div class="streamer-name">Corie</div>
         <div class="streamer-description">Member of Empire Team</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-ridda">
@@ -1687,7 +1710,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Ridda</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Blacks United (BU)</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-juice">
@@ -1697,7 +1720,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Juice</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Kozy</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <a class="streamer-card" href="https://www.twitch.tv/knownasdd" target="_blank" rel="noopener">
         <div class="streamer-avatar" id="fs-avatar-derrick-darnel">
@@ -1707,7 +1730,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Derrick &amp; Darnel</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Blacks United (BU)</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </a>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-just-added" data-added="2026-05-18">JUST ADDED</div>
@@ -1718,7 +1741,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">China</div>
         <div class="streamer-description">Member of Hall of Fame Group</div>
         <div class="streamer-group">Late Night</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-dylan">
@@ -1728,7 +1751,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Dylan</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Sky9</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-linda">
@@ -1738,7 +1761,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Linda</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Mixtapes</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-teetee">
@@ -1748,7 +1771,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">TeeTee</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Money Bag Girls (MBB)</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-humza">
@@ -1758,7 +1781,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Humza</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Blacks United (BU)</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-layla">
@@ -1768,7 +1791,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Layla</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Late Night</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-avatar" id="fs-avatar-g">
@@ -1778,7 +1801,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">G</div>
         <div class="streamer-description">Member of Hall of Fame group</div>
         <div class="streamer-group">Mixtapes</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <div class="streamer-card streamer-card-static">
         <div class="streamer-just-added" data-added="2026-05-18">JUST ADDED</div>
@@ -1789,7 +1812,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Germ</div>
         <div class="streamer-description">Member of Hall of Fame Group</div>
         <div class="streamer-group">Sky9</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </div>
       <a class="streamer-card" href="https://www.twitch.tv/qhuizz" target="_blank" rel="noopener">
         <div class="streamer-just-added" data-added="2026-05-18">JUST ADDED</div>
@@ -1800,7 +1823,7 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Qhuizz</div>
         <div class="streamer-description">Member of Empire Group</div>
         <div class="streamer-group">Northstar</div>
-        <div class="streamer-platform streamer-platform-yubo"><img class="streamer-platform-icon" src="/yubo-logo.jpg" alt="Yubo" width="16" height="16" loading="lazy"> YUBO</div>
+        <div class="streamer-platform streamer-platform-empire"><img class="streamer-platform-icon streamer-platform-icon-empire" src="/logo.png" alt="" width="16" height="16" loading="lazy"> <span class="streamer-platform-text">OUR.EMPIRE</span></div>
       </a>
     </div>
     </div>
@@ -2099,7 +2122,7 @@ section{padding:6rem 1.5rem}
 </section>
 
 <div class="footer-bar">
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.11</span>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.12</span>
 </div>
 
 <script>

@@ -7,9 +7,13 @@ Regenerates the entire <!-- FEATURED_STREAMERS_BEGIN --> ...
 <!-- FEATURED_STREAMERS_END --> block. The section sits directly below
 the "Featured Kick Streamers" section (formerly "Confirmed Streamers")
 and uses the same .streamer-card / .streamer-avatar / .streamer-img CSS
-hooks for visual parity, MINUS the platform badge and live-status dot
-(those are Kick-only). A small description paragraph is added under the
-name instead.
+hooks for visual parity, MINUS the live-status dot (Kick-only). A small
+description paragraph is added under the name instead.
+
+Badge config (v0.13.12+) is SECTION-LEVEL — one badge applied to all
+cards. Editors set badge_icon (kick / yubo / twitch / tiktok / empire /
+custom), optional badge_text override, optional custom-icon upload, and
+a badge_hidden checkbox to drop the badge entirely.
 
 Triggered by .github/workflows/sync-streamers.yml on push that touches
 featured-streamers.json. Idempotent.
@@ -34,6 +38,122 @@ DATA = os.path.join(REPO, 'featured-streamers.json')
 # get the same behavior across both sections: add a row, save, the
 # next sync stamps `added_at` to today, badge appears for 5 days.
 JUST_ADDED_TTL_DAYS = 5
+
+
+# --- Section-level badge presets ---------------------------------------
+# Each preset defines the icon HTML (inline SVG for crisp vector marks /
+# <img> for raster brand assets that live as files in the repo) plus
+# default badge text. badge_text in featured-streamers.json can override
+# the default. The wrapper <div class="streamer-platform"> is appended
+# with a brand-class so the right color rule applies.
+KICK_SVG = (
+    '<svg class="streamer-platform-svg" width="14" height="14" '
+    'viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+    '<rect x="4" y="2" width="4" height="20" rx="1"/>'
+    '<rect x="10" y="6" width="4" height="12" rx="1"/>'
+    '<rect x="16" y="2" width="4" height="20" rx="1"/></svg>'
+)
+TWITCH_SVG = (
+    '<svg class="streamer-platform-svg" width="14" height="14" '
+    'viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+    '<path d="M4 2 2 6v14h5v3h3l3-3h4l5-5V2H4zm16 11-3 3h-4l-3 3v-3H7V4h13v9zm-4-6h2v5h-2V7zm-5 0h2v5h-2V7z"/>'
+    '</svg>'
+)
+TIKTOK_SVG = (
+    '<svg class="streamer-platform-svg" width="14" height="14" '
+    'viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+    '<path d="M19.6 6.3c-1.4-.3-2.6-1.2-3.3-2.4-.4-.7-.6-1.5-.6-2.4h-3.4v13.6c0 1.7-1.4 3.1-3.1 3.1s-3.1-1.4-3.1-3.1 1.4-3.1 3.1-3.1c.3 0 .7.1 1 .2v-3.5c-.3-.1-.7-.1-1-.1-3.7 0-6.6 3-6.6 6.6S5.5 22 9.2 22s6.6-3 6.6-6.6V9.1c1.4.9 3 1.4 4.7 1.4V7.1c-.4 0-.7 0-.9-.1z"/>'
+    '</svg>'
+)
+YUBO_IMG = (
+    '<img class="streamer-platform-icon" src="/yubo-logo.jpg" '
+    'alt="" width="16" height="16" loading="lazy">'
+)
+# Empire mark uses the existing site logo. Picture/WebP wrapper isn't
+# needed here — the badge is tiny (16px) so PNG is fine, and WebP-only
+# would break the fallback. img alone keeps it simple.
+EMPIRE_IMG = (
+    '<img class="streamer-platform-icon streamer-platform-icon-empire" '
+    'src="/logo.png" alt="" width="16" height="16" loading="lazy">'
+)
+
+PRESETS = {
+    'kick': {
+        'icon': KICK_SVG,
+        'text': 'KICK',
+        'cls': 'streamer-platform-kick',
+    },
+    'yubo': {
+        'icon': YUBO_IMG,
+        'text': 'YUBO',
+        'cls': 'streamer-platform-yubo',
+    },
+    'twitch': {
+        'icon': TWITCH_SVG,
+        'text': 'TWITCH',
+        'cls': 'streamer-platform-twitch',
+    },
+    'tiktok': {
+        'icon': TIKTOK_SVG,
+        'text': 'TIKTOK',
+        'cls': 'streamer-platform-tiktok',
+    },
+    'empire': {
+        'icon': EMPIRE_IMG,
+        'text': 'OUR.EMPIRE',
+        'cls': 'streamer-platform-empire',
+    },
+    # 'custom' is resolved at render time using badge_custom_icon — it
+    # has no preset icon HTML. text defaults to '' (editor should supply).
+    'custom': {
+        'icon': None,
+        'text': '',
+        'cls': 'streamer-platform-custom',
+    },
+}
+
+
+def build_section_badge(data):
+    """Build the per-card badge HTML once from section-level config.
+    Returns an empty string when the section opts out via badge_hidden.
+
+    The same string is injected into every card by card_html() — no
+    per-card platform field anymore (v0.13.12 dropped that in favor of
+    one section-wide knob)."""
+    if data.get('badge_hidden'):
+        return ''
+
+    icon_key = (data.get('badge_icon') or 'empire').strip().lower()
+    preset = PRESETS.get(icon_key, PRESETS['empire'])
+    text_override = (data.get('badge_text') or '').strip()
+    text = text_override if text_override else preset['text']
+
+    # Resolve the icon. Custom needs the uploaded image path.
+    if icon_key == 'custom':
+        custom_src = (data.get('badge_custom_icon') or '').strip()
+        if custom_src:
+            icon_html = (
+                f'<img class="streamer-platform-icon streamer-platform-icon-custom" '
+                f'src="{escape(custom_src, quote=True)}" alt="" '
+                f'width="16" height="16" loading="lazy">'
+            )
+        else:
+            icon_html = ''
+    else:
+        icon_html = preset['icon']
+
+    # If both icon and text are empty there's nothing to render; bail.
+    if not icon_html and not text:
+        return ''
+
+    # Compose. Wrap text in a span so CSS can style icon/text separately.
+    text_html = f'<span class="streamer-platform-text">{escape(text)}</span>' if text else ''
+    icon_part = icon_html or ''
+    spacer = ' ' if (icon_html and text) else ''
+    return (
+        f'<div class="streamer-platform {preset["cls"]}">'
+        f'{icon_part}{spacer}{text_html}</div>'
+    )
 
 
 def is_just_added(s, today=None):
@@ -78,38 +198,21 @@ def slugify(s):
     return s.strip('-') or 'streamer'
 
 
-def platform_badge_html(platform):
-    """Optional platform label rendered under the name. Mirrors the
-    .streamer-platform structure used by the Kick badge, with brand-
-    specific image + text. Extensible if more platforms ship later."""
-    p = (platform or '').strip().lower()
-    if p == 'yubo':
-        # Yubo's official mark — yellow square with black smile + white
-        # tooth. Rounded-corner img to match the square logo nicely
-        # against the dark card background.
-        return (
-            '<div class="streamer-platform streamer-platform-yubo">'
-            '<img class="streamer-platform-icon" src="/yubo-logo.jpg" '
-            'alt="Yubo" width="16" height="16" loading="lazy"> YUBO'
-            '</div>'
-        )
-    return ''
-
-
-def card_html(streamer, today=None):
+def card_html(streamer, badge_html, today=None):
     """One card — <a> when URL provided, plain <div> when not. Same
     .streamer-card class as Featured Kick Streamers so the existing avatar
     / name styling applies. The .featured-streamers selector hides the
-    live-status dot (no Yubo live status) but allows .streamer-platform
-    so the optional Yubo badge can render. JUST ADDED corner ribbon
-    appears when added_at is within the last 5 days."""
+    live-status dot (no live status on these cards) but allows
+    .streamer-platform so the section-wide badge can render below the
+    name. JUST ADDED corner ribbon appears when added_at is within the
+    last 5 days. `badge_html` is the same string for every card — built
+    once from section-level config in build_section_badge()."""
     name = streamer.get('name', '').strip()
     description = streamer.get('description', '').strip()
     group = streamer.get('group', '').strip()
     url = streamer.get('url', '').strip()
     initials = streamer.get('initials', '').strip()
     avatar = streamer.get('avatar', '').strip()
-    platform = streamer.get('platform', '').strip()
     sid = slugify(name)
 
     img_html = ''
@@ -137,8 +240,7 @@ def card_html(streamer, today=None):
         f'        <div class="streamer-group">{escape(group)}</div>\n'
         if group else ''
     )
-    badge = platform_badge_html(platform)
-    badge_html = f'        {badge}\n' if badge else ''
+    badge_line_html = f'        {badge_html}\n' if badge_html else ''
 
     inner = (
         just_added_html
@@ -149,7 +251,7 @@ def card_html(streamer, today=None):
         f'        <div class="streamer-name">{escape(name)}</div>\n'
         + desc_html
         + group_html
-        + badge_html
+        + badge_line_html
     )
     # Trim trailing newline of inner so the closing tag is tidy
     inner = inner.rstrip('\n')
@@ -187,7 +289,10 @@ def main():
             f.write('\n')
         print('Auto-filled added_at for new featured streamers; wrote featured-streamers.json back')
 
-    cards = '\n'.join(card_html(s) for s in streamers)
+    # Build the section-wide badge once; every card gets the same string.
+    badge_html = build_section_badge(data)
+
+    cards = '\n'.join(card_html(s, badge_html) for s in streamers)
 
     section_label_html = (
         f'      <div class="section-label">{escape(section_label)}</div>\n'
