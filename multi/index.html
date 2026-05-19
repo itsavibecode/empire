@@ -134,6 +134,18 @@
   function bare(reason) {
     done('https://multikick.com/', reason || 'No streamers live. Sending you to MultiKick.');
   }
+  // Fallback used when the live-check finds 0 confirmed-live channels.
+  // Could be that nobody's live right now, OR that the public CORS
+  // proxies all rate-limited. Either way the operator gets more value
+  // landing on a MultiKick page populated with Empire X channels than
+  // on the bare homepage — at worst they see a wall of offline tiles
+  // for channels that aren't streaming yet. Send the first MAX_SLUGS
+  // configured slugs so the URL still fits in a clean 3x3 grid.
+  function rosterFallback(slugs, reason) {
+    const subset = slugs.slice(0, MAX_SLUGS);
+    if (subset.length === 0) return bare(reason);
+    done('https://multikick.com/' + subset.join('/'), reason);
+  }
 
   // ?bare — straight to multikick.com with no slugs.
   if (params.has('bare')) {
@@ -195,18 +207,35 @@
         }
       }
 
-      // Don't wait for the whole roster — once we have enough live
-      // slugs to fill the multikick path, fire off the redirect. But
-      // also bound the total wait so a stuck proxy can't strand us.
-      const results = await Promise.all(all.map(checkSlug));
+      // Throttled concurrency. Firing 34 channels × 3 proxies = 102
+      // simultaneous CORS-proxy requests gets the public proxies rate-
+      // limited fast (observed: ~75% of channels timed out under full
+      // parallel load). Limit to 6 channels in flight at a time — still
+      // races all 3 proxies per channel, just paces the overall throughput.
+      const CONCURRENCY = 6;
+      const results = new Array(all.length);
+      let cursor = 0;
+      async function worker() {
+        while (true) {
+          const i = cursor++;
+          if (i >= all.length) return;
+          results[i] = await checkSlug(all[i]);
+        }
+      }
+      await Promise.all(Array.from({length: CONCURRENCY}, worker));
+
       const live = results
-        .filter(r => r.isLive)
+        .filter(r => r && r.isLive)
         .sort((a, b) => (b.viewers || 0) - (a.viewers || 0))
         .slice(0, MAX_SLUGS)
         .map(r => r.slug);
 
       if (live.length === 0) {
-        bare('No Empire X streamers are live right now. Opening MultiKick…');
+        // No confirmed-live hits. Could be everyone's offline, could
+        // be proxies failed — either way, send a populated MultiKick
+        // URL with the first MAX_SLUGS configured channels instead of
+        // dumping the operator on a bare homepage.
+        rosterFallback(all, 'No live channels confirmed. Opening MultiKick with the Empire X roster…');
         return;
       }
 
@@ -218,13 +247,22 @@
       bare('Couldn’t load the streamer list. Sending you to MultiKick.');
     });
 
-  // Hard safety net — if everything hangs, fall back to bare multikick
-  // after 12 seconds. The user shouldn't sit on a "loading" screen.
-  setTimeout(() => {
+  // Hard safety net — if the live check is somehow still running after
+  // 14 seconds, fall back to the roster URL (not bare multikick) so
+  // the operator still lands on something usable. 14s gives the
+  // throttled worker pool time to finish 34 channels at ~2s each.
+  setTimeout(async () => {
     if (!document.hidden && STATUS.textContent.includes('Checking')) {
-      bare('Live check is taking too long. Sending you to MultiKick.');
+      // Re-fetch the roster cheaply (already cached) and use it.
+      try {
+        const data = await (await fetch('/streamers.json', { cache: 'force-cache' })).json();
+        const slugs = (data.streamers || []).map(s => (s.slug || '').trim().toLowerCase()).filter(Boolean);
+        rosterFallback(slugs, 'Live check timed out. Opening MultiKick with the Empire X roster…');
+      } catch (_e) {
+        bare('Live check timed out. Sending you to MultiKick.');
+      }
     }
-  }, 12000);
+  }, 14000);
 })();
 </script>
 </body>
