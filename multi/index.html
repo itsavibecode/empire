@@ -150,10 +150,15 @@
         return;
       }
 
-      // ?all — skip the live check and use every configured slug.
+      // ?all — skip the live check and use EVERY configured Kick slug.
+      // No MAX_SLUGS cap here (that cap only applies to the default
+      // live-filtered mode to match the OBS button's behavior).
+      // ?all is an explicit "give me the whole roster" override; if
+      // MultiKick chokes on too many channels at once the user can fall
+      // back to the default /multi/ which auto-trims to live + top 6.
       if (params.has('all')) {
-        const href = 'https://multikick.com/' + all.slice(0, MAX_SLUGS).join('/');
-        done(href, `Opening ${Math.min(all.length, MAX_SLUGS)} channels on MultiKick…`);
+        const href = 'https://multikick.com/' + all.join('/');
+        done(href, `Opening all ${all.length} configured Kick channels on MultiKick…`);
         return;
       }
 
