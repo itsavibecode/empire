@@ -115,7 +115,10 @@
   const SPINNER = document.getElementById('spinner');
   const FALLBACK = document.getElementById('fallbackLink');
   const params = new URLSearchParams(location.search);
-  const MAX_SLUGS = 6;
+  // 9 fits MultiKick's 3x3 grid cleanly. /obs/'s "Failing? Load
+  // MultiKick" button has its own cap (6) baked into obs/index.html
+  // and is unaffected by this — they're independent code paths.
+  const MAX_SLUGS = 9;
 
   function showTarget(href) {
     TARGET.textContent = href;
