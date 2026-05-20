@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.4">
+<meta name="version" content="0.2.5">
 <title>Empire X — Be Right Back</title>
 
 <!-- =====================================================================
@@ -29,9 +29,14 @@
     ROSTER: [],
 
     // How often to re-check live status + viewer counts (ms).
-    // 90 seconds is a good balance — responsive enough to catch streamers
-    // going live without hammering the API.
-    POLL_MS: 90_000,
+    // 3 minutes (v0.13.14+) since the empire-worker keeps a 60s-warm
+    // KV cache — there's no point polling faster than the cache
+    // refreshes, and the OBS scene is meant to be visually quiet for
+    // anyone watching it. The bigger anti-distraction fix is in
+    // applyLiveResults: when the live set is unchanged poll-to-poll,
+    // the grid is updated silently (no rotation reset, no progress
+    // bar flicker), so longer poll intervals don't matter as much.
+    POLL_MS: 180_000,
 
     // If any streamers are live, how often the grid rotates through them
     // in groups of 6 (ms). Set high so viewers can settle in on a page.
@@ -792,7 +797,7 @@
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
   <span class="uptime-divider"></span>
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.4</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.5</span>
 </div>
 
 <div class="stage">
@@ -1395,11 +1400,30 @@
       pages.push(live.slice(i, i + 6));
     }
 
-    // Preserve current page index if the live set hasn't changed
+    // v0.13.14 — distinguish "set unchanged" from "set changed" polls.
+    // Watching the OBS scene during a commercial break shouldn't show
+    // any visible change every poll — but the old code reset the
+    // rotation progress bar to 0% and re-armed the rotate timer every
+    // 90 seconds even when the live streamers were identical. That
+    // counted-down progress bar visibly flickered, and a streamer 30s
+    // into their 45s rotation window suddenly had a fresh 45s.
+    //
+    // SILENT path (same set, possibly different viewer counts):
+    //   renderPage() DOM-diffs viewer count badges in place. Rotation
+    //   timer + progress bar are left alone — the OBS viewer sees no
+    //   visible change.
+    // FULL path (set changed — someone went live or offline):
+    //   Reset to page 0, restart rotation. The visible change is
+    //   meaningful here (new content actually arrived).
     const sameAsBefore = JSON.stringify(pages.map(p => p.map(x => x.slug))) ===
                          JSON.stringify(livePages.map(p => p.map(x => x.slug)));
     livePages = pages;
-    if (!sameAsBefore) currentPageIdx = 0;
+    if (sameAsBefore) {
+      // Silent update — just refresh in-tile data (viewer counts, etc.)
+      renderPage(currentPageIdx);
+      return;
+    }
+    currentPageIdx = 0;
     startRotation();
   }
 
