@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Vanity redirect to the Empire X Discord invite. Shareable URL that
+     stays stable even if the underlying Discord invite ever changes —
+     point this page at the new invite and every shared link keeps working.
+     noindex because the destination (not this page) is the real thing. -->
+<meta name="robots" content="noindex, follow">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<meta http-equiv="refresh" content="0; url=https://discord.com/invite/vQE9emm74K">
+<title>Empire X &mdash; Join the Discord</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0A0A0A;
+    color: #F5F1EB;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .wrap { padding: 2rem 1.5rem; max-width: 480px; }
+  .logo { width: 72px; height: 72px; margin-bottom: 1.2rem; opacity: 0.95; }
+  .title {
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    color: #D4A843;
+    margin: 0 0 0.4rem;
+    font-weight: 800;
+  }
+  .body {
+    font-size: 0.95rem;
+    color: rgba(245,241,235,0.7);
+    line-height: 1.5;
+    margin: 0 0 1.4rem;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(212,168,67,0.25);
+    border-top-color: #D4A843;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .cta {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.7rem 1.4rem;
+    background: #5865F2;        /* Discord blurple */
+    color: #FFFFFF;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    transition: background 0.15s ease;
+  }
+  .cta:hover { background: #4752C4; }
+  .fallback-note {
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: rgba(245,241,235,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="/logo.png" alt="Empire X">
+  <div class="spinner"></div>
+  <h1 class="title">Opening Discord…</h1>
+  <p class="body">You're being redirected to the Empire X Discord server.</p>
+  <a class="cta" id="cta" href="https://discord.com/invite/vQE9emm74K">Open Discord Invite</a>
+  <div class="fallback-note">Not redirecting? Tap the button above.</div>
+</div>
+
+<script>
+/* Snappier than the meta refresh (which waits ~0s but still triggers a
+   navigation/history entry on slow paths). location.replace also keeps
+   the browser back button working — pressing back from the Discord
+   tab goes to wherever the visitor came from, not back to /discord/. */
+(function () {
+  var TARGET = 'https://discord.com/invite/vQE9emm74K';
+  // Belt-and-suspenders: meta refresh in <head> handles the no-JS case,
+  // JS handles the with-JS case faster. Either way the visitor lands
+  // on the Discord invite.
+  try {
+    location.replace(TARGET);
+  } catch (_e) {
+    // If something exotic prevents replace(), the meta refresh still
+    // fires after 0s and the CTA button is always there to click.
+  }
+})();
+</script>
+</body>
+</html>
