@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Vanity redirect to the Empire X Kick channel. Shareable URL that
+     stays stable even if the Kick handle ever changes — point this
+     page at the new URL and every shared link keeps working.
+     noindex because the destination is the real thing. -->
+<meta name="robots" content="noindex, follow">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<meta http-equiv="refresh" content="0; url=https://kick.com/empirex">
+<title>Empire X &mdash; Watch on Kick</title>
+<meta name="description" content="Watch Empire X live on Kick — kick.com/empirex. The world's first live-streamed reality experience.">
+<link rel="icon" type="image/png" href="/logo.png">
+
+<!-- Open Graph — link preview on iMessage, Discord, Facebook, LinkedIn,
+     Slack, etc. when someone pastes https://ourempirex.com/kick.
+     Canonical URL is the Empire vanity URL so previews stay Empire-
+     branded rather than rendering as a Kick channel card. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ourempirex.com/kick">
+<meta property="og:title" content="Empire X — Watch on Kick">
+<meta property="og:description" content="Watch Empire X live at kick.com/empirex. The world's first live-streamed reality experience — June 11–15, 2026 in Kissimmee, FL.">
+<meta property="og:image" content="https://ourempirex.com/kick/og-kick.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Empire X — Watch on Kick. Crown and handshake logo above 'Watch on Kick' in gold serif, with a Kick-green 'Watch live on Kick' pill.">
+<meta property="og:site_name" content="Empire X by Our Empire">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X card — summary_large_image gives the banner preview. -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Empire X — Watch on Kick">
+<meta name="twitter:description" content="Watch Empire X live at kick.com/empirex.">
+<meta name="twitter:image" content="https://ourempirex.com/kick/og-kick.jpg">
+<meta name="twitter:image:alt" content="Empire X — Watch on Kick">
+
+<!-- Theme color — Kick's signature neon green so embeds that show an
+     accent line up with the banner's pill. -->
+<meta name="theme-color" content="#53FC18">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0A0A0A;
+    color: #F5F1EB;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .wrap { padding: 2rem 1.5rem; max-width: 480px; }
+  .logo { width: 72px; height: 72px; margin-bottom: 1.2rem; opacity: 0.95; }
+  .title {
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    color: #D4A843;
+    margin: 0 0 0.4rem;
+    font-weight: 800;
+  }
+  .body {
+    font-size: 0.95rem;
+    color: rgba(245,241,235,0.7);
+    line-height: 1.5;
+    margin: 0 0 1.4rem;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(83,252,24,0.25);  /* Kick green */
+    border-top-color: #53FC18;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Kick brand green on the CTA. Dark text on the neon-green button
+     because Kick green is too bright for white text to be readable. */
+  .cta {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.7rem 1.4rem;
+    background: #53FC18;
+    color: #0A0A0A;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 6px 20px rgba(83,252,24,0.35);
+  }
+  .cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .fallback-note {
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: rgba(245,241,235,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="/logo.png" alt="Empire X">
+  <div class="spinner"></div>
+  <h1 class="title">Opening Kick…</h1>
+  <p class="body">You're being redirected to <strong>kick.com/empirex</strong>.</p>
+  <a class="cta" id="cta" href="https://kick.com/empirex">Watch on Kick</a>
+  <div class="fallback-note">Not redirecting? Tap the button above.</div>
+</div>
+
+<script>
+/* Snappier than the meta refresh + skips this page in browser history
+   so the back button from Kick goes wherever the visitor came from,
+   not back to /kick/. */
+(function () {
+  var TARGET = 'https://kick.com/empirex';
+  try {
+    location.replace(TARGET);
+  } catch (_e) {
+    // meta-refresh + the CTA button cover the no-JS / exotic cases.
+  }
+})();
+</script>
+</body>
+</html>
