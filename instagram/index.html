@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Vanity redirect to the Empire X Instagram profile. Shareable URL
+     that stays stable even if the Instagram handle ever changes —
+     point this page at the new URL and every shared link keeps working.
+     noindex because the destination is the real thing. -->
+<meta name="robots" content="noindex, follow">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<meta http-equiv="refresh" content="0; url=https://instagram.com/our.empire">
+<title>Empire X &mdash; Follow on Instagram</title>
+<meta name="description" content="Follow @our.empire on Instagram — the official account for Empire X, the world's first live-streamed reality experience.">
+<link rel="icon" type="image/png" href="/logo.png">
+
+<!-- Open Graph — link preview on iMessage, Discord, Facebook, LinkedIn,
+     Slack, etc. when someone pastes https://ourempirex.com/instagram.
+     Canonical URL is the Empire vanity URL so previews stay Empire-
+     branded rather than rendering as an Instagram-profile card. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ourempirex.com/instagram">
+<meta property="og:title" content="Empire X — Follow on Instagram">
+<meta property="og:description" content="Follow @our.empire — official Instagram for Empire X. The world's first live-streamed reality experience, June 11–15, 2026 in Kissimmee, FL.">
+<meta property="og:image" content="https://ourempirex.com/instagram/og-instagram.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Empire X — Follow on Instagram. Crown and handshake logo above 'Follow on Instagram' in gold serif, with an Instagram-gradient 'Follow @our.empire' pill.">
+<meta property="og:site_name" content="Empire X by Our Empire">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X card. summary_large_image gives the banner preview. -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Empire X — Follow on Instagram">
+<meta name="twitter:description" content="Follow @our.empire — official Instagram for Empire X.">
+<meta name="twitter:image" content="https://ourempirex.com/instagram/og-instagram.jpg">
+<meta name="twitter:image:alt" content="Empire X — Follow on Instagram">
+
+<!-- Theme color picked from the warm pink in the Instagram gradient
+     used on the OG image's pill — so embeds that show an accent
+     match the banner. -->
+<meta name="theme-color" content="#E1306C">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0A0A0A;
+    color: #F5F1EB;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .wrap { padding: 2rem 1.5rem; max-width: 480px; }
+  .logo { width: 72px; height: 72px; margin-bottom: 1.2rem; opacity: 0.95; }
+  .title {
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    color: #D4A843;
+    margin: 0 0 0.4rem;
+    font-weight: 800;
+  }
+  .body {
+    font-size: 0.95rem;
+    color: rgba(245,241,235,0.7);
+    line-height: 1.5;
+    margin: 0 0 1.4rem;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(225,48,108,0.25);  /* Instagram pink */
+    border-top-color: #E1306C;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Instagram brand gradient on the CTA — the same yellow→pink→purple
+     ramp Instagram uses in its own logomark. */
+  .cta {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.7rem 1.4rem;
+    background: linear-gradient(45deg, #FCAF45 0%, #F77737 18%, #E1306C 50%, #C13584 75%, #833AB4 100%);
+    color: #FFFFFF;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 6px 20px rgba(225,48,108,0.35);
+  }
+  .cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .fallback-note {
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    color: rgba(245,241,235,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="/logo.png" alt="Empire X">
+  <div class="spinner"></div>
+  <h1 class="title">Opening Instagram…</h1>
+  <p class="body">You're being redirected to <strong>@our.empire</strong> on Instagram.</p>
+  <a class="cta" id="cta" href="https://instagram.com/our.empire">Open @our.empire</a>
+  <div class="fallback-note">Not redirecting? Tap the button above.</div>
+</div>
+
+<script>
+/* Snappier than the meta refresh + skips this page in browser history
+   so the back button from Instagram goes wherever the visitor came
+   from, not back to /instagram/. */
+(function () {
+  var TARGET = 'https://instagram.com/our.empire';
+  try {
+    location.replace(TARGET);
+  } catch (_e) {
+    // meta-refresh + the CTA button cover the no-JS / exotic cases.
+  }
+})();
+</script>
+</body>
+</html>
