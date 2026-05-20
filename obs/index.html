@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.8">
+<meta name="version" content="0.2.9">
 <title>Empire X — Be Right Back</title>
 <link rel="icon" type="image/png" href="/logo.png">
 
@@ -799,7 +799,7 @@
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
   <span class="uptime-divider"></span>
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.8</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.9</span>
 </div>
 
 <div class="stage">
@@ -980,121 +980,81 @@
      through a public CORS proxy. The response has a `livestream` object
      (null if offline) with `viewer_count`, `session_title`, etc.
   ================================================================== */
-  // Live-status fetch stack (v0.13.13+):
-  //   1. PRIMARY — empire-worker (Cloudflare Worker we control).
-  //      Single trusted endpoint, 10s edge cache, CORS-allowed for
-  //      ourempirex.com. Replaces the public CORS proxies that were
-  //      missing 75%+ of channels under load.
-  //   2. FALLBACKS — kept the previous public-proxy stack as a safety
-  //      net so a bad CF deploy doesn't strand /obs/. They race the
-  //      worker via Promise.any; first to return a valid Kick channel
-  //      response wins.
-  const PROXIES = [
-    // empire-worker — our Cloudflare Worker. Faster + far more reliable
-    // than the public proxies; the 10s edge cache means once one operator
-    // has polled, subsequent polls are essentially free.
-    s => ({
-      url: `https://empire-worker.sevendwarfs.workers.dev/channel/${encodeURIComponent(s)}`,
-      wrapped: false,
-    }),
-    // allorigins /raw — returns the target response directly (no JSON wrapper).
-    // More reliable than /get when the response is already JSON.
-    s => ({
-      url: `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
-      wrapped: false,
-    }),
-    // corsproxy.io — uses explicit ?url= param per current docs. Direct raw pass-through.
-    s => ({
-      url: `https://corsproxy.io/?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
-      wrapped: false,
-    }),
-    // allorigins /get — JSON wrapper. Last resort since it's slower and has lower rate limits.
-    s => ({
-      url: `https://api.allorigins.win/get?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`,
-      wrapped: true,
-    }),
-  ];
+  // Live-status fetch (v0.2.9+):
+  //
+  // ONE request to empire-worker's /live endpoint returns the snapshot
+  // of every channel in the roster. Was 34 separate requests per poll
+  // (one per slug, racing 4 proxies each = 136 outbound requests per
+  // poll cycle). With multiple OBS instances active, that was burning
+  // through the Cloudflare 100k/day worker-request quota fast.
+  //
+  // Snapshot shape:
+  //   {
+  //     generated_at: <ms>,
+  //     roster_size: 34,
+  //     channels: {
+  //       "<slug>": { isLive: bool, viewers: N, title: string },
+  //       ...
+  //     }
+  //   }
+  //
+  // Fallback: if the snapshot fetch fails entirely (worker down, network
+  // hiccup), we return an "unknown" result for every slug — the existing
+  // proxy-outage detection in poll() then keeps whatever's currently on
+  // screen rather than wiping to "warming up". No public-CORS-proxy
+  // fallback anymore: Kick's bot protection blocks them so reliably
+  // that they were essentially never returning anything useful.
+  const WORKER_LIVE_URL = 'https://empire-worker.sevendwarfs.workers.dev/live';
 
-  // Try ONE proxy. Resolves with a valid live-status object on success,
-  // REJECTS on any failure (so Promise.any below picks the first success).
-  async function tryProxy(build, slug) {
-    const lower = slug.toLowerCase();
-    const { url, wrapped } = build(lower);
-    // Reduced from 12s → 6s. Healthy proxies respond in <1 sec; if a
-    // proxy is taking longer than 6s it's almost certainly never going
-    // to come back, and we have other proxies racing in parallel.
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-    if (!res.ok) throw new Error('http ' + res.status);
-    const text = await res.text();
-    if (!text) throw new Error('empty');
-    let data;
-    if (wrapped) {
-      const wrapper = JSON.parse(text);
-      if (!wrapper || !wrapper.contents) throw new Error('no contents');
-      data = JSON.parse(wrapper.contents);
-    } else {
-      data = JSON.parse(text);
-    }
-    if (!data || typeof data !== 'object') throw new Error('not object');
-    // Sanity check: real Kick channel responses have id/slug/user_id.
-    if (data.id == null && data.slug == null && data.user_id == null) {
-      throw new Error('not a kick channel response');
-    }
-    const ls = data.livestream;
-    const isLive = !!ls && (ls.is_live === true || ls.viewer_count != null);
-    return {
-      // slug is the kick.com username (lowercase, no spaces) — used for
-      // API URL + iframe player URL. Matches the slug field in
-      // streamers.json. Display label comes from `name` set in the
-      // worker that calls this function.
-      slug: slug,
-      isLive,
-      viewers: isLive ? Number(ls.viewer_count || 0) : 0,
-      title: isLive ? (ls.session_title || '') : '',
-      known: true,
-    };
-  }
-
-  // Race ALL proxies in parallel. Promise.any resolves with the first
-  // proxy that returns a valid result — no more sequential fallback
-  // waiting up to 36s per channel. Typical case is <1s for the fastest
-  // proxy. If ALL proxies fail, we return an "unknown" result.
-  async function fetchChannelLive(slug) {
+  async function fetchAllLive() {
+    let snapshot = null;
     try {
-      return await Promise.any(PROXIES.map(build => tryProxy(build, slug)));
+      const res = await fetch(WORKER_LIVE_URL, {
+        signal: AbortSignal.timeout(10000),
+        cache: 'no-cache',
+      });
+      if (!res.ok) throw new Error('http ' + res.status);
+      snapshot = await res.json();
     } catch (e) {
-      // v0.2.1 — log proxy failures so we can diagnose outages from
-      // the console. The aggregate "all proxies failed for everyone"
-      // case is detected later in poll() by counting known:false.
-      console.warn('[BRB] all proxies failed for', slug, e && e.errors ? e.errors.map(x => String(x)) : e);
-      return { slug: slug, isLive: false, viewers: 0, known: false };
+      console.warn('[BRB] /live fetch failed:', e && e.message || e);
+      // Return all-unknown so the proxy-outage path kicks in and
+      // current grid stays put.
+      return CONFIG.ROSTER.map(entry => ({
+        slug: entry.slug,
+        name: entry.name,
+        isLive: false,
+        viewers: 0,
+        title: '',
+        known: false,
+      }));
     }
-  }
 
-  // Bumped WORKERS 3 → 8 so larger rosters parallelize better. Each
-  // worker now also receives an `onResult` callback so the UI can
-  // re-render incrementally as live streamers are discovered, instead
-  // of waiting for all 26 fetches to settle.
-  async function fetchAllLive(onResult) {
-    const results = new Array(CONFIG.ROSTER.length);
-    let cursor = 0;
-    const WORKERS = 8;
-
-    async function worker() {
-      while (cursor < CONFIG.ROSTER.length) {
-        const i = cursor++;
-        const entry = CONFIG.ROSTER[i];   // {slug, name}
-        const r = await fetchChannelLive(entry.slug);
-        // Stash the display name on the result so tile rendering can
-        // show "Ice Poseidon" while the iframe URL uses "iceposeidon".
-        r.name = entry.name;
-        results[i] = r;
-        if (onResult) onResult(r, results);
+    const channels = (snapshot && snapshot.channels) || {};
+    return CONFIG.ROSTER.map(entry => {
+      const ch = channels[entry.slug.toLowerCase()];
+      // A slug present in the snapshot is a "known" result (worker
+      // confirmed the state, whether live or offline). A slug missing
+      // from the snapshot means the cron couldn't reach Kick for that
+      // one — treat as unknown so the outage detection has a signal.
+      if (ch) {
+        return {
+          slug: entry.slug,
+          name: entry.name,
+          isLive: !!ch.isLive,
+          viewers: Number(ch.viewers || 0),
+          title: ch.title || '',
+          known: true,
+        };
       }
-    }
-
-    await Promise.all(Array.from({ length: WORKERS }, worker));
-    return results;
+      return {
+        slug: entry.slug,
+        name: entry.name,
+        isLive: false,
+        viewers: 0,
+        title: '',
+        known: false,
+      };
+    });
   }
 
   // localStorage cache so the page shows the last-known live grid

@@ -6,7 +6,7 @@
 <!-- Internal operator shortcut. Don't index. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.2.0">
 <title>Empire X &mdash; MultiKick</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <style>
@@ -177,71 +177,42 @@
         return;
       }
 
-      STATUS.textContent = `Checking ${all.length} streamers…`;
+      STATUS.textContent = `Checking who's live…`;
 
-      // Live check via empire-worker (our Cloudflare Worker that
-      // proxies kick.com/api/v2/channels/<slug> from a single trusted
-      // endpoint with a 10s edge cache). Replaces the unreliable
-      // public CORS proxies that were missing 75%+ of channels under
-      // load. The worker handles fallback / caching / CORS for us, so
-      // the client-side becomes a single fetch per slug.
-      //
-      // Public-proxy fallback kept as a safety net in case the worker
-      // itself is down — race the worker against allorigins so one
-      // bad CF deploy can't strand the page.
-      const WORKER = 'https://empire-worker.sevendwarfs.workers.dev/channel/';
-      const FALLBACK_PROXY = s =>
-        `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kick.com/api/v2/channels/' + s)}`;
+      // Live check via empire-worker's /live endpoint — one request
+      // returns the snapshot of every channel in the roster. Was 34
+      // separate requests per visit; this is one. Drastically cuts
+      // worker quota usage and is faster.
+      const WORKER_LIVE_URL = 'https://empire-worker.sevendwarfs.workers.dev/live';
 
-      async function fetchFrom(url, parseWrapped = false) {
-        const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
+      let snapshot = null;
+      try {
+        const res = await fetch(WORKER_LIVE_URL, {
+          signal: AbortSignal.timeout(10000),
+          cache: 'no-cache',
+        });
         if (!res.ok) throw new Error('http ' + res.status);
-        const text = await res.text();
-        if (!text) throw new Error('empty');
-        const d = parseWrapped ? JSON.parse(JSON.parse(text).contents || '{}') : JSON.parse(text);
-        if (d.id == null && d.slug == null && d.user_id == null) throw new Error('not a kick channel');
-        const ls = d.livestream;
-        return {
-          isLive: !!ls && (ls.is_live === true || ls.viewer_count != null),
-          viewers: ls ? Number(ls.viewer_count || 0) : 0,
-        };
-      }
-      async function checkSlug(slug) {
-        try {
-          const r = await Promise.any([
-            fetchFrom(WORKER + encodeURIComponent(slug)),
-            fetchFrom(FALLBACK_PROXY(slug)),
-          ]);
-          return { slug, ...r };
-        } catch (_e) {
-          return { slug, isLive: false, viewers: 0 };
-        }
+        snapshot = await res.json();
+      } catch (e) {
+        console.warn('[multi] /live fetch failed:', e && e.message || e);
+        rosterFallback(all, 'Couldn’t reach the live-check service. Opening MultiKick with the Empire X roster…');
+        return;
       }
 
-      // Throttled concurrency. Our empire-worker can handle full
-      // parallel load (and edge-caches each slug for 10s, so polling
-      // the same roster is essentially free after the first hit). The
-      // public-proxy fallback can't, so we still throttle modestly —
-      // 10 in flight is a good middle ground: fast wall-clock when the
-      // worker is up (~3s for the whole roster), not catastrophic if
-      // we have to fall back to allorigins.
-      const CONCURRENCY = 10;
-      const results = new Array(all.length);
-      let cursor = 0;
-      async function worker() {
-        while (true) {
-          const i = cursor++;
-          if (i >= all.length) return;
-          results[i] = await checkSlug(all[i]);
-        }
-      }
-      await Promise.all(Array.from({length: CONCURRENCY}, worker));
-
-      const live = results
-        .filter(r => r && r.isLive)
-        .sort((a, b) => (b.viewers || 0) - (a.viewers || 0))
+      // Build [{slug, viewers}] for live channels, sorted by viewers.
+      const channels = (snapshot && snapshot.channels) || {};
+      const liveRanked = all
+        .map(slug => {
+          const ch = channels[slug];
+          return ch && ch.isLive
+            ? { slug, viewers: Number(ch.viewers || 0) }
+            : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.viewers - a.viewers)
         .slice(0, MAX_SLUGS)
         .map(r => r.slug);
+      const live = liveRanked;
 
       if (live.length === 0) {
         // No confirmed-live hits. Could be everyone's offline, could
@@ -260,13 +231,11 @@
       bare('Couldn’t load the streamer list. Sending you to MultiKick.');
     });
 
-  // Hard safety net — if the live check is somehow still running after
-  // 14 seconds, fall back to the roster URL (not bare multikick) so
-  // the operator still lands on something usable. 14s gives the
-  // throttled worker pool time to finish 34 channels at ~2s each.
+  // Hard safety net — the /live fetch has its own 10s timeout but if
+  // something else hangs (DNS, TLS handshake), fall back to the roster
+  // URL after 12s rather than leaving the user on a loading screen.
   setTimeout(async () => {
     if (!document.hidden && STATUS.textContent.includes('Checking')) {
-      // Re-fetch the roster cheaply (already cached) and use it.
       try {
         const data = await (await fetch('/streamers.json', { cache: 'force-cache' })).json();
         const slugs = (data.streamers || []).map(s => (s.slug || '').trim().toLowerCase()).filter(Boolean);
@@ -275,7 +244,7 @@
         bare('Live check timed out. Sending you to MultiKick.');
       }
     }
-  }, 14000);
+  }, 12000);
 })();
 </script>
 </body>
