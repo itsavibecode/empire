@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1" />
-<meta name="version" content="0.2.7">
+<meta name="version" content="0.2.8">
 <title>Empire X — Be Right Back</title>
 <link rel="icon" type="image/png" href="/logo.png">
 
@@ -30,14 +30,15 @@
     ROSTER: [],
 
     // How often to re-check live status + viewer counts (ms).
-    // 3 minutes (v0.13.14+) since the empire-worker keeps a 60s-warm
-    // KV cache — there's no point polling faster than the cache
-    // refreshes, and the OBS scene is meant to be visually quiet for
-    // anyone watching it. The bigger anti-distraction fix is in
-    // applyLiveResults: when the live set is unchanged poll-to-poll,
-    // the grid is updated silently (no rotation reset, no progress
-    // bar flicker), so longer poll intervals don't matter as much.
-    POLL_MS: 180_000,
+    // 5 minutes (v0.2.8). The empire-worker keeps a 60s-warm KV cache
+    // so polling faster than that just re-fetches the same data. And
+    // since the BRB scene only ever shows the TOP 6 live streamers
+    // (no rotation), a new streamer going live mid-stream only matters
+    // if they crack the top 6 by viewer count — which doesn't happen
+    // instantly. 5 minutes is plenty responsive AND keeps us well
+    // under Cloudflare's 100k/day worker-request quota (5min × 34
+    // channels ≈ 9,800 requests/day per active OBS instance).
+    POLL_MS: 300_000,
 
     // If any streamers are live, how often the grid rotates through them
     // in groups of 6 (ms). Set high so viewers can settle in on a page.
@@ -798,7 +799,7 @@
   <span class="uptime-label">Uptime</span>
   <span class="uptime-value" id="uptimeValue">00:00</span>
   <span class="uptime-divider"></span>
-  <span class="v-prefix">OBS </span><span class="v-num">v0.2.7</span>
+  <span class="v-prefix">OBS </span><span class="v-num">v0.2.8</span>
 </div>
 
 <div class="stage">
@@ -1411,23 +1412,18 @@
       return;
     }
 
-    // v0.2.7 — balanced pagination. Old code split into rigid pages of
-    // 6 which left a near-empty trailing page in the common 7-9 live
-    // case: 7 live → [[6 tiles], [1 tile]]. Rotation then showed "1
-    // alone" half the time on the BRB scene, looking like a bug.
-    // Balanced approach: aim for ~equal page sizes within the 6-per-
-    // page cap. 7 live → [[4], [3]], 9 live → [[5], [4]], etc. Every
-    // rotation now shows a "real" grid instead of a lonely tile.
-    const pages = (() => {
-      if (live.length <= 6) return live.length ? [live] : [];
-      const totalPages = Math.ceil(live.length / 6);
-      const perPage = Math.ceil(live.length / totalPages);
-      const out = [];
-      for (let i = 0; i < live.length; i += perPage) {
-        out.push(live.slice(i, i + perPage));
-      }
-      return out;
-    })();
+    // v0.2.8 — show TOP 6 only, no rotation. Previously the code paged
+    // any live count >6 into multiple pages and rotated through them
+    // every 45s. That meant a lonely "page 2 with 1 tile" half the
+    // time when 7 were live, and even with v0.2.7's balanced split
+    // ([4, 3] etc.) the BRB scene still flipped its grid layout every
+    // 45 seconds, which is a lot of visual change for a "be right
+    // back" overlay.
+    // Top 6 by viewers is the "highlights" view that actually fits a
+    // BRB scene. Streamers 7+ don't appear, but at any given moment
+    // they only had ~50% screen time before either, and the lower
+    // viewer counts mean fewer people miss them.
+    const pages = live.length ? [live.slice(0, 6)] : [];
 
     // v0.13.14 — distinguish "set unchanged" from "set changed" polls.
     // Watching the OBS scene during a commercial break shouldn't show
