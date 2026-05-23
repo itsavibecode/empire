@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Ice Poseidon, XenaTheWitch, MarkyNextDoor, WoodBaby, Chibu, Blame, Sasha West, Kimmee, Hanridge, AshWilder, Suzie Smalls, Dejayboss, JJStream, Shangel, Diamond, Nick Lee, FloridaBoy, Letty, TaylorStarlight, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, lifeismizzy, Fanos, KikiKrazy, Dtan, RiddaW, Ozemi, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.14">
+<meta name="version" content="0.13.15">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -288,6 +288,70 @@ body{
 .hero-kick span{
   color:var(--green-kick);
   font-weight:600;
+}
+
+/* Empire X Kick channel chip — sits just below the "Live Streamed on
+   KICK" line. Three vertically-centered elements:
+     [white-circle Empire logo] [EmpireX] [Kick-green verified badge]
+   Uses inline-flex with align-items:center so all three sit on the
+   same horizontal centerline regardless of their individual sizes
+   (the chip the client referenced had the badge floating above the
+   text baseline; this fixes that). */
+.hero-kick-channel{
+  display:inline-flex;
+  align-items:center;
+  gap:0.65rem;
+  margin-top:0.85rem;
+  padding:0.4rem 1rem 0.4rem 0.4rem;
+  background:rgba(245,241,235,0.06);
+  border:1px solid rgba(245,241,235,0.1);
+  border-radius:999px;
+  text-decoration:none;
+  transition:background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  animation:fadeInUp 1s ease-out 1.1s both;
+}
+.hero-kick-channel:hover{
+  background:rgba(83,252,24,0.1);
+  border-color:rgba(83,252,24,0.45);
+  transform:translateY(-1px);
+  box-shadow:0 6px 22px rgba(83,252,24,0.18);
+}
+.hero-kick-channel-icon{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  padding:3px;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+.hero-kick-channel-icon img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+.hero-kick-channel-name{
+  font-family:'DM Sans',sans-serif;
+  font-weight:700;
+  font-size:1.1rem;
+  letter-spacing:-0.01em;
+  color:#fff;
+  line-height:1;
+}
+.hero-kick-channel-verified{
+  display:inline-flex;
+  flex:0 0 auto;
+  line-height:0;
+}
+.hero-kick-channel-verified svg{
+  width:22px;
+  height:22px;
+  display:block;
 }
 
 .scroll-indicator{
@@ -1361,6 +1425,22 @@ section{padding:6rem 1.5rem}
     </div>
     <a class="hero-cta hero-cta-top" href="https://lite.evernote.com/note/50fb8d35-2bd7-6ccf-dc39-540c457e197e" target="_blank" rel="noopener">CLICK HERE TO RSVP</a>
     <div class="hero-kick">Live Streamed on <span>KICK</span></div>
+    <a class="hero-kick-channel" href="https://kick.com/empirex" target="_blank" rel="noopener" aria-label="EmpireX on Kick — verified channel">
+      <span class="hero-kick-channel-icon">
+        <img src="logo.png" alt="" width="36" height="36" loading="lazy">
+      </span>
+      <span class="hero-kick-channel-name">EmpireX</span>
+      <span class="hero-kick-channel-verified" aria-hidden="true">
+        <!-- Kick-style verified badge: scalloped green disc with a
+             white checkmark. Path is the standard Twitter/Kick
+             verified shape; recolored to Kick neon green so it reads
+             as "this is the official Empire X channel on Kick". -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#53FC18" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/>
+          <path fill="#000" d="M10.54 16.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>
+        </svg>
+      </span>
+    </a>
   </div>
   <div class="scroll-indicator">
     <span>Scroll</span>
@@ -2142,7 +2222,7 @@ section{padding:6rem 1.5rem}
 </section>
 
 <div class="footer-bar">
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.14</span>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.15</span>
 </div>
 
 <script>
