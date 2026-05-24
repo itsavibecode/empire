@@ -89,14 +89,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "suziesmalls",
-      "name": "Suzie Smalls",
-      "url": "https://kick.com/suziesmalls",
-      "initials": "SM",
-      "avatar": "/avatars/screenshot-2026-05-21-164912.png",
-      "added_at": "2026-05-21"
-    },
-    {
       "slug": "dejayboss",
       "name": "Dejayboss",
       "url": "https://kick.com/Dejayboss",
@@ -129,6 +121,13 @@
       "added_at": "2026-05-18"
     },
     {
+      "slug": "miamaxxed",
+      "name": "Mia Maxxed",
+      "url": "https://kick.com/miamaxxed",
+      "initials": "MM",
+      "avatar": "/avatars/screenshot-2026-05-24-153810.png"
+    },
+    {
       "slug": "nicklee",
       "name": "Nick Lee",
       "url": "https://kick.com/nicklee",
@@ -151,6 +150,14 @@
       "initials": "LV",
       "avatar": "/avatars/screenshot-2026-04-29-173238.jpg",
       "added_at": "2026-04-29"
+    },
+    {
+      "slug": "suziesmalls",
+      "name": "Suzie Smalls",
+      "url": "https://kick.com/suziesmalls",
+      "initials": "SM",
+      "avatar": "/avatars/screenshot-2026-05-21-164912.png",
+      "added_at": "2026-05-21"
     },
     {
       "slug": "taylorstarlight",
