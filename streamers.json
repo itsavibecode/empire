@@ -73,6 +73,13 @@
       "added_at": "2026-04-20"
     },
     {
+      "slug": "jeanemarie",
+      "name": "Jeane Marie",
+      "url": "https://kick.com/jeanemarie",
+      "initials": "JM",
+      "avatar": "/avatars/screenshot-2026-05-24-162032.png"
+    },
+    {
       "slug": "hanridge",
       "name": "Hanridge",
       "url": "https://kick.com/hanridge",
@@ -87,14 +94,6 @@
       "initials": "AW",
       "avatar": "avatars/ashwilder.jpg",
       "added_at": "2026-04-20"
-    },
-    {
-      "slug": "dejayboss",
-      "name": "Dejayboss",
-      "url": "https://kick.com/Dejayboss",
-      "initials": "DJB",
-      "avatar": "/avatars/screenshot-2026-05-06-162442.jpg",
-      "added_at": "2026-05-06"
     },
     {
       "slug": "jjstream",
@@ -119,6 +118,14 @@
       "initials": "CTS",
       "avatar": "/avatars/screenshot-2026-05-24-155527.png",
       "added_at": "2026-05-24"
+    },
+    {
+      "slug": "dejayboss",
+      "name": "Dejayboss",
+      "url": "https://kick.com/Dejayboss",
+      "initials": "DJB",
+      "avatar": "/avatars/screenshot-2026-05-06-162442.jpg",
+      "added_at": "2026-05-06"
     },
     {
       "slug": "diamondthebarbie",
