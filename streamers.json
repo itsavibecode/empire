@@ -9,14 +9,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "iceposeidon",
-      "name": "Ice Poseidon",
-      "url": "https://kick.com/iceposeidon",
-      "initials": "IP",
-      "avatar": "/avatars/screenshot-2026-05-07-212940.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
       "slug": "xenathewitch",
       "name": "XenaTheWitch",
       "url": "https://kick.com/xenathewitch",
@@ -47,6 +39,14 @@
       "initials": "CB",
       "avatar": "/avatars/screenshot-2026-05-23-162940.png",
       "added_at": "2026-05-23"
+    },
+    {
+      "slug": "iceposeidon",
+      "name": "Ice Poseidon",
+      "url": "https://kick.com/iceposeidon",
+      "initials": "IP",
+      "avatar": "/avatars/screenshot-2026-05-07-212940.jpg",
+      "added_at": "2026-04-20"
     },
     {
       "slug": "blame",
