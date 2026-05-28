@@ -77,8 +77,7 @@
       "name": "Fabia Alissia",
       "url": "https://kick.com/fabiaalissia",
       "initials": "FA",
-      "avatar": "/avatars/screenshot-2026-05-27-201940.png",
-      "added_at": "2026-05-28"
+      "avatar": "/avatars/screenshot-2026-05-27-201940.png"
     },
     {
       "slug": "jeanemarie",
@@ -119,6 +118,13 @@
       "initials": "SH",
       "avatar": "/avatars/screenshot-2026-04-26-152009.jpg",
       "added_at": "2026-04-20"
+    },
+    {
+      "slug": "emzam",
+      "name": "Emzam",
+      "url": "https://kick.com/emzam",
+      "initials": "EZ",
+      "avatar": "/avatars/screenshot-2026-05-27-204602.png"
     },
     {
       "slug": "Checkthestar",
