@@ -9,14 +9,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "xenathewitch",
-      "name": "XenaTheWitch",
-      "url": "https://kick.com/xenathewitch",
-      "initials": "XT",
-      "avatar": "avatars/xenathewitch.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
       "slug": "markynextdoor",
       "name": "MarkyNextDoor",
       "url": "https://kick.com/markynextdoor",
@@ -25,11 +17,11 @@
       "added_at": "2026-05-02"
     },
     {
-      "slug": "woodbaby",
-      "name": "WoodBaby",
-      "url": "https://kick.com/woodbaby",
-      "initials": "WB",
-      "avatar": "avatars/woodbaby.jpg",
+      "slug": "xenathewitch",
+      "name": "XenaTheWitch",
+      "url": "https://kick.com/xenathewitch",
+      "initials": "XT",
+      "avatar": "avatars/xenathewitch.jpg",
       "added_at": "2026-04-20"
     },
     {
@@ -71,6 +63,14 @@
       "initials": "FA",
       "avatar": "/avatars/screenshot-2026-05-27-201940.png",
       "added_at": "2026-05-28"
+    },
+    {
+      "slug": "woodbaby",
+      "name": "WoodBaby",
+      "url": "https://kick.com/woodbaby",
+      "initials": "WB",
+      "avatar": "avatars/woodbaby.jpg",
+      "added_at": "2026-04-20"
     },
     {
       "slug": "jeanemarie",
@@ -327,14 +327,6 @@
       "initials": "DT",
       "avatar": "avatars/dtanmanb.png",
       "added_at": "2026-04-20"
-    },
-    {
-      "slug": "BoostBri",
-      "name": "Boost Bri",
-      "url": "https://kick.com/BoostBri",
-      "initials": "bb",
-      "avatar": "/avatars/screenshot-2026-05-29-201541.png",
-      "added_at": "2026-05-30"
     },
     {
       "slug": "ozemi",
