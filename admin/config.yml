@@ -704,14 +704,16 @@ collections:
             widget: boolean
             default: true
             hint: 'When OFF, no sponsor renders anywhere on the homepage. Use this if a sponsorship ends without losing the saved details.'
-          - name: placement
-            label: 'Where the sponsor appears'
+          - name: placements
+            label: 'Where the sponsor appears (check one or both)'
             widget: select
-            default: 'top-left'
+            multiple: true
+            min: 1
+            default: ['top-left']
             options:
               - { label: 'Top-left corner (always visible while scrolling)', value: 'top-left' }
               - { label: 'Bottom of the page footer (only seen when scrolled to bottom)', value: 'footer' }
-            hint: 'Top-left = maximum visibility, floats over the hero video. Footer = subtle, only seen by visitors who scroll to the end.'
+            hint: 'Check either spot, or both. Top-left = maximum visibility, floats over the hero. Footer = subtle, only seen by visitors who scroll to the end. Both checked = sponsor shows in both locations on the same page.'
           - name: logo_image
             label: 'Sponsor logo'
             widget: image

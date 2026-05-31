@@ -1,6 +1,8 @@
 {
   "enabled": true,
-  "placement": "top-left",
+  "placements": [
+    "top-left"
+  ],
   "logo_image": "/sap-logo.png",
   "link_url": "https://streamautopilot.com/mike",
   "eyebrow_text": "Sponsored by",
