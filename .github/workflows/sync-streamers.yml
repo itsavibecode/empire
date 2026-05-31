@@ -19,6 +19,7 @@ on:
       - hall-of-fame.json
       - display.json
       - featured-streamers.json
+      - sponsor.json
 
 permissions:
   contents: write
@@ -92,6 +93,11 @@ jobs:
         env:
           REPO_PATH: ${{ github.workspace }}
         run: python .github/scripts/sync-featured-streamers.py
+
+      - name: Sync Sponsor block in index.html
+        env:
+          REPO_PATH: ${{ github.workspace }}
+        run: python .github/scripts/sync-sponsor.py
 
       - name: Build Activity changelog at /analytics/activity/
         env:

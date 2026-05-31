@@ -682,3 +682,59 @@ collections:
             widget: string
             default: 'Featured group house'
             hint: 'Description of the photo for screen readers. e.g. "Sky9 Group House".'
+
+  - name: sponsor
+    label: Sponsor Block
+    description: |
+      One sponsor link displayed on the homepage. The logo + label
+      sits either in the top-left of the page (always visible while
+      scrolling) or inside the footer (only visible at the bottom of
+      the page).
+
+      Saving here triggers the GitHub Action that regenerates the
+      sponsor block in index.html (~30 seconds after save).
+    files:
+      - file: sponsor.json
+        label: Sponsor content
+        name: sponsor_file
+        format: json
+        fields:
+          - name: enabled
+            label: 'Show the sponsor block on the homepage'
+            widget: boolean
+            default: true
+            hint: 'When OFF, no sponsor renders anywhere on the homepage. Use this if a sponsorship ends without losing the saved details.'
+          - name: placement
+            label: 'Where the sponsor appears'
+            widget: select
+            default: 'top-left'
+            options:
+              - { label: 'Top-left corner (always visible while scrolling)', value: 'top-left' }
+              - { label: 'Bottom of the page footer (only seen when scrolled to bottom)', value: 'footer' }
+            hint: 'Top-left = maximum visibility, floats over the hero video. Footer = subtle, only seen by visitors who scroll to the end.'
+          - name: logo_image
+            label: 'Sponsor logo'
+            widget: image
+            choose_url: false
+            media_folder: '/'
+            public_folder: '/'
+            hint: 'Square works best (e.g. 256×256). The site renders it at 64px (top-left) or 54px (footer), so the source can be larger. Saved at the repo root.'
+          - name: link_url
+            label: 'Where the logo links to when clicked'
+            widget: string
+            hint: 'Full https://... URL. Opens in a new tab.'
+            pattern: ['^https?://.+', 'Must be a full http(s):// URL']
+          - name: eyebrow_text
+            label: 'Small label above the sponsor name'
+            widget: string
+            default: 'Sponsored by'
+            hint: 'Shown in small gold uppercase above the sponsor name. Usually "Sponsored by" but you could use "Powered by" / "Presented by" / etc.'
+          - name: name
+            label: 'Sponsor name'
+            widget: string
+            hint: 'The bold name shown next to the logo (e.g. "Stream Auto Pilot").'
+          - name: alt_text
+            label: 'Logo alt text (for accessibility)'
+            widget: string
+            required: false
+            hint: 'Description of the logo for screen readers. Defaults to the sponsor name if left blank.'
