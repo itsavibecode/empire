@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, MarkyNextDoor, XenaTheWitch, Chibu, Ice Poseidon, Sasha West, Kimmee, Fabia Alissia, WoodBaby, Jeane Marie, Hanridge, AshWilder, Blame, Shangel, Mia Maxxed, Emzam, Check , Dejayboss, Diamond, JJStream, Nick Lee, FloridaBoy, Letty, Suzie Smalls, TaylorStarlight, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, RiddaW, Fanos, KikiKrazy, lifeismizzy, Mando, Dtan, Ozemi, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.16">
+<meta name="version" content="0.13.17">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -1008,6 +1008,172 @@ section{padding:6rem 1.5rem}
 }
 
 
+/* === SPONSOR BADGE PREVIEWS (v0.13.17) ============================
+   Four placement variants for the Stream Auto Pilot sponsor link.
+   All hidden by default; URL query param ?sponsor=<key> toggles one
+   on (see the tiny script at the bottom of the page). After the
+   client picks one we'll lock it in and delete the others.
+   Keys: tl = top-left floating, strip = full-width top strip,
+         br = bottom-right floating, footer = inline footer line. */
+.sp-badge,
+.sp-strip{ display:none; }
+
+/* Shared visual language: dark glass card with gold-hairline border. */
+.sp-card{
+  background:rgba(10,10,10,0.72);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(212,168,67,0.32);
+  border-radius:999px;
+  text-decoration:none;
+  color:var(--white);
+  font-family:'DM Sans',sans-serif;
+  box-shadow:0 6px 24px rgba(0,0,0,0.35);
+  transition:border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sp-card:hover{
+  border-color:rgba(212,168,67,0.85);
+  transform:translateY(-1px);
+  box-shadow:0 10px 32px rgba(212,168,67,0.22);
+}
+
+/* Inner layout common to top-left + bottom-right pill variants. */
+.sp-badge{
+  position:fixed;
+  z-index:120;
+  align-items:center;
+  gap:0.55rem;
+  padding:0.45rem 0.95rem 0.45rem 0.45rem;
+}
+.sp-badge-logo{
+  width:34px; height:34px;
+  border-radius:999px;
+  flex:0 0 auto;
+  display:block;
+  object-fit:contain;
+  background:rgba(255,255,255,0.04);
+}
+.sp-badge-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.1;
+  text-align:left;
+}
+.sp-badge-prefix{
+  font-size:0.6rem;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:rgba(245,241,235,0.55);
+  font-weight:500;
+  margin-bottom:1px;
+}
+.sp-badge-name{
+  font-size:0.86rem;
+  font-weight:700;
+  letter-spacing:0.01em;
+  color:var(--white);
+}
+
+/* --- A) Top-left floating pill --- */
+.sp-badge.sp-tl{ top:1rem; left:1rem; }
+body.sp-show-tl .sp-badge.sp-tl{ display:inline-flex; }
+
+/* --- B) Top horizontal strip across full width --- */
+.sp-strip{
+  position:fixed;
+  top:0; left:0; right:0;
+  z-index:120;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:0.7rem;
+  padding:0.55rem 1rem;
+  background:linear-gradient(90deg, rgba(10,10,10,0.95) 0%, rgba(20,16,8,0.95) 50%, rgba(10,10,10,0.95) 100%);
+  border-bottom:1px solid rgba(212,168,67,0.32);
+  text-decoration:none;
+  color:var(--white);
+  font-family:'DM Sans',sans-serif;
+  letter-spacing:0.04em;
+  font-size:0.85rem;
+  transition:background 0.2s ease;
+}
+.sp-strip img{
+  width:24px; height:24px;
+  border-radius:999px;
+  display:inline-block;
+  vertical-align:middle;
+  object-fit:contain;
+}
+.sp-strip .sp-strip-prefix{
+  color:rgba(245,241,235,0.6);
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  font-size:0.7rem;
+  font-weight:500;
+}
+.sp-strip .sp-strip-name{
+  color:var(--gold);
+  font-weight:700;
+}
+.sp-strip:hover{ background:linear-gradient(90deg, rgba(20,16,8,0.95) 0%, rgba(40,30,12,0.95) 50%, rgba(20,16,8,0.95) 100%); }
+body.sp-show-strip .sp-strip{ display:flex; }
+body.sp-show-strip{ padding-top:54px; }
+
+/* --- C) Bottom-right floating pill --- */
+.sp-badge.sp-br{ bottom:1.25rem; right:1.25rem; }
+body.sp-show-br .sp-badge.sp-br{ display:inline-flex; }
+
+/* --- D) Footer inline (inside the existing .footer-bar) --- */
+.sp-footer-inline{
+  display:none;
+  align-items:center;
+  gap:0.55rem;
+  margin:0 auto 0.8rem;
+  padding:0.4rem 0.85rem 0.4rem 0.4rem;
+  background:rgba(212,168,67,0.06);
+  border:1px solid rgba(212,168,67,0.18);
+  border-radius:999px;
+  text-decoration:none;
+  color:var(--white);
+  font-family:'DM Sans',sans-serif;
+  font-size:0.78rem;
+  transition:background 0.2s ease, border-color 0.2s ease;
+  width:fit-content;
+}
+.sp-footer-inline img{
+  width:26px; height:26px;
+  border-radius:999px;
+  display:block;
+  flex:0 0 auto;
+  object-fit:contain;
+  background:rgba(255,255,255,0.04);
+}
+.sp-footer-inline .sp-footer-prefix{
+  color:rgba(245,241,235,0.55);
+  font-size:0.65rem;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  font-weight:500;
+}
+.sp-footer-inline .sp-footer-name{
+  color:var(--gold);
+  font-weight:700;
+}
+.sp-footer-inline:hover{
+  background:rgba(212,168,67,0.12);
+  border-color:rgba(212,168,67,0.5);
+}
+body.sp-show-footer .sp-footer-inline{ display:inline-flex; }
+
+/* Mobile tweaks — pills slightly smaller, strip wraps cleanly. */
+@media (max-width: 600px){
+  .sp-badge{ padding:0.4rem 0.75rem 0.4rem 0.4rem; }
+  .sp-badge-logo{ width:28px; height:28px; }
+  .sp-badge-name{ font-size:0.78rem; }
+  .sp-strip{ font-size:0.75rem; gap:0.45rem; padding:0.5rem 0.7rem; }
+  body.sp-show-strip{ padding-top:48px; }
+}
+
 /* === STREAMERS === */
 .streamers{
   background:var(--black);
@@ -1374,6 +1540,39 @@ section{padding:6rem 1.5rem}
 </style>
 </head>
 <body>
+
+<!-- SPONSOR BADGE PREVIEWS (v0.13.17) — four placement variants for
+     the Stream Auto Pilot sponsor link. All hidden by default. Add
+     ?sponsor=tl|strip|br|footer to the URL to preview each one in
+     context. The toggle script at the bottom of <body> reads the
+     param and sets a body class. Once the client picks one, the
+     others get removed. -->
+
+<!-- Option A: top-left floating pill -->
+<a class="sp-badge sp-card sp-tl" href="https://streamautopilot.com/mike" target="_blank" rel="noopener sponsored" aria-label="Sponsored by Stream Auto Pilot">
+  <img class="sp-badge-logo" src="sap-logo.png" alt="" width="34" height="34">
+  <span class="sp-badge-text">
+    <span class="sp-badge-prefix">Sponsored by</span>
+    <span class="sp-badge-name">Stream Auto Pilot</span>
+  </span>
+</a>
+
+<!-- Option B: full-width top strip -->
+<a class="sp-strip" href="https://streamautopilot.com/mike" target="_blank" rel="noopener sponsored" aria-label="Sponsored by Stream Auto Pilot">
+  <span class="sp-strip-prefix">Sponsored by</span>
+  <img src="sap-logo.png" alt="" width="24" height="24">
+  <span class="sp-strip-name">Stream Auto Pilot</span>
+</a>
+
+<!-- Option C: bottom-right floating pill -->
+<a class="sp-badge sp-card sp-br" href="https://streamautopilot.com/mike" target="_blank" rel="noopener sponsored" aria-label="Sponsored by Stream Auto Pilot">
+  <img class="sp-badge-logo" src="sap-logo.png" alt="" width="34" height="34">
+  <span class="sp-badge-text">
+    <span class="sp-badge-prefix">Sponsored by</span>
+    <span class="sp-badge-name">Stream Auto Pilot</span>
+  </span>
+</a>
+
 <nav class="social-bar" aria-label="Social links">
   <a href="https://kick.com/empirex" target="_blank" rel="noopener" aria-label="Kick">
     <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg>
@@ -2288,7 +2487,14 @@ section{padding:6rem 1.5rem}
 </section>
 
 <div class="footer-bar">
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.16</span>
+  <!-- Option D: footer inline sponsor pill (hidden unless ?sponsor=footer) -->
+  <a class="sp-footer-inline" href="https://streamautopilot.com/mike" target="_blank" rel="noopener sponsored" aria-label="Sponsored by Stream Auto Pilot">
+    <img src="sap-logo.png" alt="" width="26" height="26">
+    <span class="sp-footer-prefix">Sponsored by</span>
+    <span class="sp-footer-name">Stream Auto Pilot</span>
+  </a>
+  <br>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.17</span>
 </div>
 
 <script>
@@ -2432,6 +2638,16 @@ section{padding:6rem 1.5rem}
       }
     });
   }
+})();
+
+// Sponsor placement preview toggle (v0.13.17). Reads ?sponsor= from
+// the URL and adds the matching body class so one of the 4 sponsor
+// variants becomes visible. After the client picks one we'll lock
+// it in and delete the others.
+(function(){
+  var p = new URLSearchParams(location.search).get('sponsor');
+  var map = { tl: 'sp-show-tl', strip: 'sp-show-strip', br: 'sp-show-br', footer: 'sp-show-footer' };
+  if (p && map[p]) document.body.classList.add(map[p]);
 })();
 </script>
 </body>
