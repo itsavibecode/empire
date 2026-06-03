@@ -115,6 +115,12 @@
       "added_at": "2026-05-24"
     },
     {
+      "name": "Marzy",
+      "description": "Empire Elite Member ",
+      "initials": "MZ",
+      "avatar": "/avatars/featured/screenshot-2026-06-03-182148.png"
+    },
+    {
       "name": "Layla",
       "description": "Member of Hall of Fame group",
       "group": "Late Night",
@@ -139,15 +145,6 @@
       "url": "",
       "initials": "GM",
       "avatar": "/avatars/featured/germ.jpg",
-      "added_at": "2026-05-18"
-    },
-    {
-      "name": "Qhuizz",
-      "description": "Member of Empire Group",
-      "group": "Northstar",
-      "url": "https://www.twitch.tv/qhuizz",
-      "initials": "QZ",
-      "avatar": "/avatars/featured/screenshot-2026-05-18-152821.png",
       "added_at": "2026-05-18"
     }
   ]
