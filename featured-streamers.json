@@ -118,7 +118,8 @@
       "name": "Marzy",
       "description": "Empire Elite Member ",
       "initials": "MZ",
-      "avatar": "/avatars/featured/screenshot-2026-06-03-182148.png"
+      "avatar": "/avatars/featured/screenshot-2026-06-03-182148.png",
+      "added_at": "2026-06-03"
     },
     {
       "name": "Layla",
@@ -143,7 +144,8 @@
       "description": "Member of Hall of Fame Group",
       "group": "Doing Things Better (DTB)",
       "initials": "D",
-      "avatar": "/avatars/featured/screenshot-2026-06-03-182323.png"
+      "avatar": "/avatars/featured/screenshot-2026-06-03-182323.png",
+      "added_at": "2026-06-03"
     },
     {
       "name": "Germ",
