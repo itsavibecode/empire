@@ -26,6 +26,15 @@
       "added_at": "2026-04-29"
     },
     {
+      "name": "Humza",
+      "description": "Member of Hall of Fame group",
+      "group": "Blacks United (BU)",
+      "url": "",
+      "initials": "H",
+      "avatar": "/avatars/featured/09-humza.jpg",
+      "added_at": "2026-04-29"
+    },
+    {
       "name": "Corie",
       "description": "Member of Empire Team",
       "group": "",
@@ -95,15 +104,6 @@
       "url": "",
       "initials": "TT",
       "avatar": "/avatars/featured/07-teetee.jpg",
-      "added_at": "2026-04-29"
-    },
-    {
-      "name": "Humza",
-      "description": "Member of Hall of Fame group",
-      "group": "Blacks United (BU)",
-      "url": "",
-      "initials": "H",
-      "avatar": "/avatars/featured/09-humza.jpg",
       "added_at": "2026-04-29"
     },
     {
