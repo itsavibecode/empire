@@ -10,5 +10,6 @@ Disallow: /voting/
 Disallow: /voting/overlay/
 Disallow: /obs/rankings/
 Disallow: /obs/rankings/final/
+Disallow: /obs/rankings/preview/
 
 Sitemap: https://ourempirex.com/sitemap.xml

@@ -13,7 +13,7 @@
      (assuming "Refresh browser when scene becomes active" is on). -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.1.1">
 <title>Empire X — Final Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -316,8 +316,21 @@
     listEl.appendChild(fragment);
   }
 
+  // ?demo=1 loads a hardcoded sample ranking from real Empire X
+  // streamers (preview-page use, no need to populate rankings.json
+  // first).
+  var DEMO_RANKINGS = [
+    { slug: 'shangel' }, { slug: 'cobbruvs' }, { slug: 'mikesmallsjr' },
+    { slug: 'markynextdoor' }, { slug: 'iceposeidon' }, { slug: 'nicklee' },
+    { slug: 'dtanmanb' }, { slug: 'kennyhoopz' }, { slug: 'xenathewitch' },
+    { slug: 'briewylde' },
+  ];
+  var isDemo = new URLSearchParams(location.search).get('demo') === '1';
+
   Promise.all([
-    fetch('/rankings.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
+    isDemo
+      ? Promise.resolve({ rankings: DEMO_RANKINGS })
+      : fetch('/rankings.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
     fetch('/streamers.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }),
     fetch(WORKER_LIVE, { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
   ]).then(function (results) {

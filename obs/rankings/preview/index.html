@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Preview page for the /obs/rankings/ family of overlays.
+     Renders the actual production overlay HTML (via iframe with
+     ?demo=1) on top of a looping live-stream video clip so the
+     client can see what it looks like composited over a broadcast
+     before setting any real rankings. NOT linked from the public
+     site; meta-noindex'd and robots.txt-disallowed. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X &mdash; Rankings Overlay Preview</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --gold-dark:  #8B6620;
+    --ink:        #0A0A0A;
+    --ink-card:   #141414;
+    --ink-soft:   #1F1F1F;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.6);
+    --cream-faint:rgba(245,241,235,0.4);
+    --hairline:   rgba(245,241,235,0.1);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* === HEADER === */
+  header {
+    padding: 1.4rem 1.5rem 1.1rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.12) 0%, transparent 70%),
+      var(--ink);
+    border-bottom: 1px solid var(--hairline);
+    text-align: center;
+  }
+  .header-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .header-logo { width: 52px; height: 52px; object-fit: contain; flex: 0 0 auto; }
+  .header-text { text-align: left; line-height: 1.1; }
+  .header-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.45em;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
+  }
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+  }
+  .header-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 400;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin-top: 0.3rem;
+  }
+  .dev-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.6rem;
+    background: rgba(212,168,67,0.18);
+    color: var(--gold);
+    border: 1px solid rgba(212,168,67,0.45);
+    border-radius: 999px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-top: 0.6rem;
+  }
+
+  /* === LAYOUT === */
+  main {
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 3rem;
+  }
+
+  /* === PREVIEW BLOCK ===
+     A 16:9 frame holding a looping stream-vibe video. Each overlay
+     iframe is positioned absolute on top with `pointer-events:none`
+     so clicking goes to the underlying video controls if any
+     (currently we have none — autoplay loop muted). The frame's
+     aspect ratio matches OBS canvas at 1920x1080, so what fits here
+     is exactly what'll fit at 1080p. */
+  .preview-block { margin-bottom: 2.2rem; }
+  .preview-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+  .preview-h {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0;
+  }
+  .preview-h .url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--cream-dim);
+    margin-left: 0.6rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .preview-meta {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream-faint);
+  }
+
+  .frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.55);
+  }
+  .frame-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+  .frame-overlay {
+    position: absolute;
+    border: 0;
+    pointer-events: none;
+    background: transparent;
+  }
+
+  /* Ticker overlay anchored top with the suggested OBS source size
+     (1920×130 at 16:9 = 100% wide, ~12% tall on this preview frame). */
+  .frame-overlay.ticker {
+    top: 0; left: 0;
+    width: 100%;
+    height: 12.04%; /* 130/1080 */
+  }
+  /* Final-reveal overlay is fullscreen, so it fills the frame. */
+  .frame-overlay.final {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Notes under each preview frame */
+  .preview-notes {
+    margin-top: 0.8rem;
+    padding: 0.9rem 1rem;
+    background: var(--ink-card);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    color: var(--cream-dim);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+  .preview-notes strong { color: var(--cream); }
+  .preview-notes code {
+    background: var(--ink-soft);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--gold-light);
+  }
+
+  /* === FOOTER === */
+  footer {
+    padding: 1.4rem 1.5rem 2rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--hairline);
+    text-align: center;
+  }
+  .footer-line {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .footer-version {
+    margin-top: 0.6rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--cream-faint);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <img class="header-logo" src="/logo.png" alt="Empire X" loading="eager">
+    <div class="header-text">
+      <div class="header-eyebrow">Empire X &middot; OBS</div>
+      <h1 class="header-title">Rankings Overlay Preview</h1>
+      <div class="header-subtitle">What it looks like over a live stream</div>
+      <div class="dev-pill">Preview &middot; demo data</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ====== TICKER ====== -->
+  <section class="preview-block">
+    <div class="preview-title">
+      <h2 class="preview-h">Live ticker
+        <span class="url">/obs/rankings/</span>
+      </h2>
+      <div class="preview-meta">Suggested OBS size 1920 × 130</div>
+    </div>
+    <div class="frame">
+      <video class="frame-bg" src="stream-bg.mp4" autoplay loop muted playsinline></video>
+      <iframe class="frame-overlay ticker"
+              src="/obs/rankings/?demo=1"
+              title="Rankings ticker preview"></iframe>
+    </div>
+    <div class="preview-notes">
+      Thin top-bar strip the streamer adds as a Browser Source. Sits over
+      the broadcast for the duration of the event, refreshing every 5
+      minutes. <strong>Add the URL above</strong> as a Browser Source in OBS
+      (1920 × 130). The overlay shown here uses the same code, just with
+      <code>?demo=1</code> to load sample standings.
+    </div>
+  </section>
+
+  <!-- ====== FINAL REVEAL ====== -->
+  <section class="preview-block">
+    <div class="preview-title">
+      <h2 class="preview-h">Final-reveal closing scene
+        <span class="url">/obs/rankings/final/</span>
+      </h2>
+      <div class="preview-meta">Suggested OBS size 1920 × 1080</div>
+    </div>
+    <div class="frame">
+      <video class="frame-bg" src="stream-bg.mp4" autoplay loop muted playsinline></video>
+      <iframe class="frame-overlay final"
+              src="/obs/rankings/final/?demo=1"
+              title="Final rankings preview"></iframe>
+    </div>
+    <div class="preview-notes">
+      Fullscreen reveal for the closing scene. Reveals <strong>#10 → #1</strong>
+      one at a time with a ~1s gap; #1 lands with a finale pause + bigger
+      frame + gold pulse. <strong>Refresh this page</strong> (or switch the OBS
+      scene away and back) to replay the animation. Note: the reveal takes
+      ~13 seconds to land — the bottom rows appear first.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-line">
+    Empire X &middot; internal preview &middot;
+    <span style="color:var(--cream);">not linked from the public site</span>
+  </div>
+  <div class="footer-version">Rankings preview v0.1.0</div>
+</footer>
+
+</body>
+</html>

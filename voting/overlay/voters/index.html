@@ -14,7 +14,7 @@
      so it composites cleanly. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.1">
+<meta name="version" content="0.1.2">
 <title>Empire X Voting — Live Voters</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,63 +202,99 @@
 
 <script>
 /* =====================================================================
-   Live voters ticker — prototype v0.1.1.
+   Live voters ticker — prototype v0.1.2.
 
-   Now pulls REAL Kick avatars (and uses real Empire X streamer
-   slugs as the mock voter pool) by hitting empire-worker's /live
-   endpoint, which carries profile_pic per channel as of worker
-   v0.3.4. Each voter row shows the streamer's actual Kick avatar.
+   v0.1.2 fix: previously this pool was drawn from Empire X streamers
+   themselves (real slugs + their real Kick avatars), which was
+   misleading -- in production the voters are VIEWERS, not the
+   streamers. Now we mock the voter pool with realistic viewer-style
+   usernames and generated avatars (initials on a colored disc via
+   ui-avatars.com, same approach Kick uses for users without a
+   custom profile pic). Avatar color is hashed from the username so
+   it's stable per-voter across re-renders.
 
-   Why this matters even though the production flow is different:
-   when a real viewer signs in with Kick OAuth to vote, the OAuth
-   response carries their profile_pic — we capture it at vote time
-   and store it alongside the vote. So in production this overlay
-   reads avatar URLs straight off the Firestore vote document. The
-   prototype just sources them from a different place; the render
-   path is identical.
+   In production this overlay reads avatar URLs straight off each
+   Firestore vote document -- captured from the OAuth response when
+   the viewer signed in to vote. The render path doesn't change;
+   only the avatar URL source does.
 ===================================================================== */
 (function () {
-  var WORKER_LIVE_URL = 'https://empire-worker.sevendwarfs.workers.dev/live';
-
-  // Choice pool — used to randomly pick a vote choice per fake voter.
   var CHOICES = ['Sky9 House', 'DTB House', 'Mixtapes House', 'Kozy House'];
+
+  // Realistic Kick viewer usernames -- mix of obvious fans, casual
+  // handles, numbered defaults, and lurker-style accounts so the
+  // ticker reads like an actual audience rather than a celebrity
+  // panel. Capitalization varies to match how Kick handles display
+  // them on Kick's own UI.
+  var USERNAMES = [
+    'cobbruvs_fan22', 'EmpireSzn', 'shangelpolice', 'IRL_lurker', 'kickwatcher',
+    'glorpkick', 'StreamGuy_98', 'Polish_Pete', 'midnightviewer', 'tunedin_2026',
+    'EmpireGoer', 'sky9_4ever', 'mixtapesfanboi', 'dailyDTB', 'sundayviewer',
+    'user_28194', 'iceshorts', 'mikejr4lyfe', 'briewstan', 'kennyhoopzfan',
+    'KozyBois', 'late_night_listener', 'florida_kicker', 'jjwatching',
+    'lurk_more', 'AnDriahLee_22', 'cb_sees_all', 'rid_w_dub', 'feedjunkie',
+    'PHX_Streams', 'CHIstreams', 'NYC_watching', 'firsttime_caller', 'longtimewatcher',
+    'EmpireXlurker', 'PartyHouseFan', 'theBaddest_OG', 'BlacksUnitedBU', 'kozygrl',
+    'mixtapesQueen', 'late_to_stream', 'just_here_4_drama', 'voter_4_2_8',
+    'EmpireXdaily', 'streamdotcom', 'gimme_clips', 'lurker_no_more', 'EmpireFirstTime',
+    'DTBriders', 'allpursuitAP', 'ChibuFollower', 'iceP_for_pres'
+  ];
+
+  // Generate an avatar URL via ui-avatars.com with a color picked
+  // deterministically from a small palette by hashing the username.
+  // Mirrors how Kick renders default avatars: bold initials on a
+  // saturated background.
+  var PALETTE = [
+    ['D4A843', '0a0a0a'],   // brand gold
+    ['8B5CF6', 'ffffff'],   // purple
+    ['EC4899', 'ffffff'],   // pink
+    ['10B981', 'ffffff'],   // green
+    ['F59E0B', '0a0a0a'],   // amber
+    ['3B82F6', 'ffffff'],   // blue
+    ['EF4444', 'ffffff'],   // red
+    ['8B6620', 'F5F1EB'],   // dark gold
+    ['06B6D4', '0a0a0a'],   // cyan
+    ['F472B6', '0a0a0a'],   // light pink
+  ];
+  function avatarFor(name) {
+    var hash = 0;
+    for (var i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    }
+    var p = PALETTE[Math.abs(hash) % PALETTE.length];
+    return 'https://ui-avatars.com/api/?bold=true&size=128&format=svg'
+         + '&background=' + p[0]
+         + '&color=' + p[1]
+         + '&name=' + encodeURIComponent(name);
+  }
 
   var listEl  = document.getElementById('voterList');
   var totalEl = document.getElementById('totalVotes');
   var MAX_ROWS = 6;
   var total = 746;
 
-  // Built once we fetch the snapshot. Each entry: { slug, avatar }.
-  var POOL = [];
+  function pickChoice() { return CHOICES[Math.floor(Math.random() * CHOICES.length)]; }
+  function pickVoter()  { return USERNAMES[Math.floor(Math.random() * USERNAMES.length)]; }
 
-  function pickChoice() {
-    return CHOICES[Math.floor(Math.random() * CHOICES.length)];
-  }
-  function pickVoter() {
-    return POOL[Math.floor(Math.random() * POOL.length)];
-  }
-
-  function buildRow(voter, choice) {
+  function buildRow(name, choice) {
     var row = document.createElement('li');
     row.className = 'voter-row';
     row.innerHTML =
       '<div class="voter-avatar">' +
-        '<img src="' + voter.avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
+        '<img src="' + avatarFor(name) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
       '</div>' +
-      '<div class="voter-name">' + voter.slug + '</div>' +
+      '<div class="voter-name">' + name + '</div>' +
       '<div class="voter-choice">' + choice + '</div>';
     return row;
   }
 
   function addVote() {
-    if (!POOL.length) return;
-    var v = pickVoter();
-    var c = pickChoice();
-    var row = buildRow(v, c);
+    var name = pickVoter();
+    var choice = pickChoice();
+    var row = buildRow(name, choice);
     listEl.insertBefore(row, listEl.firstChild);
     total += 1;
     totalEl.textContent = total;
-    /* Trim the tail when over MAX_ROWS. */
     while (listEl.children.length > MAX_ROWS) {
       var oldest = listEl.lastElementChild;
       oldest.classList.add('fadeOut');
@@ -274,30 +310,12 @@
     setTimeout(function () { addVote(); schedule(); }, ms);
   }
 
-  /* Pull the live snapshot, build the voter pool from streamers that
-     have an avatar set. Then paint the initial 5 rows + start the
-     ticker. If the fetch fails we leave the list empty rather than
-     showing fake placeholder avatars — the design intent (real
-     Kick avatars) is the whole point. */
-  fetch(WORKER_LIVE_URL, { cache: 'no-cache' })
-    .then(function (r) { return r.json(); })
-    .then(function (snap) {
-      var chans = (snap && snap.channels) || {};
-      POOL = Object.keys(chans)
-        .filter(function (slug) { return chans[slug] && chans[slug].profile_pic; })
-        .map(function (slug) {
-          return { slug: slug, avatar: chans[slug].profile_pic };
-        });
-      if (!POOL.length) return;
-      for (var i = 0; i < 5; i++) {
-        var v = pickVoter();
-        listEl.appendChild(buildRow(v, pickChoice()));
-      }
-      schedule();
-    })
-    .catch(function (err) {
-      console.warn('[ticker] /live fetch failed:', err);
-    });
+  /* Paint the initial 5 rows then start the ticker. No async fetch
+     anymore -- everything's local. */
+  for (var i = 0; i < 5; i++) {
+    listEl.appendChild(buildRow(pickVoter(), pickChoice()));
+  }
+  schedule();
 })();
 </script>
 </body>
