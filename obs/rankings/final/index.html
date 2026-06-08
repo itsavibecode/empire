@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Empire X event rankings — FINAL REVEAL overlay.
+     Fullscreen OBS browser source for the closing scene. Reads the
+     same rankings.json + streamers.json + empire-worker /live the
+     ticker uses, then plays a dramatic 10 → 1 reveal animation
+     when the scene becomes active.
+     Suggested OBS size: 1920 × 1080.
+     Auto-plays on mount; switch away + back to re-trigger
+     (assuming "Refresh browser when scene becomes active" is on). -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X — Final Rankings</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@500;600;700&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@500;600;700&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --gold-dark:  #8B6620;
+    --silver:     #B7B7B7;
+    --bronze:     #B97B4D;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.75);
+    --ink:        #0A0A0A;
+    --hairline:   rgba(245,241,235,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: transparent;
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* === STAGE ===
+     Dark glass full-bleed background so the reveal feels like a
+     dedicated scene, not a corner overlay. Streamers can still
+     composite live video underneath if they want a subtle reveal,
+     since the background carries 88% alpha. */
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    padding: 4vh 4vw;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,168,67,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 50% 80%, rgba(212,168,67,0.08) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(10,10,10,0.88) 0%, rgba(15,12,8,0.92) 100%);
+  }
+
+  /* === HEADER === */
+  .header {
+    text-align: center;
+    margin-bottom: 1.5vh;
+    opacity: 0;
+    animation: headerIn 1.2s ease 0.2s forwards;
+  }
+  @keyframes headerIn {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .header-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.55em;
+    color: var(--gold);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  }
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    margin: 0.4rem 0 0;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 18px rgba(0,0,0,0.7);
+    letter-spacing: -0.005em;
+  }
+
+  /* === LIST ===
+     The reveal happens row by row from #10 → #1 via staggered
+     animation-delays computed at runtime by JS based on each
+     row's data-index attribute. Each row starts hidden and slides
+     up + fades in. #1 lands with a slightly bigger pop. */
+  .list {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1vh;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 92px 80px 1fr auto;
+    gap: 1.6rem;
+    align-items: center;
+    padding: 1vh 1.4rem;
+    background: rgba(20,20,20,0.55);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+    animation: rowReveal 0.7s cubic-bezier(0.18, 0.85, 0.25, 1) forwards;
+    animation-delay: var(--reveal-delay, 0s);
+  }
+  @keyframes rowReveal {
+    0%   { opacity: 0; transform: translateY(28px) scale(0.94); }
+    60%  { opacity: 1; transform: translateY(-4px) scale(1.02); }
+    100% { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+
+  .row-rank {
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 2.2rem;
+    color: #1a0e02;
+    background: linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
+    border: 2px solid rgba(255,255,255,0.22);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.3);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.22);
+  }
+
+  .row-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--hairline);
+    background: linear-gradient(135deg, #2a2018, #1a1208);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .row-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .row-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    letter-spacing: -0.005em;
+  }
+  .row-meta {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  }
+
+  /* Top-3 styling: distinct gradients, bigger rank disc, glow ring. */
+  .row-rank.rank-1 {
+    width: 100px; height: 100px;
+    font-size: 2.8rem;
+    background: linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 28px rgba(255,216,106,0.6);
+    animation: leaderShine 2.2s ease-in-out infinite;
+  }
+  @keyframes leaderShine {
+    0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 28px rgba(255,216,106,0.6); }
+    50%      { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.9), 0 0 42px rgba(255,216,106,0.95); }
+  }
+  .row-rank.rank-2 {
+    background: linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%);
+    color: #1a1a1a;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(183,183,183,0.5), 0 0 20px rgba(183,183,183,0.4);
+  }
+  .row-rank.rank-3 {
+    background: linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(185,123,77,0.5), 0 0 20px rgba(185,123,77,0.4);
+  }
+  /* #1 row gets a slightly larger frame to land the moment. */
+  .row.is-leader {
+    padding: 1.4vh 1.4rem;
+    background: linear-gradient(90deg, rgba(212,168,67,0.18) 0%, rgba(212,168,67,0.05) 100%);
+    border-color: rgba(212,168,67,0.45);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,168,67,0.25);
+  }
+  .row.is-leader .row-name { font-size: 2.1rem; }
+  .row.is-leader .row-avatar { width: 96px; height: 96px; }
+  .row.is-leader { grid-template-columns: 108px 96px 1fr auto; }
+
+  /* === EMPTY STATE === */
+  .empty {
+    margin: auto;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+  }
+
+  /* === FOOTER (Empire X mark) === */
+  .stage-foot {
+    text-align: center;
+    margin-top: 1.5vh;
+    opacity: 0;
+    animation: footIn 1s ease 1s forwards;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.5em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  }
+  @keyframes footIn { to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="header">
+    <div class="header-eyebrow">EMPIRE X &middot; EVENT STANDINGS</div>
+    <h1 class="header-title">FINAL RANKINGS</h1>
+  </div>
+  <div class="list" id="list">
+    <div class="empty">Rankings load here once the standings are set</div>
+  </div>
+  <div class="stage-foot">OUREMPIREX.COM</div>
+</div>
+
+<script>
+/* =====================================================================
+   Final-reveal overlay — sources the SAME data as /obs/rankings/:
+     rankings.json (curated standings), streamers.json (names),
+     empire-worker /live (real Kick avatars).
+
+   Animation: reveals from #10 → #1 with a 1.2s gap between each
+   row landing. #1 gets ~2s of dwell time before the streamer cuts
+   the scene. Each row's stagger is set via --reveal-delay inline
+   style so the CSS keyframe handles the motion and JS just picks
+   the timing.
+===================================================================== */
+(function () {
+  var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
+  var TOP_N = 10;
+  var BASE_DELAY_S = 0.9;  // first reveal starts after the header lands
+  var STEP_S = 1.0;        // gap between successive reveals (10→1)
+  var FINALE_PAUSE_S = 1.2; // extra dwell before #1 lands
+
+  var listEl = document.getElementById('list');
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function render(ranked) {
+    if (!ranked.length) {
+      listEl.innerHTML = '<div class="empty">Rankings load here once the standings are set</div>';
+      return;
+    }
+
+    // Build rows DOM in rank order. Animation delay increases for
+    // EARLIER reveals — #N (highest in the list) reveals first.
+    // Compute delays such that the last entry (#1) is the finale.
+    // Delay formula: BASE + (TOP_N - rank) * STEP, with an extra
+    // FINALE_PAUSE between #2 and #1.
+    var fragment = document.createDocumentFragment();
+    ranked.forEach(function (s) {
+      var row = document.createElement('div');
+      var isLeader = (s.rank === 1);
+      row.className = 'row' + (isLeader ? ' is-leader' : '');
+
+      // For a 10→1 reveal, lowest-rank-in-list (worst) appears
+      // first. So delay = (s.rank - 1) * STEP, offset by BASE.
+      // #1 lands last, with finale pause.
+      var delay;
+      if (isLeader) {
+        delay = BASE_DELAY_S + (ranked.length - 1) * STEP_S + FINALE_PAUSE_S;
+      } else {
+        delay = BASE_DELAY_S + (ranked.length - s.rank) * STEP_S;
+      }
+      row.style.setProperty('--reveal-delay', delay + 's');
+
+      var img = s.avatar
+        ? '<img src="' + s.avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        : '';
+      var rankCls = s.rank >= 1 && s.rank <= 3 ? ' rank-' + s.rank : '';
+
+      row.innerHTML =
+        '<div class="row-rank' + rankCls + '">' + s.rank + '</div>' +
+        '<div class="row-avatar">' + img + '</div>' +
+        '<div class="row-name">' + escapeHtml(s.name || s.slug) + '</div>' +
+        '<div class="row-meta">@' + escapeHtml(s.slug) + '</div>';
+      fragment.appendChild(row);
+    });
+
+    listEl.innerHTML = '';
+    listEl.appendChild(fragment);
+  }
+
+  Promise.all([
+    fetch('/rankings.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
+    fetch('/streamers.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }),
+    fetch(WORKER_LIVE, { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
+  ]).then(function (results) {
+    var ranksFile = results[0] || {};
+    var roster = (results[1] && results[1].streamers) || [];
+    var snap = results[2];
+    var chans = (snap && snap.channels) || {};
+
+    var streamerBySlug = {};
+    roster.forEach(function (s) {
+      if (s && s.slug) streamerBySlug[s.slug.toLowerCase()] = s;
+    });
+    var avatarBySlug = {};
+    Object.keys(chans).forEach(function (k) {
+      if (chans[k] && chans[k].profile_pic) avatarBySlug[k] = chans[k].profile_pic;
+    });
+
+    var rawList = (ranksFile.rankings) || [];
+    var ranked = [];
+    for (var i = 0; i < rawList.length && ranked.length < TOP_N; i++) {
+      var entry = rawList[i];
+      var slug = (typeof entry === 'string') ? entry : (entry && entry.slug);
+      if (!slug) continue;
+      slug = String(slug).trim().toLowerCase();
+      if (!slug) continue;
+      var s = streamerBySlug[slug];
+      ranked.push({
+        slug: slug,
+        name: (s && s.name) || slug,
+        rank: i + 1,
+        avatar: avatarBySlug[slug] || '',
+      });
+    }
+    render(ranked);
+  }).catch(function (err) {
+    console.warn('[final-rankings] fetch failed:', err);
+  });
+})();
+</script>
+</body>
+</html>

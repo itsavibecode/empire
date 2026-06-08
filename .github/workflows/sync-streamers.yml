@@ -20,6 +20,7 @@ on:
       - display.json
       - featured-streamers.json
       - sponsor.json
+      - rankings.json
 
 permissions:
   contents: write

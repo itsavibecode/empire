@@ -12,7 +12,7 @@
      Place at top or bottom of the broadcast scene. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.1.1">
 <title>Empire X — Event Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,20 +210,20 @@
 
 <script>
 /* =====================================================================
-   Event rankings ticker — reads streamers.json (same-origin, no auth)
-   to get who's ranked, then pulls real Kick avatars from
-   empire-worker's /live snapshot for each one. Filters to streamers
-   with a numeric `rank` ≥ 1, sorts ascending, takes top 10.
+   Event rankings ticker — pulls three files and joins them:
+     1. /rankings.json   — the curated standings (admin sets in Decap).
+                           Position in array = rank; first entry is #1.
+     2. /streamers.json  — names + display info for each slug.
+     3. empire-worker /live — real Kick avatars per slug.
 
-   Re-fetches every 5 minutes so the ticker reflects rank changes
-   the admin makes mid-event without the streamer needing to refresh
-   the OBS scene. (Also fine to enable the OBS "refresh when scene
-   becomes active" toggle for instant updates between scene swaps.)
+   v0.1.1: rankings now come from rankings.json (not a `rank` field on
+   each streamer record). Keeps the curated standings completely
+   independent of the streamer roster's display order.
 
-   End-of-event final-reveal version: a separate page (todo) that
-   shows the same data full-screen with a 10→1 reveal animation
-   for a closing scene. Easy follow-up — same data source, just
-   different render.
+   Re-fetches every 5 minutes so the ticker reflects rank changes the
+   admin makes mid-event without the streamer needing to refresh OBS.
+   (Also fine to enable OBS "Refresh when scene becomes active" for
+   instant updates on scene swap.)
 ===================================================================== */
 (function () {
   var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
@@ -232,16 +232,14 @@
 
   var entriesEl = document.getElementById('entries');
 
-  function render(ranked, avatarBySlug) {
+  function render(ranked) {
     if (!ranked.length) {
       entriesEl.innerHTML = '<div class="empty">Rankings will appear here once the event starts</div>';
       return;
     }
     var html = ranked.map(function (s) {
-      var slug = (s.slug || '').toLowerCase();
-      var avatar = avatarBySlug[slug] || '';
-      var img = avatar
-        ? '<img src="' + avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      var img = s.avatar
+        ? '<img src="' + s.avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
         : '';
       var rankCls = s.rank >= 1 && s.rank <= 3 ? ' rank-' + s.rank : '';
       return (
@@ -265,30 +263,45 @@
 
   function refresh() {
     Promise.all([
+      fetch('/rankings.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch('/streamers.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }),
       fetch(WORKER_LIVE, { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
     ]).then(function (results) {
-      var roster = (results[0] && results[0].streamers) || [];
-      var snap = results[1];
+      var ranksFile = results[0] || {};
+      var roster = (results[1] && results[1].streamers) || [];
+      var snap = results[2];
       var chans = (snap && snap.channels) || {};
 
+      // Build lookup tables
+      var streamerBySlug = {};
+      roster.forEach(function (s) {
+        if (s && s.slug) streamerBySlug[s.slug.toLowerCase()] = s;
+      });
       var avatarBySlug = {};
       Object.keys(chans).forEach(function (k) {
         if (chans[k] && chans[k].profile_pic) avatarBySlug[k] = chans[k].profile_pic;
       });
 
-      var ranked = roster
-        .filter(function (s) {
-          var r = parseInt(s.rank, 10);
-          return Number.isFinite(r) && r >= 1;
-        })
-        .map(function (s) {
-          return { slug: s.slug, name: s.name, rank: parseInt(s.rank, 10) };
-        })
-        .sort(function (a, b) { return a.rank - b.rank; })
-        .slice(0, TOP_N);
+      // Normalize rankings.json entries — each can be {slug} or a
+      // bare string. Filter to valid slugs that exist in the roster.
+      var rawList = (ranksFile.rankings) || [];
+      var ranked = [];
+      for (var i = 0; i < rawList.length && ranked.length < TOP_N; i++) {
+        var entry = rawList[i];
+        var slug = (typeof entry === 'string') ? entry : (entry && entry.slug);
+        if (!slug) continue;
+        slug = String(slug).trim().toLowerCase();
+        if (!slug) continue;
+        var s = streamerBySlug[slug];
+        ranked.push({
+          slug: slug,
+          name: (s && s.name) || slug,
+          rank: i + 1,
+          avatar: avatarBySlug[slug] || '',
+        });
+      }
 
-      render(ranked, avatarBySlug);
+      render(ranked);
     }).catch(function (err) {
       console.warn('[rankings] refresh failed:', err);
     });

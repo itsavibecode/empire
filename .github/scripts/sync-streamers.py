@@ -17,6 +17,12 @@ REPO = os.environ.get('REPO_PATH', os.path.dirname(os.path.dirname(os.path.dirna
 INDEX = os.path.join(REPO, 'index.html')
 LLMS = os.path.join(REPO, 'llms.txt')
 SJSON = os.path.join(REPO, 'streamers.json')
+# v0.13.22 — separate rankings file. Streamer records in streamers.json
+# stay focused on identity + display order; the client's curated event
+# ranking lives independently. Position in rankings.json's array = rank
+# (first entry is #1, second is #2, etc.) so the admin just drags to
+# reorder rather than juggling rank numbers.
+RANKINGS_JSON = os.path.join(REPO, 'rankings.json')
 
 KICK_SVG = ('<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)">'
             '<rect x="4" y="2" width="4" height="20" rx="1"/>'
@@ -61,16 +67,40 @@ def is_just_added(s, today=None):
     return (today - d) <= timedelta(days=JUST_ADDED_TTL_DAYS) and d <= today
 
 
-def card_html(s, today=None):
+def load_rankings():
+    """Read rankings.json and return {slug: rank_number} mapping.
+    Position in the array = rank (first entry is #1). Missing file or
+    empty list yields an empty dict — no bubbles render."""
+    try:
+        with open(RANKINGS_JSON, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    entries = data.get('rankings') or []
+    out = {}
+    for i, e in enumerate(entries):
+        if isinstance(e, dict):
+            slug = (e.get('slug') or '').strip().lower()
+        elif isinstance(e, str):
+            slug = e.strip().lower()
+        else:
+            continue
+        if slug and slug not in out:
+            out[slug] = i + 1   # 1-based
+    return out
+
+
+def card_html(s, today=None, rank_by_slug=None):
     """Generate one streamer card. Caller is responsible for </a> separators.
 
     Renders a JUST ADDED corner ribbon when the streamer's `added_at`
     is within the last 3 days. Badge is positioned absolute over the
     top-right corner of the card via CSS (.streamer-just-added).
 
-    v0.13.21 — also renders a rank bubble when `rank` is set in
-    streamers.json. CSS handles the upper-right positioning and the
-    gold / silver / bronze tints for #1 / #2 / #3."""
+    v0.13.22 — rank bubble (#1/#2/#3 etc.) is sourced from a separate
+    rankings.json (slug → position-in-list), not from anything inside
+    streamers.json. Keeps display order / view ordering completely
+    independent of the client-curated event standings."""
     badge = ''
     if is_just_added(s, today):
         # Stamp the badge with the date so a JS check at page load can
@@ -81,21 +111,15 @@ def card_html(s, today=None):
         badge = (f'        <div class="streamer-just-added" '
                  f'data-added="{s["added_at"]}">JUST ADDED</div>\n')
 
-    # Rank bubble — render only when `rank` is set (positive int).
-    # Blank / null / 0 / non-numeric all skip rendering. We trust the
-    # admin not to set duplicate ranks, but we don't enforce it (a
-    # tie just renders two same-number bubbles which is fine for
-    # display purposes).
+    # Rank bubble — looked up from rankings.json (passed in as a
+    # slug→rank dict). Streamers not in rankings.json get no bubble.
     rank_badge = ''
-    rank_val = s.get('rank')
-    if rank_val not in (None, '', 0, '0'):
-        try:
-            n = int(rank_val)
-            if n >= 1:
-                rank_badge = (f'        <div class="streamer-rank rank-{n}" '
-                              f'aria-label="Ranked #{n}">{n}</div>\n')
-        except (TypeError, ValueError):
-            pass
+    if rank_by_slug:
+        slug = (s.get('slug') or '').strip().lower()
+        n = rank_by_slug.get(slug)
+        if n and n >= 1:
+            rank_badge = (f'        <div class="streamer-rank rank-{n}" '
+                          f'aria-label="Ranked #{n}">{n}</div>\n')
 
     return (
         f'<a class="streamer-card" href="{s["url"]}" target="_blank">\n'
@@ -179,9 +203,12 @@ def main():
     )
 
     # 2. Cards block — replace everything inside <div class="streamers-regular-grid">...</div>
-    cards_inner = card_html(streamers[0])
+    # Load the curated event rankings once so each card_html call can
+    # look up its slug in O(1) without re-parsing rankings.json.
+    rank_by_slug = load_rankings()
+    cards_inner = card_html(streamers[0], rank_by_slug=rank_by_slug)
     for s in streamers[1:]:
-        cards_inner += '</a>' + card_html(s)
+        cards_inner += '</a>' + card_html(s, rank_by_slug=rank_by_slug)
     cards_inner += '</a>'
 
     cards_pat = re.compile(
