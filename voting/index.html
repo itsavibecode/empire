@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.1.1">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -206,6 +206,33 @@
   }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+  /* Pill variants — open (green pulse) vs closed (red, no pulse). */
+  .card-title .pill-closed {
+    background: rgba(255,77,77,0.15);
+    color: var(--red);
+    border-color: rgba(255,77,77,0.4);
+  }
+  .card-title .pill-closed::before {
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: none;
+  }
+  .countdown-num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  /* Inline "(resets each poll)" hint next to anti-bot guard items. */
+  .meta-note {
+    display: inline;
+    color: var(--cream-faint);
+    font-size: 0.78em;
+    margin-left: 0.3em;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 400;
+  }
+
   /* === POLL UI === */
   .poll-question {
     font-family: 'Playfair Display', serif;
@@ -291,11 +318,37 @@
   }
   .voter-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 0.6rem;
+    /* avatar | name+source | choice | flag */
+    grid-template-columns: 34px 1fr auto auto;
+    gap: 0.65rem;
     padding: 0.55rem 0.4rem;
     border-bottom: 1px solid var(--hairline);
     align-items: center;
+  }
+  /* Kick user avatar — real version pulls from Kick's user API
+     (channel response carries user.profile_pic). For the prototype
+     these are initials in a brand-colored disc, kept in their own
+     element so swapping to <img> later is a one-liner. */
+  .voter-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2a2018, #1a1208);
+    border: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--gold-light);
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+  .voter-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
   .voter-row:last-child { border-bottom: 0; }
   .voter-name {
@@ -450,7 +503,10 @@
   <section class="card">
     <h2 class="card-title">
       Live Poll
-      <span class="pill">Open &middot; 2:47 left</span>
+      <span class="pill" id="pollPill">
+        <span id="pollStatusLabel">Open</span>
+        <span id="pollCountdownWrap"> &middot; <span class="countdown-num" id="pollCountdown">--:--</span> left</span>
+      </span>
     </h2>
     <p class="poll-question">Which group throws tonight's party?</p>
     <div class="poll-options" id="pollOptions" data-poll-id="demo-1">
@@ -498,42 +554,55 @@
         Live tail of incoming votes. Mods can flag/invalidate from here.
       </p>
       <div class="voter-log" id="voterLog">
+        <!-- Each voter row: avatar | name+source | choice | flag.
+             The real version fills .voter-avatar with an <img> from
+             Kick's user profile (cached via empire-worker). For the
+             prototype these are initials so the layout intent is
+             clear without external image loads. -->
         <div class="voter-row">
+          <div class="voter-avatar">CF</div>
           <div class="voter-name">cobbruvs_fan22<span class="source">via shangel chat</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar">DT</div>
           <div class="voter-name">DTBforever<span class="source">via cobbruvs chat</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar">U8</div>
           <div class="voter-name">user_8821<span class="source">via riddaw chat</span></div>
           <div class="voter-choice">Mixtapes</div>
           <div class="voter-flag flag">new acct</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar">E4</div>
           <div class="voter-name">empire_4lyfe<span class="source">via nicklee chat</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">follower</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">B9</div>
           <div class="voter-name">bot_acct_91<span class="source">via shangel chat</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">3 IPs</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar">LP</div>
           <div class="voter-name">layla_pres<span class="source">via dtanmanb chat</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">TX</div>
           <div class="voter-name">throwaway_xx<span class="source">via cobbruvs chat</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">acct &lt; 2h</div>
         </div>
         <div class="voter-row">
+          <div class="voter-avatar">EV</div>
           <div class="voter-name">empirexvibes<span class="source">via shangel chat</span></div>
           <div class="voter-choice">Kozy</div>
           <div class="voter-flag ok">verified</div>
@@ -606,18 +675,23 @@
         </div>
 
         <div>
-          <h3 style="font-family: 'Oswald', sans-serif; font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin: 0 0 0.7rem;">
+          <h3 style="font-family: 'Oswald', sans-serif; font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin: 0 0 0.5rem;">
             Anti-bot guards
           </h3>
+          <p style="margin: 0 0 0.7rem; font-size: 0.8rem; color: var(--cream-dim); line-height: 1.5;">
+            All per-vote limits below are <strong style="color:var(--gold)">scoped to a single poll</strong>.
+            A new poll starts every counter fresh — voting in one poll never blocks anyone from voting in
+            the next, even from the same Kick account or IP.
+          </p>
           <ul class="checklist">
             <li class="done">Require Kick login (no anonymous votes)</li>
             <li class="done">Reject accounts &lt; 24h old</li>
             <li class="done">Require verified email</li>
-            <li class="done">1 vote per Kick username per poll</li>
-            <li class="done">1 vote per IP per poll (proxy ranges blacklisted)</li>
-            <li>Require following the channel (toggle)</li>
+            <li class="done">1 vote per Kick username <span class="meta-note">(this poll only)</span></li>
+            <li class="done">1 vote per IP <span class="meta-note">(this poll only · proxy ranges blacklisted)</span></li>
+            <li>Require following the channel (toggle, this poll only)</li>
             <li>Require N minutes of watch time (toggle)</li>
-            <li>Cross-poll voter-pattern detection (background job)</li>
+            <li>Cross-poll voter-pattern detection (background job, all polls)</li>
           </ul>
           <p style="margin-top: 0.8rem; font-size: 0.78rem; color: var(--cream-faint); line-height: 1.5;">
             Heuristics run server-side per vote and stamp the verified / new&nbsp;acct / suspect flags shown
@@ -635,7 +709,7 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.1.0 &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.1.1 &middot; not linked from the public site</div>
 </footer>
 
 <script>
@@ -691,8 +765,10 @@
 
   /* --- Mock vote casting on the poll options --- */
   var options = document.querySelectorAll('#pollOptions .poll-option');
+  var pollClosed = false;
   options.forEach(function (opt) {
     opt.addEventListener('click', function () {
+      if (pollClosed) return;
       if (!loggedIn) {
         // Real version: prompt sign-in modal
         status.style.color = 'var(--red)';
@@ -707,6 +783,49 @@
       opt.classList.add('selected');
     });
   });
+
+  /* --- Live countdown until the poll closes ---
+     The real version reads the poll's ends_at from Firestore (set
+     when the mod creates the poll, or pushed by "extend by 1 min"
+     mod actions). For the prototype we mock a 5-minute window
+     starting at page load so the timer ticks visibly. */
+  var pollEnds = Date.now() + (5 * 60 * 1000);
+  var pollPill = document.getElementById('pollPill');
+  var pollStatusLabel = document.getElementById('pollStatusLabel');
+  var pollCountdownWrap = document.getElementById('pollCountdownWrap');
+  var pollCountdown = document.getElementById('pollCountdown');
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtCountdown(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return h > 0
+      ? h + ':' + pad2(m) + ':' + pad2(s)
+      : m + ':' + pad2(s);
+  }
+
+  var countdownTimer = null;
+  function tick() {
+    var remaining = pollEnds - Date.now();
+    if (remaining <= 0) {
+      pollClosed = true;
+      pollPill.classList.add('pill-closed');
+      pollStatusLabel.textContent = 'Closed';
+      pollCountdownWrap.textContent = '';
+      // Disable vote interactions on the options (visual cue too)
+      options.forEach(function (o) {
+        o.style.pointerEvents = 'none';
+        o.style.opacity = '0.65';
+      });
+      if (countdownTimer) clearInterval(countdownTimer);
+      return;
+    }
+    pollCountdown.textContent = fmtCountdown(remaining);
+  }
+  tick();
+  countdownTimer = setInterval(tick, 1000);
 })();
 </script>
 </body>
