@@ -13,7 +13,7 @@
      (assuming "Refresh browser when scene becomes active" is on). -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.5">
+<meta name="version" content="0.1.6">
 <title>Empire X — Final Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,7 +51,7 @@
     position: relative;
     width: 100vw;
     height: 100vh;
-    padding: 4vh 4vw;
+    padding: 2.5vh 4vw;
     display: flex;
     flex-direction: column;
     background:
@@ -63,9 +63,9 @@
   /* === HEADER === */
   .header {
     text-align: center;
-    margin-bottom: 1.5vh;
+    margin-bottom: 1vh;
     opacity: 0;
-    animation: headerIn 1.2s ease 0.2s forwards;
+    animation: headerIn 0.7s ease 0.1s forwards;
   }
   @keyframes headerIn {
     from { opacity: 0; transform: translateY(-12px); }
@@ -73,7 +73,7 @@
   }
   .header-eyebrow {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
+    font-size: 0.9rem;
     letter-spacing: 0.55em;
     color: var(--gold);
     text-shadow: 0 2px 6px rgba(0,0,0,0.8);
@@ -81,8 +81,8 @@
   .header-title {
     font-family: 'Playfair Display', serif;
     font-weight: 900;
-    font-size: clamp(2.4rem, 5vw, 4rem);
-    margin: 0.4rem 0 0;
+    font-size: clamp(2rem, 3.8vw, 3.2rem);
+    margin: 0.3rem 0 0;
     background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -92,28 +92,24 @@
   }
 
   /* === LIST ===
-     v0.1.4 — rows now scroll up from below into their final
-     positions instead of stacking statically. The whole list starts
-     way below the visible area (translateY ~60vh) and the LIST
-     itself animates upward to its rest position over ~14 seconds.
-     Each individual row STILL gets a staggered fade-in + scale
-     animation tied to its rank (computed at runtime via
-     --reveal-delay) so the dramatic countdown order stays intact —
-     #10 reveals first as it scrolls into view from below, #1 last
-     when the list comes to rest. Slimmer row sizing (-rank/-avatar
-     down to 64px) so all 10 fit on a 1080p OBS canvas with room
-     for the header and footer. */
+     v0.1.6 — tightened sizing so all 10 rows fit comfortably on a
+     1080p OBS canvas with header/footer chrome. Rank discs 48px,
+     avatars 52px, slimmer paddings/gaps. Scroll-up animation kept
+     but shortened to 8.5s (was 14s) with a 0.3s start delay (was
+     0.8s) so the first row reveals at ~0.6s instead of ~2.4s and
+     the closing scene wraps in under 10s total. The dramatic
+     10→1 countdown is preserved via staggered per-row reveals. */
   .list {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.75vh;
+    gap: 0.5vh;
     max-width: 1100px;
     margin: 0 auto;
     width: 100%;
     /* Whole list slides up over the reveal phase. */
-    transform: translateY(60vh);
-    animation: listScrollUp 14s cubic-bezier(0.32, 0.04, 0.34, 1) 0.8s forwards;
+    transform: translateY(45vh);
+    animation: listScrollUp 8.5s cubic-bezier(0.32, 0.04, 0.34, 1) 0.3s forwards;
   }
   @keyframes listScrollUp {
     to { transform: translateY(0); }
@@ -121,16 +117,16 @@
 
   .row {
     display: grid;
-    grid-template-columns: 72px 64px 1fr auto;
-    gap: 1.1rem;
+    grid-template-columns: 58px 52px 1fr auto;
+    gap: 0.85rem;
     align-items: center;
-    padding: 0.55vh 1.1rem;
+    padding: 0.35vh 0.9rem;
     background: rgba(20,20,20,0.55);
     border: 1px solid var(--hairline);
-    border-radius: 10px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    border-radius: 9px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.45);
     opacity: 0;
-    animation: rowReveal 0.9s cubic-bezier(0.18, 0.85, 0.25, 1) forwards;
+    animation: rowReveal 0.7s cubic-bezier(0.18, 0.85, 0.25, 1) forwards;
     animation-delay: var(--reveal-delay, 0s);
   }
   @keyframes rowReveal {
@@ -143,27 +139,27 @@
      number drawn in the same gold as the ring. #1/#2/#3 override
      this with solid gradient fills below. */
   .row-rank {
-    width: 60px; height: 60px;
+    width: 48px; height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 1.7rem;
+    font-size: 1.35rem;
     color: var(--gold);
     background: transparent;
-    border: 2.5px solid var(--gold);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    border: 2px solid var(--gold);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
 
   .row-avatar {
-    width: 64px; height: 64px;
+    width: 52px; height: 52px;
     border-radius: 50%;
     overflow: hidden;
     border: 2px solid var(--hairline);
     background: linear-gradient(135deg, #2a2018, #1a1208);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
   .row-avatar img {
     width: 100%; height: 100%;
@@ -173,14 +169,14 @@
   .row-name {
     font-family: 'DM Sans', sans-serif;
     font-weight: 700;
-    font-size: 1.45rem;
+    font-size: 1.2rem;
     color: #fff;
     text-shadow: 0 2px 6px rgba(0,0,0,0.8);
     letter-spacing: -0.005em;
   }
   .row-meta {
     font-family: 'Oswald', sans-serif;
-    font-size: 0.78rem;
+    font-size: 0.7rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--cream-dim);
@@ -188,12 +184,13 @@
   }
 
   /* Top-3 styling: solid gradient fills (override the gold-ring
-     default), slightly bigger rank disc + glow. Each one re-sets
-     background, border, AND color so the ring style doesn't leak
-     through. */
+     default). Each one re-sets background, border, AND color so
+     the ring style doesn't leak through. #1 gets a small size
+     bump to land the moment; #2/#3 stay normal-sized so all 10
+     rows fit on the canvas. */
   .row-rank.rank-1 {
-    width: 76px; height: 76px;
-    font-size: 2.15rem;
+    width: 56px; height: 56px;
+    font-size: 1.55rem;
     background: linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
     border: 2px solid rgba(255,255,255,0.5);
     color: #1a0e02;
@@ -219,17 +216,17 @@
     text-shadow: 0 1px 0 rgba(255,255,255,0.22);
     box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(185,123,77,0.5), 0 0 18px rgba(185,123,77,0.4);
   }
-  /* #1 row keeps a slightly larger frame to land the moment, but
-     trimmed enough that 10 rows still fit. */
+  /* #1 row gets a soft gold wash + glow so it still pops, but
+     no extra padding bump so the row stays within the height
+     budget for all 10 to fit. */
   .row.is-leader {
-    padding: 0.9vh 1.1rem;
-    background: linear-gradient(90deg, rgba(212,168,67,0.18) 0%, rgba(212,168,67,0.05) 100%);
+    background: linear-gradient(90deg, rgba(212,168,67,0.22) 0%, rgba(212,168,67,0.06) 100%);
     border-color: rgba(212,168,67,0.45);
-    box-shadow: 0 6px 22px rgba(0,0,0,0.55), 0 0 22px rgba(212,168,67,0.25);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.55), 0 0 22px rgba(212,168,67,0.25);
   }
-  .row.is-leader .row-name { font-size: 1.7rem; }
-  .row.is-leader .row-avatar { width: 76px; height: 76px; }
-  .row.is-leader { grid-template-columns: 88px 76px 1fr auto; }
+  .row.is-leader .row-name { font-size: 1.4rem; }
+  .row.is-leader .row-avatar { width: 58px; height: 58px; }
+  .row.is-leader { grid-template-columns: 66px 58px 1fr auto; }
 
   /* === EMPTY STATE === */
   .empty {
@@ -285,13 +282,14 @@
 (function () {
   var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
   var TOP_N = 10;
-  // v0.1.4 — timings now align with the 14s list scroll-up animation
-  // (defined in CSS). Each row's reveal triggers roughly when its
-  // position scrolls into the visible area, so the dramatic countdown
-  // happens AS the list rises into view rather than after.
-  var BASE_DELAY_S = 1.6;   // when #10 (bottom of list) crosses into view
-  var STEP_S = 1.25;        // gap between successive row reveals
-  var FINALE_PAUSE_S = 1.0; // extra dwell before #1 lands at the top
+  // v0.1.6 — much snappier reveal. Was 14s scroll + 13.85s for the
+  // last row = ~15s of dead-ish time before #1 lands. Now ~8s total
+  // so the closing scene wraps in well under 10s. Row #10 first
+  // appears at ~0.6s instead of ~2.4s, eliminating the "did it
+  // freeze?" feeling at the start of the scene.
+  var BASE_DELAY_S = 0.6;   // when #10 (bottom of list) crosses into view
+  var STEP_S = 0.7;         // gap between successive row reveals
+  var FINALE_PAUSE_S = 0.5; // extra dwell before #1 lands at the top
 
   var listEl = document.getElementById('list');
 
