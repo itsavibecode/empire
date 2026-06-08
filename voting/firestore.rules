@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Empire X voting — Firestore security rules.
+//
+// Auth model: voters are NOT signed in to Firebase Auth. They auth
+// via Kick OAuth → empire-worker issues a session JWT they send via
+// Authorization: Bearer. All WRITES go through the worker, which
+// talks to Firestore as a service account and bypasses these rules.
+//
+// So these rules are entirely about controlling what the PUBLIC web
+// client can READ. They never allow client writes — that's the
+// worker's job exclusively.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The pointer to the currently active poll. Public read so any
+    // visitor's /voting/ page can find out what to render. Write
+    // blocked — only the worker (via SA) opens/closes polls.
+    match /polls/current {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Each poll's metadata + denormalized tally. Public read so the
+    // OBS overlay can subscribe and live-update during the broadcast.
+    // Vote subcollection underneath is also publicly readable so the
+    // "live voters" ticker can subscribe to recent votes.
+    match /polls/{pollId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /votes/{kickUserId} {
+        // Public read enables the live-voters ticker. Each vote doc
+        // contains the voter's Kick username + profile_pic (which is
+        // public info anyway, derived from the public Kick API).
+        allow read: if true;
+        // No client writes ever. The worker writes via SA, and uses
+        // createDocument-with-documentId so duplicate vote attempts
+        // fail atomically (the doc id IS the kick user_id).
+        allow write: if false;
+      }
+    }
+
+    // Admin allowlist. Public read so the client can pre-check
+    // "should I show the admin panel link?" without a worker round
+    // trip — but the worker re-validates on every privileged action,
+    // so a hostile client editing this doesn't bypass anything.
+    match /admins/{username} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Default-deny everything else. Anything new added later (e.g.
+    // an audit log) is locked down by default until the schema
+    // explicitly allows it above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
