@@ -14,7 +14,7 @@
      so it composites cleanly. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.0">
+<meta name="version" content="0.1.1">
 <title>Empire X Voting — Live Voters</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,97 +202,102 @@
 
 <script>
 /* =====================================================================
-   Live voters ticker — prototype.
-   Real version subscribes to a Firestore query that orders the
-   votes subcollection by cast_at desc, limit N. New documents push
-   into the snapshot, we render them at the top of the list and
-   age out the oldest row.
+   Live voters ticker — prototype v0.1.1.
 
-   For the prototype we cycle through a fake feed every ~2-3 seconds
-   so the entry/exit animations are visible.
+   Now pulls REAL Kick avatars (and uses real Empire X streamer
+   slugs as the mock voter pool) by hitting empire-worker's /live
+   endpoint, which carries profile_pic per channel as of worker
+   v0.3.4. Each voter row shows the streamer's actual Kick avatar.
 
-   Avatars: real Kick avatars come back on the OAuth response when
-   the user signs in to vote. The vote write stores avatarUrl
-   alongside the vote, so this overlay just renders <img src> per
-   row. For the prototype we mock with ui-avatars.com (free,
-   deterministic, CORS-enabled SVG generator) so the design intent
-   reads correctly without external image deps that might fail.
+   Why this matters even though the production flow is different:
+   when a real viewer signs in with Kick OAuth to vote, the OAuth
+   response carries their profile_pic — we capture it at vote time
+   and store it alongside the vote. So in production this overlay
+   reads avatar URLs straight off the Firestore vote document. The
+   prototype just sources them from a different place; the render
+   path is identical.
 ===================================================================== */
 (function () {
-  /* Mock voter pool — username + choice. ui-avatars.com renders
-     circular avatars with initials on the gold brand color, which
-     looks close enough to real Kick avatars to convey the design. */
-  function avatarUrl(name) {
-    return 'https://ui-avatars.com/api/?bold=true&size=128&format=svg'
-         + '&background=D4A843&color=0a0a0a'
-         + '&name=' + encodeURIComponent(name);
-  }
-  var POOL = [
-    { name: 'cobbruvs_fan22',  via: 'shangel stream',   choice: 'Sky9 House' },
-    { name: 'DTBforever',       via: 'cobbruvs stream',  choice: 'DTB House' },
-    { name: 'empire_4lyfe',     via: 'nicklee stream',   choice: 'Sky9 House' },
-    { name: 'layla_pres',       via: 'dtanmanb stream',  choice: 'DTB House' },
-    { name: 'empirexvibes',     via: 'shangel stream',   choice: 'Kozy House' },
-    { name: 'kozysadie',        via: 'kozy stream',      choice: 'Kozy House' },
-    { name: 'mixtape_marquise', via: 'mixtapes stream',  choice: 'Mixtapes House' },
-    { name: 'sky9foreva',       via: 'cobbruvs stream',  choice: 'Sky9 House' },
-    { name: 'briewfan',         via: 'briewylde stream', choice: 'Mixtapes House' },
-    { name: 'streamerstan',     via: 'nicklee stream',   choice: 'DTB House' },
-    { name: 'humza_hype',       via: 'shangel stream',   choice: 'Sky9 House' },
-    { name: 'AdrianahFan22',    via: 'adrianahlee stream', choice: 'DTB House' },
-  ];
+  var WORKER_LIVE_URL = 'https://empire-worker.sevendwarfs.workers.dev/live';
+
+  // Choice pool — used to randomly pick a vote choice per fake voter.
+  var CHOICES = ['Sky9 House', 'DTB House', 'Mixtapes House', 'Kozy House'];
 
   var listEl  = document.getElementById('voterList');
   var totalEl = document.getElementById('totalVotes');
   var MAX_ROWS = 6;
   var total = 746;
 
-  function buildRow(v) {
+  // Built once we fetch the snapshot. Each entry: { slug, avatar }.
+  var POOL = [];
+
+  function pickChoice() {
+    return CHOICES[Math.floor(Math.random() * CHOICES.length)];
+  }
+  function pickVoter() {
+    return POOL[Math.floor(Math.random() * POOL.length)];
+  }
+
+  function buildRow(voter, choice) {
     var row = document.createElement('li');
     row.className = 'voter-row';
     row.innerHTML =
       '<div class="voter-avatar">' +
-        '<img src="' + avatarUrl(v.name) + '" alt="" loading="lazy">' +
+        '<img src="' + voter.avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
       '</div>' +
-      '<div class="voter-name">' + v.name +
-        '<small>via ' + v.via + '</small>' +
-      '</div>' +
-      '<div class="voter-choice">' + v.choice + '</div>';
+      '<div class="voter-name">' + voter.slug + '</div>' +
+      '<div class="voter-choice">' + choice + '</div>';
     return row;
   }
 
-  /* Initial paint — 5 rows so the ticker looks full on first frame. */
-  for (var i = 0; i < 5; i++) {
-    var v = POOL[Math.floor(Math.random() * POOL.length)];
-    listEl.appendChild(buildRow(v));
-  }
-
   function addVote() {
-    var v = POOL[Math.floor(Math.random() * POOL.length)];
-    var row = buildRow(v);
+    if (!POOL.length) return;
+    var v = pickVoter();
+    var c = pickChoice();
+    var row = buildRow(v, c);
     listEl.insertBefore(row, listEl.firstChild);
     total += 1;
     totalEl.textContent = total;
-    /* Trim the tail when over MAX_ROWS. Add a fadeOut class so the
-       exit animation runs, then remove. */
+    /* Trim the tail when over MAX_ROWS. */
     while (listEl.children.length > MAX_ROWS) {
       var oldest = listEl.lastElementChild;
       oldest.classList.add('fadeOut');
       (function (el) {
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
       })(oldest);
-      /* Stop after marking one so subsequent ticks pace the trim. */
       break;
     }
   }
 
-  /* Vary the interval between 1.6 and 3.4 seconds so it feels
-     organic rather than metronome-y. */
   function schedule() {
     var ms = 1600 + Math.random() * 1800;
     setTimeout(function () { addVote(); schedule(); }, ms);
   }
-  schedule();
+
+  /* Pull the live snapshot, build the voter pool from streamers that
+     have an avatar set. Then paint the initial 5 rows + start the
+     ticker. If the fetch fails we leave the list empty rather than
+     showing fake placeholder avatars — the design intent (real
+     Kick avatars) is the whole point. */
+  fetch(WORKER_LIVE_URL, { cache: 'no-cache' })
+    .then(function (r) { return r.json(); })
+    .then(function (snap) {
+      var chans = (snap && snap.channels) || {};
+      POOL = Object.keys(chans)
+        .filter(function (slug) { return chans[slug] && chans[slug].profile_pic; })
+        .map(function (slug) {
+          return { slug: slug, avatar: chans[slug].profile_pic };
+        });
+      if (!POOL.length) return;
+      for (var i = 0; i < 5; i++) {
+        var v = pickVoter();
+        listEl.appendChild(buildRow(v, pickChoice()));
+      }
+      schedule();
+    })
+    .catch(function (err) {
+      console.warn('[ticker] /live fetch failed:', err);
+    });
 })();
 </script>
 </body>

@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.3">
+<meta name="version" content="0.1.4">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -551,59 +551,60 @@
         Live tail of incoming votes. Mods can flag/invalidate from here.
       </p>
       <div class="voter-log" id="voterLog">
-        <!-- Each voter row: avatar | name+source | choice | flag.
-             v0.1.3 — prototype now uses ui-avatars.com so the
-             discs look like real circular avatars instead of bare
-             initials. Real version replaces these <img> tags with
-             the user's actual Kick profile-pic URL, captured at
-             vote-time from the Kick OAuth response and stored
-             alongside the vote in Firestore. Suspect rows still
-             get the red ring via .voter-avatar.suspect. -->
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=cobbruvs_fan22&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
-          <div class="voter-name">cobbruvs_fan22<span class="source">via shangel stream</span></div>
+        <!-- v0.1.4 — voter rows now show REAL Kick avatars. JS at the
+             bottom of the page fetches empire-worker's /live snapshot
+             (which carries profile_pic per channel as of worker
+             v0.3.4) and fills the <img> for each row, using the
+             data-slug attribute to look up the matching avatar.
+             Real version's render path is identical — only the
+             source of the avatar URL changes (Firestore vote doc
+             instead of the streamer snapshot). The .voter-avatar.suspect
+             class still adds a red ring to flagged voters. -->
+        <div class="voter-row" data-slug="cobbruvs">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">cobbruvs<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">verified</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=DTBforever&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
-          <div class="voter-name">DTBforever<span class="source">via cobbruvs stream</span></div>
+        <div class="voter-row" data-slug="markynextdoor">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">markynextdoor<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=user_8821&bold=true&size=128&format=svg&background=8B6620&color=F5F1EB" alt=""></div>
-          <div class="voter-name">user_8821<span class="source">via riddaw stream</span></div>
+        <div class="voter-row" data-slug="riddaw">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">riddaw<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Mixtapes</div>
           <div class="voter-flag flag">new acct</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=empire_4lyfe&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
-          <div class="voter-name">empire_4lyfe<span class="source">via nicklee stream</span></div>
+        <div class="voter-row" data-slug="nicklee">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">nicklee<span class="source">via dtanmanb stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">follower</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar suspect"><img src="https://ui-avatars.com/api/?name=bot_acct_91&bold=true&size=128&format=svg&background=4a1a1a&color=FF4D4D" alt=""></div>
-          <div class="voter-name">bot_acct_91<span class="source">via shangel stream</span></div>
+        <div class="voter-row" data-slug="kennyhoopz">
+          <div class="voter-avatar suspect"></div>
+          <div class="voter-name">kennyhoopz<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">3 IPs</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=layla_pres&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
-          <div class="voter-name">layla_pres<span class="source">via dtanmanb stream</span></div>
+        <div class="voter-row" data-slug="dtanmanb">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">dtanmanb<span class="source">via shangel stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar suspect"><img src="https://ui-avatars.com/api/?name=throwaway_xx&bold=true&size=128&format=svg&background=4a1a1a&color=FF4D4D" alt=""></div>
-          <div class="voter-name">throwaway_xx<span class="source">via cobbruvs stream</span></div>
+        <div class="voter-row" data-slug="briewylde">
+          <div class="voter-avatar suspect"></div>
+          <div class="voter-name">briewylde<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">acct &lt; 2h</div>
         </div>
-        <div class="voter-row">
-          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=empirexvibes&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
-          <div class="voter-name">empirexvibes<span class="source">via shangel stream</span></div>
+        <div class="voter-row" data-slug="shangel">
+          <div class="voter-avatar"></div>
+          <div class="voter-name">shangel<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Kozy</div>
           <div class="voter-flag ok">verified</div>
         </div>
@@ -786,7 +787,7 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.1.3 &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.1.4 &middot; not linked from the public site</div>
 </footer>
 
 <script>
@@ -903,6 +904,39 @@
   }
   tick();
   countdownTimer = setInterval(tick, 1000);
+
+  /* --- Real Kick avatars for voter rows ---
+     The prototype's voter rows carry data-slug attributes pointing
+     at real Empire X streamers (for the mock list). On load we
+     hit empire-worker's /live snapshot to get each one's actual
+     profile_pic URL, then fill the matching <div class="voter-avatar">
+     with an <img>. Real version's render path is identical -- the
+     <img src> would come from the vote's Firestore document
+     (captured at OAuth sign-in time). */
+  (function () {
+    var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
+    var rows = document.querySelectorAll('.voter-row[data-slug]');
+    if (!rows.length) return;
+    fetch(WORKER_LIVE, { cache: 'no-cache' })
+      .then(function (r) { return r.json(); })
+      .then(function (snap) {
+        var chans = (snap && snap.channels) || {};
+        rows.forEach(function (row) {
+          var slug = row.getAttribute('data-slug');
+          var ch = chans[slug];
+          if (!ch || !ch.profile_pic) return;
+          var avatar = row.querySelector('.voter-avatar');
+          if (!avatar) return;
+          var img = document.createElement('img');
+          img.src = ch.profile_pic;
+          img.alt = '';
+          img.loading = 'lazy';
+          img.referrerPolicy = 'no-referrer';
+          avatar.appendChild(img);
+        });
+      })
+      .catch(function (err) { console.warn('[voting] /live fetch failed:', err); });
+  })();
 
   /* --- Copy OBS overlay URL (handles all copy buttons in OBS card) --- */
   document.querySelectorAll('.sp-overlay-copy').forEach(function (btn) {
