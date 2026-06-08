@@ -67,26 +67,49 @@ def is_just_added(s, today=None):
     return (today - d) <= timedelta(days=JUST_ADDED_TTL_DAYS) and d <= today
 
 
-def load_rankings():
-    """Read rankings.json and return {slug: rank_number} mapping.
-    Position in the array = rank (first entry is #1). Missing file or
-    empty list yields an empty dict — no bubbles render."""
+def load_rankings(streamers=None):
+    """Build {slug: rank_number} mapping from two sources, merged:
+
+      1. rankings.json (drag-to-reorder collection in Decap). Position
+         in the `rankings` array determines rank (first = #1).
+      2. Per-streamer `rank` field on each entry in streamers.json
+         (number widget in Decap's Featured Kick Streamers). Wins
+         over rankings.json when both are set for the same slug.
+
+    Either source can be absent / empty. With nothing set, returns
+    {} and no bubbles render."""
+    out = {}
+
+    # Source A — rankings.json (lower priority)
     try:
         with open(RANKINGS_JSON, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        entries = data.get('rankings') or []
+        for i, e in enumerate(entries):
+            if isinstance(e, dict):
+                slug = (e.get('slug') or '').strip().lower()
+            elif isinstance(e, str):
+                slug = e.strip().lower()
+            else:
+                continue
+            if slug and slug not in out:
+                out[slug] = i + 1
     except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-    entries = data.get('rankings') or []
-    out = {}
-    for i, e in enumerate(entries):
-        if isinstance(e, dict):
-            slug = (e.get('slug') or '').strip().lower()
-        elif isinstance(e, str):
-            slug = e.strip().lower()
-        else:
-            continue
-        if slug and slug not in out:
-            out[slug] = i + 1   # 1-based
+        pass
+
+    # Source B — per-streamer `rank` field on streamers.json entries.
+    # Overrides anything from rankings.json for the same slug.
+    if streamers:
+        for s in streamers:
+            try:
+                n = int(s.get('rank') or 0)
+            except (TypeError, ValueError):
+                n = 0
+            if n >= 1:
+                slug = (s.get('slug') or '').strip().lower()
+                if slug:
+                    out[slug] = n
+
     return out
 
 
@@ -204,8 +227,10 @@ def main():
 
     # 2. Cards block — replace everything inside <div class="streamers-regular-grid">...</div>
     # Load the curated event rankings once so each card_html call can
-    # look up its slug in O(1) without re-parsing rankings.json.
-    rank_by_slug = load_rankings()
+    # look up its slug in O(1) without re-parsing rankings.json. The
+    # merge looks at BOTH rankings.json AND the per-streamer `rank`
+    # field on each streamer (per-streamer wins).
+    rank_by_slug = load_rankings(streamers)
     cards_inner = card_html(streamers[0], rank_by_slug=rank_by_slug)
     for s in streamers[1:]:
         cards_inner += '</a>' + card_html(s, rank_by_slug=rank_by_slug)

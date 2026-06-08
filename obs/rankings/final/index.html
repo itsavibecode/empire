@@ -13,7 +13,7 @@
      (assuming "Refresh browser when scene becomes active" is on). -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.1">
+<meta name="version" content="0.1.2">
 <title>Empire X — Final Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -348,22 +348,36 @@
       if (chans[k] && chans[k].profile_pic) avatarBySlug[k] = chans[k].profile_pic;
     });
 
+    // Merge rank sources: rankings.json position (drag-to-reorder)
+    // + per-streamer `rank` field. Per-streamer wins on conflict.
+    var rankBySlug = {};
     var rawList = (ranksFile.rankings) || [];
-    var ranked = [];
-    for (var i = 0; i < rawList.length && ranked.length < TOP_N; i++) {
-      var entry = rawList[i];
+    rawList.forEach(function (entry, i) {
       var slug = (typeof entry === 'string') ? entry : (entry && entry.slug);
-      if (!slug) continue;
+      if (!slug) return;
       slug = String(slug).trim().toLowerCase();
-      if (!slug) continue;
-      var s = streamerBySlug[slug];
-      ranked.push({
-        slug: slug,
-        name: (s && s.name) || slug,
-        rank: i + 1,
-        avatar: avatarBySlug[slug] || '',
-      });
-    }
+      if (slug) rankBySlug[slug] = i + 1;
+    });
+    roster.forEach(function (s) {
+      var n = parseInt(s && s.rank, 10);
+      if (Number.isFinite(n) && n >= 1 && s.slug) {
+        rankBySlug[s.slug.toLowerCase()] = n;
+      }
+    });
+
+    var ranked = Object.keys(rankBySlug)
+      .map(function (slug) {
+        var s = streamerBySlug[slug];
+        return {
+          slug: slug,
+          name: (s && s.name) || slug,
+          rank: rankBySlug[slug],
+          avatar: avatarBySlug[slug] || '',
+        };
+      })
+      .sort(function (a, b) { return a.rank - b.rank; })
+      .slice(0, TOP_N);
+
     render(ranked);
   }).catch(function (err) {
     console.warn('[final-rankings] fetch failed:', err);

@@ -100,10 +100,14 @@ collections:
                 media_folder: '/avatars'
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
-              # NOTE: event ranking is NOT a per-streamer field. It
-              # lives in its own collection (see "Event Rankings"
-              # below) so the curated standings stay decoupled from
-              # the streamer roster's display order.
+              - name: rank
+                label: 'Event ranking (optional)'
+                widget: number
+                required: false
+                value_type: int
+                min: 1
+                max: 99
+                hint: 'Optional event-standing number. Leave blank to hide. When set, a small numbered bubble appears in the upper-right of this streamer''s card AND they appear on the /obs/rankings/ overlay. #1 gets brighter gold + pulse, #2 silver, #3 bronze, #4-10 standard gold. Two ways to manage ranks -- this per-streamer field, or the "Event Rankings" collection (drag-to-reorder). If both are set for the same streamer, the value here wins.'
               # NOTE: `added_at` is NOT exposed here. The sync workflow
               # auto-fills it with today's date when a brand-new
               # streamer entry has none, then writes streamers.json
@@ -748,22 +752,21 @@ collections:
   - name: event_rankings
     label: Event Rankings
     description: |
-      The curated event ranking — your call as the organizer, based on
-      poll results / standings / whatever you want to surface. This is
-      INDEPENDENT of the streamer roster's display order: changing the
-      ranking here doesn't reorder anyone in the Featured Kick Streamers
-      list, and vice versa.
+      Optional drag-to-reorder workflow for managing the event standings.
+      Two ways to set ranks — pick whichever feels easier:
 
-      Drag entries to reorder — the first entry is #1, the second is #2,
-      and so on. Top 10 are shown in the rank bubbles on streamer cards
-      and on the /obs/rankings/ overlay. Pick streamers from the
-      dropdown (it pulls from your existing Featured Kick Streamers
-      list).
+        1. Per-streamer "Event ranking" field inside Featured Kick
+           Streamers (most direct: edit one streamer at a time).
+        2. This collection — drag streamer entries into rank order
+           (fastest when reshuffling a lot of ranks at once based on
+           poll results). First entry is #1, second is #2, etc.
+
+      If a streamer has a rank set in BOTH places, the per-streamer
+      field in Featured Kick Streamers wins.
 
       Saving here triggers the GitHub Action that regenerates the rank
-      bubbles in index.html (~30 seconds after save). The /obs/rankings/
-      overlay re-reads the JSON every 5 minutes (and on scene switch),
-      so changes appear in OBS without any code action.
+      bubbles in index.html (~30 seconds). The /obs/rankings/ overlay
+      re-reads every 5 minutes (and on scene switch in OBS).
     files:
       - file: rankings.json
         label: Event rankings
