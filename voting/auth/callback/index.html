@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Empire X voting — Kick OAuth callback landing page.
+     Kick redirects voters here after they authorize the bookhockeys
+     app. This page validates the OAuth state matches what we stored
+     before redirecting, then POSTs the code + PKCE verifier to the
+     worker's /voting/auth/exchange endpoint. On success, stores the
+     returned session JWT in localStorage and bounces back to wherever
+     the user came from (defaults to /voting/).
+
+     Hidden from search engines (noindex, nofollow). -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Signing in&hellip; &mdash; Empire X Voting</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Oswald:wght@400;600&family=DM+Sans:wght@500;600&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Oswald:wght@400;600&family=DM+Sans:wght@500;600&display=swap"></noscript>
+<style>
+  :root {
+    --gold:      #D4A843;
+    --gold-light:#F0D68A;
+    --cream:     #F5F1EB;
+    --cream-dim: rgba(245,241,235,0.7);
+    --ink:       #0A0A0A;
+    --red:       #E45A4A;
+    --hairline:  rgba(245,241,235,0.12);
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 60% 60% at 50% 0%, rgba(212,168,67,0.12) 0%, transparent 70%),
+      linear-gradient(180deg, #0a0a0a 0%, #15110a 100%);
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .card {
+    max-width: 480px;
+    width: 100%;
+    padding: 2.5rem 2rem;
+    background: rgba(20,20,20,0.6);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    text-align: center;
+  }
+  .crest {
+    width: 56px; height: 56px;
+    display: block;
+    margin: 0 auto 1.25rem;
+    opacity: 0.92;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin: 0 0 0.6rem;
+    color: var(--cream);
+    letter-spacing: -0.005em;
+  }
+  .detail {
+    color: var(--cream-dim);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin: 0 0 1.5rem;
+    word-break: break-word;
+  }
+  /* Loading spinner — a thin gold ring. Only visible during the
+     normal "exchanging code" path; hidden on error so the error
+     message isn't competing with motion. */
+  .spinner {
+    width: 38px; height: 38px;
+    margin: 0 auto 1rem;
+    border: 3px solid rgba(212,168,67,0.18);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .actions {
+    display: none;
+    margin-top: 1.2rem;
+  }
+  .actions.show { display: block; }
+  .btn {
+    display: inline-block;
+    padding: 0.7rem 1.4rem;
+    background: var(--gold);
+    color: var(--ink);
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .error h1 { color: var(--red); }
+  .error .spinner { display: none; }
+</style>
+</head>
+<body>
+<main class="card" id="card">
+  <img class="crest" src="/logo.png" alt="Empire X">
+  <div class="spinner" id="spinner"></div>
+  <h1 id="msg">Signing you in with Kick&hellip;</h1>
+  <p class="detail" id="detail">Verifying your Kick account.</p>
+  <div class="actions" id="actions">
+    <a href="/voting/" class="btn">Back to voting</a>
+  </div>
+</main>
+
+<script type="module">
+import { exchangeCode, saveSession } from '/voting/auth.js';
+
+const card = document.getElementById('card');
+const spinner = document.getElementById('spinner');
+const msgEl = document.getElementById('msg');
+const detailEl = document.getElementById('detail');
+const actionsEl = document.getElementById('actions');
+
+function fail(short, detail) {
+  card.classList.add('error');
+  msgEl.textContent = short;
+  detailEl.textContent = detail || '';
+  actionsEl.classList.add('show');
+  spinner.style.display = 'none';
+}
+
+(async function () {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
+  const errorDesc = params.get('error_description');
+
+  // Kick returned an error rather than a code. Most common cause:
+  // the user clicked Cancel on the consent screen.
+  if (error) {
+    fail('Sign-in cancelled',
+         (errorDesc || error) + '. You can try again from the voting page.');
+    return;
+  }
+  if (!code || !state) {
+    fail('Missing parameters',
+         "Kick's redirect didn't include the expected code or state values. "
+         + 'Try signing in again from the voting page.');
+    return;
+  }
+
+  // Validate the state matches what we stored before redirecting.
+  // If it doesn't match, this could be a stale tab OR a CSRF attempt.
+  const expectedState = sessionStorage.getItem('ex_oauth_state');
+  if (state !== expectedState) {
+    fail('Sign-in state mismatch',
+         'The sign-in attempt is stale or was started in a different tab. '
+         + 'Close this tab and try again from the voting page.');
+    return;
+  }
+
+  const verifier = sessionStorage.getItem('ex_pkce_verifier');
+  if (!verifier) {
+    fail('Sign-in data missing',
+         'The PKCE verifier from this browser session was lost. '
+         + 'Close this tab and start a fresh sign-in from the voting page.');
+    return;
+  }
+
+  try {
+    const result = await exchangeCode(code, verifier);
+    saveSession({
+      token: result.token,
+      user: result.user,
+      is_admin: result.is_admin,
+      saved_at: Date.now(),
+    });
+    // Clear the OAuth scratch-state now that sign-in succeeded.
+    sessionStorage.removeItem('ex_pkce_verifier');
+    sessionStorage.removeItem('ex_oauth_state');
+
+    msgEl.textContent = 'Signed in as ' + result.user.username;
+    detailEl.textContent = result.is_admin
+      ? 'Welcome back, mod. Redirecting to the voting page…'
+      : 'Redirecting to the voting page…';
+
+    // Bounce back to wherever the user came from before sign-in.
+    // Defaults to /voting/ for first-time sign-ins.
+    const returnTo = sessionStorage.getItem('ex_return_to') || '/voting/';
+    sessionStorage.removeItem('ex_return_to');
+    setTimeout(() => { location.href = returnTo; }, 900);
+  } catch (e) {
+    fail('Sign-in failed', String(e.message || e));
+  }
+})();
+</script>
+</body>
+</html>

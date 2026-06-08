@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.5">
+<meta name="version" content="0.2.0">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,7 +468,7 @@
 <body>
 
 <div class="dev-banner">
-  Prototype &middot; internal only &middot; not yet wired to live data
+  Internal only &middot; Kick OAuth live &middot; vote casting + Firestore wiring lands in v0.3
 </div>
 
 <header>
@@ -788,72 +788,98 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.1.5 &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.2.0 &middot; Kick OAuth live &middot; not linked from the public site</div>
 </footer>
 
-<script>
+<script type="module">
 /* =====================================================================
-   Voting v0.1.0 — prototype scaffolding only.
-   No real auth, no Firestore. Everything below is
-   local UI plumbing so we can iterate on the design before wiring it
-   to the real backend.
+   Voting v0.2.0 — REAL Kick OAuth wired (auth flow only).
 
-   Planned data model (when we hit the backend pass):
-     /polls/{pollId} : {
-       question, options[], starts_at, ends_at, status,
-       created_by_kick_uid, channel_scope,
-       anti_bot: { require_login, min_age_hours, require_email, ... }
-     }
-     /polls/{pollId}/votes/{voteId} : {
-       kick_uid, kick_username, source_channel, choice_id,
-       cast_at, ip_hash, ua_hash, flags: ["ok"|"new_acct"|"suspect"],
-       invalidated_by, invalidated_at
-     }
-     /admins/{kick_uid} : { role: "mod"|"streamer", added_by, added_at }
+   This commit replaces the mock sign-in flip with a real PKCE Kick
+   OAuth flow against the bookhockeys developer app. The rest of the
+   page (poll display, vote casting, voter log, admin panel) is still
+   the original mock — those get wired to Firestore in the next pass.
+
+   Data model (now live in Firestore project empire-voting):
+     /polls/current                        → {poll_id, updated_at}
+     /polls/{pollId}                       → poll metadata
+     /polls/{pollId}/votes/{kickUserId}    → one vote per Kick user (atomic)
+     /admins/{username}                    → mod allowlist
 ===================================================================== */
-(function () {
-  /* --- Mock auth (placeholder for Kick OAuth) --- */
+import { getSession, checkSession, startKickSignIn, signOut } from '/voting/auth.js';
+
+(async function () {
+  /* --- Real auth (Kick OAuth via empire-worker) --- */
   var authBtn = document.getElementById('authBtn');
   var modBtn  = document.getElementById('modBtn');
-  var status  = document.getElementById('authStatus');
+  var statusEl = document.getElementById('authStatus');
   var adminPanel = document.getElementById('adminPanel');
-  var loggedIn = false;
-  var isMod = true; // for the prototype, treat the signed-in user as a mod
+
+  // Verify any cached session with the worker on every page load.
+  // Returns null if the session is missing or rejected (e.g. expired,
+  // secret rotated, etc.) — that also clears localStorage so the
+  // UI renders cleanly as "signed out".
+  var session = await checkSession();
 
   function renderAuth() {
-    if (loggedIn) {
-      status.innerHTML = 'Signed in as <strong>you (mock)</strong>';
+    if (session && session.user) {
+      var roleLabel = session.is_admin ? ' (mod)' : '';
+      statusEl.innerHTML = 'Signed in as <strong>'
+        + escapeHtml(session.user.username) + '</strong>' + roleLabel;
       authBtn.textContent = 'Sign out';
-      modBtn.hidden = !isMod;
+      modBtn.hidden = !session.is_admin;
     } else {
-      status.textContent = 'Signed out';
+      statusEl.textContent = 'Signed out';
       authBtn.textContent = 'Sign in with Kick';
       modBtn.hidden = true;
       adminPanel.hidden = true;
     }
   }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   authBtn.addEventListener('click', function () {
-    loggedIn = !loggedIn;
-    renderAuth();
+    if (session && session.user) {
+      // Confirm before signing out — the only way to revoke a vote
+      // is to refuse to re-cast, so an accidental sign-out shouldn't
+      // be expensive but it IS friction we want acknowledged.
+      signOut();
+    } else {
+      startKickSignIn();
+    }
   });
+
   modBtn.addEventListener('click', function () {
     adminPanel.hidden = !adminPanel.hidden;
     if (!adminPanel.hidden) adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+
   renderAuth();
 
-  /* --- Mock vote casting on the poll options --- */
+  // Expose session on window for the legacy mock blocks below — they
+  // gate vote-casting on a `loggedIn` flag. Wire that to the real
+  // session check (still client-side mock, but at least it respects
+  // the actual sign-in state until the vote endpoint is wired).
+  window.__exSession = session;
+
+  /* --- Mock vote casting on the poll options ---
+     v0.2.0 — auth check is now real (uses the real session), but the
+     vote itself is still a local "selected" highlight. The next
+     commit wires this to the worker's POST /voting/vote endpoint
+     so the click actually persists to Firestore. */
   var options = document.querySelectorAll('#pollOptions .poll-option');
   var pollClosed = false;
   options.forEach(function (opt) {
     opt.addEventListener('click', function () {
       if (pollClosed) return;
-      if (!loggedIn) {
-        // Real version: prompt sign-in modal
-        status.style.color = 'var(--red)';
-        status.textContent = 'Sign in to vote';
+      if (!window.__exSession || !window.__exSession.user) {
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = 'Sign in to vote';
         setTimeout(function () {
-          status.style.color = '';
+          statusEl.style.color = '';
           renderAuth();
         }, 1800);
         return;
