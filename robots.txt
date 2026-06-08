@@ -6,5 +6,6 @@ Disallow: /game/
 Disallow: /analytics/
 Disallow: /analytics/activity/
 Disallow: /multi/
+Disallow: /voting/
 
 Sitemap: https://ourempirex.com/sitemap.xml

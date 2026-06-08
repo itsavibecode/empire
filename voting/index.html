@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Internal in-development page. Don't index, don't leak referrer.
+     Not linked from anywhere on the public site. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X &mdash; Voting (Prototype)</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --gold-dark:  #8B6620;
+    --ink:        #0A0A0A;
+    --ink-card:   #141414;
+    --ink-soft:   #1F1F1F;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.6);
+    --cream-faint:rgba(245,241,235,0.35);
+    --green:      #53FC18;
+    --red:        #FF4D4D;
+    --hairline:   rgba(245,241,235,0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* === DEV BANNER — makes it impossible to forget this is unfinished === */
+  .dev-banner {
+    position: sticky; top: 0; z-index: 100;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(212,168,67,0.85) 0 16px,
+      rgba(10,10,10,0.85)   16px 32px
+    );
+    color: #fff;
+    text-align: center;
+    padding: 0.4rem 1rem;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    border-bottom: 1px solid rgba(0,0,0,0.4);
+  }
+
+  /* === HEADER === */
+  header {
+    padding: 1.6rem 1.5rem 1.4rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,168,67,0.12) 0%, transparent 70%),
+      var(--ink);
+    border-bottom: 1px solid var(--hairline);
+    text-align: center;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .header-logo { width: 56px; height: 56px; object-fit: contain; flex: 0 0 auto; }
+  .header-text { text-align: left; line-height: 1.1; }
+  .header-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.45em;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
+  }
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+  }
+  .header-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 400;
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin-top: 0.3rem;
+  }
+
+  /* === AUTH BAR === */
+  .auth-bar {
+    padding: 0.8rem 1.5rem;
+    background: var(--ink-soft);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .auth-status {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .auth-status strong { color: var(--cream); font-weight: 600; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    background: var(--green);
+    color: #0a0a0a;
+    border: 0;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid var(--hairline);
+  }
+  .btn-ghost:hover { background: var(--ink-card); }
+  .btn-gold { background: var(--gold); color: #1a1208; }
+  .btn-danger { background: var(--red); color: #fff; }
+
+  /* === LAYOUT === */
+  main {
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 3rem;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  @media (min-width: 900px) {
+    .row.row-2 { grid-template-columns: 1.4fr 1fr; }
+  }
+
+  /* === CARDS === */
+  .card {
+    background: var(--ink-card);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+  }
+  .card-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .card-title .pill {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: rgba(83,252,24,0.15);
+    color: var(--green);
+    border: 1px solid rgba(83,252,24,0.4);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+  .card-title .pill::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* === POLL UI === */
+  .poll-question {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    margin: 0 0 1.1rem;
+    color: var(--cream);
+  }
+  .poll-options { display: flex; flex-direction: column; gap: 0.6rem; }
+  .poll-option {
+    position: relative;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--hairline);
+    background: var(--ink-soft);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    overflow: hidden;
+  }
+  .poll-option:hover { border-color: var(--gold); background: rgba(212,168,67,0.06); }
+  .poll-option.selected { border-color: var(--green); background: rgba(83,252,24,0.06); }
+  .poll-option-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(212,168,67,0.18) 0%, rgba(212,168,67,0.05) 100%);
+    transition: width 0.5s ease;
+    z-index: 0;
+  }
+  .poll-option.selected .poll-option-fill {
+    background: linear-gradient(90deg, rgba(83,252,24,0.22) 0%, rgba(83,252,24,0.06) 100%);
+  }
+  .poll-option-row {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+  }
+  .poll-option-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--cream);
+  }
+  .poll-option-tally {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    color: var(--cream-dim);
+    white-space: nowrap;
+  }
+  .poll-option-tally strong { color: var(--cream); font-weight: 700; }
+  .poll-actions {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    color: var(--cream-dim);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .poll-meta {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--hairline);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.7rem;
+    font-size: 0.78rem;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.08em;
+    color: var(--cream-dim);
+  }
+  .poll-meta strong { display: block; color: var(--cream); font-size: 0.95rem; margin-top: 0.15rem; }
+
+  /* === VOTER LOG === */
+  .voter-log {
+    max-height: 380px;
+    overflow-y: auto;
+    margin: 0 -0.4rem;
+  }
+  .voter-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.6rem;
+    padding: 0.55rem 0.4rem;
+    border-bottom: 1px solid var(--hairline);
+    align-items: center;
+  }
+  .voter-row:last-child { border-bottom: 0; }
+  .voter-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    color: var(--cream);
+  }
+  .voter-name .source {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--cream-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .voter-choice {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .voter-flag {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+  }
+  .voter-flag.ok      { background: rgba(83,252,24,0.12); color: var(--green); border-color: rgba(83,252,24,0.35); }
+  .voter-flag.flag    { background: rgba(212,168,67,0.18); color: var(--gold-light); border-color: rgba(212,168,67,0.45); }
+  .voter-flag.suspect { background: rgba(255,77,77,0.16); color: var(--red); border-color: rgba(255,77,77,0.45); }
+
+  /* === ADMIN PANEL === */
+  .admin-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  @media (min-width: 900px) {
+    .admin-row { grid-template-columns: 1fr 1fr; }
+  }
+  .form-field { margin-bottom: 0.9rem; }
+  .form-label {
+    display: block;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin-bottom: 0.35rem;
+  }
+  .form-input, .form-textarea {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background: var(--ink-soft);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+  }
+  .form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(212,168,67,0.18);
+  }
+  .form-row {
+    display: flex; gap: 0.4rem; margin-bottom: 0.45rem;
+  }
+  .form-row .form-input { flex: 1 1 auto; }
+  .form-row .btn { flex: 0 0 auto; padding: 0.55rem 0.85rem; }
+
+  /* === ANTI-BOT CHECKLIST === */
+  .checklist { list-style: none; padding: 0; margin: 0; }
+  .checklist li {
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--hairline);
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    font-size: 0.9rem;
+    color: var(--cream-dim);
+  }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist li::before {
+    content: "○";
+    color: var(--gold);
+    flex: 0 0 auto;
+    font-weight: 700;
+  }
+  .checklist li.done { color: var(--cream); }
+  .checklist li.done::before { content: "●"; color: var(--green); }
+
+  /* === FOOTER === */
+  footer {
+    padding: 1.6rem 1.5rem 2rem;
+    border-top: 1px solid var(--hairline);
+    text-align: center;
+  }
+  .footer-line {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .footer-line a { color: var(--cream); text-decoration: none; transition: color 0.2s ease; }
+  .footer-line a:hover { color: var(--gold); }
+  .footer-version {
+    margin-top: 0.6rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--cream-faint);
+  }
+</style>
+</head>
+<body>
+
+<div class="dev-banner">
+  Prototype &middot; internal only &middot; not yet wired to live data
+</div>
+
+<header>
+  <div class="header-inner">
+    <img class="header-logo" src="/logo.png" alt="Empire X" loading="eager">
+    <div class="header-text">
+      <div class="header-eyebrow">Empire X</div>
+      <h1 class="header-title">Voting</h1>
+      <div class="header-subtitle">Live audience polling across the broadcast</div>
+    </div>
+  </div>
+</header>
+
+<!-- Sign-in bar. Eventually wires up to Kick OAuth so mods +
+     streamers can manage polls and ordinary viewers can sign in to
+     vote (1 vote per Kick user enforced). For the prototype this is
+     a mock: the "Sign in" button just flips local UI state. -->
+<div class="auth-bar">
+  <div class="auth-status" id="authStatus">Signed out</div>
+  <button class="btn" id="authBtn" type="button">Sign in with Kick</button>
+  <button class="btn btn-ghost" id="modBtn" type="button" hidden>Mod tools</button>
+</div>
+
+<main>
+
+  <!-- ============== PUBLIC POLL VIEW ============== -->
+  <!-- What ordinary viewers see — open poll, mock tallies, vote
+       buttons. Tallies update locally on click for the prototype;
+       the real version hits Firestore via a worker write. -->
+  <section class="card">
+    <h2 class="card-title">
+      Live Poll
+      <span class="pill">Open &middot; 2:47 left</span>
+    </h2>
+    <p class="poll-question">Which group throws tonight's party?</p>
+    <div class="poll-options" id="pollOptions" data-poll-id="demo-1">
+      <div class="poll-option" data-option-id="sky9">
+        <div class="poll-option-fill" style="width: 42%"></div>
+        <div class="poll-option-row">
+          <span class="poll-option-label">Sky9 House</span>
+          <span class="poll-option-tally"><strong>312</strong> &middot; 42%</span>
+        </div>
+      </div>
+      <div class="poll-option" data-option-id="dtb">
+        <div class="poll-option-fill" style="width: 31%"></div>
+        <div class="poll-option-row">
+          <span class="poll-option-label">DTB House</span>
+          <span class="poll-option-tally"><strong>233</strong> &middot; 31%</span>
+        </div>
+      </div>
+      <div class="poll-option" data-option-id="mixtapes">
+        <div class="poll-option-fill" style="width: 18%"></div>
+        <div class="poll-option-row">
+          <span class="poll-option-label">Mixtapes House</span>
+          <span class="poll-option-tally"><strong>134</strong> &middot; 18%</span>
+        </div>
+      </div>
+      <div class="poll-option" data-option-id="kozy">
+        <div class="poll-option-fill" style="width: 9%"></div>
+        <div class="poll-option-row">
+          <span class="poll-option-label">Kozy House</span>
+          <span class="poll-option-tally"><strong>67</strong> &middot; 9%</span>
+        </div>
+      </div>
+    </div>
+    <div class="poll-actions">
+      <span><strong>746</strong> total votes &middot; across 34 channels</span>
+      <span>or vote in chat: <strong style="color:var(--gold)">!vote sky9</strong></span>
+    </div>
+  </section>
+
+  <!-- ============== RESULTS / VOTER LOG ============== -->
+  <div class="row row-2" style="margin-top: 1.5rem;">
+
+    <section class="card">
+      <h2 class="card-title">Who voted</h2>
+      <p style="color: var(--cream-dim); font-size: 0.85rem; margin: 0 0 0.6rem;">
+        Live tail of incoming votes. Mods can flag/invalidate from here.
+      </p>
+      <div class="voter-log" id="voterLog">
+        <div class="voter-row">
+          <div class="voter-name">cobbruvs_fan22<span class="source">via shangel chat</span></div>
+          <div class="voter-choice">Sky9</div>
+          <div class="voter-flag ok">verified</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">DTBforever<span class="source">via cobbruvs chat</span></div>
+          <div class="voter-choice">DTB</div>
+          <div class="voter-flag ok">verified</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">user_8821<span class="source">via riddaw chat</span></div>
+          <div class="voter-choice">Mixtapes</div>
+          <div class="voter-flag flag">new acct</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">empire_4lyfe<span class="source">via nicklee chat</span></div>
+          <div class="voter-choice">Sky9</div>
+          <div class="voter-flag ok">follower</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">bot_acct_91<span class="source">via shangel chat</span></div>
+          <div class="voter-choice">Sky9</div>
+          <div class="voter-flag suspect">3 IPs</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">layla_pres<span class="source">via dtanmanb chat</span></div>
+          <div class="voter-choice">DTB</div>
+          <div class="voter-flag ok">verified</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">throwaway_xx<span class="source">via cobbruvs chat</span></div>
+          <div class="voter-choice">Sky9</div>
+          <div class="voter-flag suspect">acct &lt; 2h</div>
+        </div>
+        <div class="voter-row">
+          <div class="voter-name">empirexvibes<span class="source">via shangel chat</span></div>
+          <div class="voter-choice">Kozy</div>
+          <div class="voter-flag ok">verified</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Tally health</h2>
+      <ul class="checklist">
+        <li class="done">746 total votes</li>
+        <li class="done">38 flagged as suspicious (5%)</li>
+        <li class="done">12 invalidated by mods</li>
+        <li>0 cross-IP duplicates detected (mock)</li>
+        <li>0 disposable-email signups blocked (mock)</li>
+      </ul>
+      <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-ghost" type="button">Export voter list (CSV)</button>
+        <button class="btn btn-danger" type="button">Re-tally w/o suspects</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============== ADMIN PANEL ============== -->
+  <!-- Hidden until the user clicks "Mod tools" in the auth bar. Real
+       version checks the signed-in Kick username against an allowlist
+       of mods + streamer accounts before showing. -->
+  <div id="adminPanel" hidden style="margin-top: 1.5rem;">
+    <section class="card">
+      <h2 class="card-title">
+        Admin
+        <span class="pill" style="background:rgba(212,168,67,0.15);color:var(--gold);border-color:rgba(212,168,67,0.4);">
+          mod / streamer only
+        </span>
+      </h2>
+      <p style="color: var(--cream-dim); font-size: 0.85rem; margin: 0 0 0.9rem;">
+        Create new polls, edit options, close polls, push live to the broadcast overlay.
+      </p>
+
+      <div class="admin-row">
+        <div>
+          <div class="form-field">
+            <label class="form-label">Question</label>
+            <input class="form-input" type="text" value="Which group throws tonight's party?" placeholder="What are we asking?">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Options</label>
+            <div class="form-row"><input class="form-input" type="text" value="Sky9 House"><button class="btn btn-ghost" type="button">&times;</button></div>
+            <div class="form-row"><input class="form-input" type="text" value="DTB House"><button class="btn btn-ghost" type="button">&times;</button></div>
+            <div class="form-row"><input class="form-input" type="text" value="Mixtapes House"><button class="btn btn-ghost" type="button">&times;</button></div>
+            <div class="form-row"><input class="form-input" type="text" value="Kozy House"><button class="btn btn-ghost" type="button">&times;</button></div>
+            <button class="btn btn-ghost" type="button">+ Add option</button>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Duration</label>
+            <div style="display:flex; gap: 0.5rem;">
+              <input class="form-input" type="number" value="5" style="max-width:80px;">
+              <select class="form-input" style="max-width:120px;">
+                <option>minutes</option>
+                <option>hours</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-gold" type="button">Save changes</button>
+            <button class="btn btn-ghost" type="button">Push live to overlay</button>
+            <button class="btn btn-danger" type="button">Close poll</button>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-family: 'Oswald', sans-serif; font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin: 0 0 0.7rem;">
+            Anti-bot guards
+          </h3>
+          <ul class="checklist">
+            <li class="done">Require Kick login (no anonymous votes)</li>
+            <li class="done">Reject accounts &lt; 24h old</li>
+            <li class="done">Require verified email</li>
+            <li class="done">1 vote per Kick username per poll</li>
+            <li class="done">1 vote per IP per poll (proxy ranges blacklisted)</li>
+            <li>Require following the channel (toggle)</li>
+            <li>Require N minutes of watch time (toggle)</li>
+            <li>Cross-poll voter-pattern detection (background job)</li>
+          </ul>
+          <p style="margin-top: 0.8rem; font-size: 0.78rem; color: var(--cream-faint); line-height: 1.5;">
+            Heuristics run server-side per vote and stamp the verified / new&nbsp;acct / suspect flags shown
+            in the "Who voted" tail. Suspect votes are still recorded but excluded from the live tally
+            unless a mod manually approves.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-line">
+    Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
+  </div>
+  <div class="footer-version">Voting v0.1.0 &middot; not linked from the public site</div>
+</footer>
+
+<script>
+/* =====================================================================
+   Voting v0.1.0 — prototype scaffolding only.
+   No real auth, no Firestore, no chat listener. Everything below is
+   local UI plumbing so we can iterate on the design before wiring it
+   to the real backend.
+
+   Planned data model (when we hit the backend pass):
+     /polls/{pollId} : {
+       question, options[], starts_at, ends_at, status,
+       created_by_kick_uid, channel_scope,
+       anti_bot: { require_login, min_age_hours, require_email, ... }
+     }
+     /polls/{pollId}/votes/{voteId} : {
+       kick_uid, kick_username, source_channel, choice_id,
+       cast_at, ip_hash, ua_hash, flags: ["ok"|"new_acct"|"suspect"],
+       invalidated_by, invalidated_at
+     }
+     /admins/{kick_uid} : { role: "mod"|"streamer", added_by, added_at }
+===================================================================== */
+(function () {
+  /* --- Mock auth (placeholder for Kick OAuth) --- */
+  var authBtn = document.getElementById('authBtn');
+  var modBtn  = document.getElementById('modBtn');
+  var status  = document.getElementById('authStatus');
+  var adminPanel = document.getElementById('adminPanel');
+  var loggedIn = false;
+  var isMod = true; // for the prototype, treat the signed-in user as a mod
+
+  function renderAuth() {
+    if (loggedIn) {
+      status.innerHTML = 'Signed in as <strong>you (mock)</strong>';
+      authBtn.textContent = 'Sign out';
+      modBtn.hidden = !isMod;
+    } else {
+      status.textContent = 'Signed out';
+      authBtn.textContent = 'Sign in with Kick';
+      modBtn.hidden = true;
+      adminPanel.hidden = true;
+    }
+  }
+  authBtn.addEventListener('click', function () {
+    loggedIn = !loggedIn;
+    renderAuth();
+  });
+  modBtn.addEventListener('click', function () {
+    adminPanel.hidden = !adminPanel.hidden;
+    if (!adminPanel.hidden) adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  renderAuth();
+
+  /* --- Mock vote casting on the poll options --- */
+  var options = document.querySelectorAll('#pollOptions .poll-option');
+  options.forEach(function (opt) {
+    opt.addEventListener('click', function () {
+      if (!loggedIn) {
+        // Real version: prompt sign-in modal
+        status.style.color = 'var(--red)';
+        status.textContent = 'Sign in to vote';
+        setTimeout(function () {
+          status.style.color = '';
+          renderAuth();
+        }, 1800);
+        return;
+      }
+      options.forEach(function (o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+    });
+  });
+})();
+</script>
+</body>
+</html>
