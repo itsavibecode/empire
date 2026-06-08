@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.1">
+<meta name="version" content="0.1.2">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -540,8 +540,7 @@
       </div>
     </div>
     <div class="poll-actions">
-      <span><strong>746</strong> total votes &middot; across 34 channels</span>
-      <span>or vote in chat: <strong style="color:var(--gold)">!vote sky9</strong></span>
+      <span><strong>746</strong> total votes &middot; web-only, Kick login required</span>
     </div>
   </section>
 
@@ -561,49 +560,49 @@
              clear without external image loads. -->
         <div class="voter-row">
           <div class="voter-avatar">CF</div>
-          <div class="voter-name">cobbruvs_fan22<span class="source">via shangel chat</span></div>
+          <div class="voter-name">cobbruvs_fan22<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar">DT</div>
-          <div class="voter-name">DTBforever<span class="source">via cobbruvs chat</span></div>
+          <div class="voter-name">DTBforever<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar">U8</div>
-          <div class="voter-name">user_8821<span class="source">via riddaw chat</span></div>
+          <div class="voter-name">user_8821<span class="source">via riddaw stream</span></div>
           <div class="voter-choice">Mixtapes</div>
           <div class="voter-flag flag">new acct</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar">E4</div>
-          <div class="voter-name">empire_4lyfe<span class="source">via nicklee chat</span></div>
+          <div class="voter-name">empire_4lyfe<span class="source">via nicklee stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">follower</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">B9</div>
-          <div class="voter-name">bot_acct_91<span class="source">via shangel chat</span></div>
+          <div class="voter-name">bot_acct_91<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">3 IPs</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar">LP</div>
-          <div class="voter-name">layla_pres<span class="source">via dtanmanb chat</span></div>
+          <div class="voter-name">layla_pres<span class="source">via dtanmanb stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">TX</div>
-          <div class="voter-name">throwaway_xx<span class="source">via cobbruvs chat</span></div>
+          <div class="voter-name">throwaway_xx<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">acct &lt; 2h</div>
         </div>
         <div class="voter-row">
           <div class="voter-avatar">EV</div>
-          <div class="voter-name">empirexvibes<span class="source">via shangel chat</span></div>
+          <div class="voter-name">empirexvibes<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Kozy</div>
           <div class="voter-flag ok">verified</div>
         </div>
@@ -626,6 +625,47 @@
     </section>
 
   </div>
+
+  <!-- ============== OBS OVERLAY ============== -->
+  <!-- Streamers add this URL as an OBS Browser Source so the live
+       poll appears on top of their broadcast. The overlay page
+       itself is at /voting/overlay/ (transparent background, fits
+       in a corner of the scene). -->
+  <section class="card" style="margin-top: 1.5rem;">
+    <h2 class="card-title">
+      OBS Overlay
+      <span class="pill" style="background:rgba(212,168,67,0.15);color:var(--gold);border-color:rgba(212,168,67,0.4);">
+        for streamers
+      </span>
+    </h2>
+    <p style="color: var(--cream-dim); font-size: 0.92rem; margin: 0 0 1rem; line-height: 1.5;">
+      Add this URL as a <strong style="color:var(--cream)">Browser Source</strong> in OBS. The poll widget
+      will appear on the broadcast whenever a poll is active and auto-hide between polls. Transparent
+      background — composites cleanly over your video.
+    </p>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom: 0.9rem;">
+      <input id="overlayUrl" class="form-input" type="text" readonly
+             value="https://ourempirex.com/voting/overlay/"
+             style="flex:1 1 320px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem;">
+      <button class="btn btn-gold" type="button" id="copyOverlayBtn">Copy URL</button>
+      <a class="btn btn-ghost" href="/voting/overlay/" target="_blank" rel="noopener">Preview</a>
+    </div>
+    <details style="margin-top: 0.4rem;">
+      <summary style="cursor:pointer; font-family: 'Oswald', sans-serif; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-light);">
+        OBS setup &mdash; recommended settings
+      </summary>
+      <ul style="margin: 0.6rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--cream-dim); line-height: 1.7;">
+        <li>Source type: <strong style="color:var(--cream)">Browser</strong></li>
+        <li>URL: paste the URL above</li>
+        <li>Width: <strong style="color:var(--cream)">720</strong>, Height: <strong style="color:var(--cream)">560</strong></li>
+        <li>Check <strong style="color:var(--cream)">"Refresh browser when scene becomes active"</strong> (so the
+          overlay always shows the current poll when you switch back to the scene)</li>
+        <li>Position: anywhere &mdash; bottom-left and lower-third are popular</li>
+        <li>The widget centers itself within the source bounds and only renders during active polls,
+          so it's safe to leave in all scenes</li>
+      </ul>
+    </details>
+  </section>
 
   <!-- ============== ADMIN PANEL ============== -->
   <!-- Hidden until the user clicks "Mod tools" in the auth bar. Real
@@ -709,13 +749,13 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.1.1 &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.1.2 &middot; not linked from the public site</div>
 </footer>
 
 <script>
 /* =====================================================================
    Voting v0.1.0 — prototype scaffolding only.
-   No real auth, no Firestore, no chat listener. Everything below is
+   No real auth, no Firestore. Everything below is
    local UI plumbing so we can iterate on the design before wiring it
    to the real backend.
 
@@ -826,6 +866,32 @@
   }
   tick();
   countdownTimer = setInterval(tick, 1000);
+
+  /* --- Copy OBS overlay URL --- */
+  var overlayInput = document.getElementById('overlayUrl');
+  var copyBtn = document.getElementById('copyOverlayBtn');
+  if (overlayInput && copyBtn) {
+    copyBtn.addEventListener('click', function () {
+      overlayInput.select();
+      var ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch (e) { /* ignore — fall through to clipboard API */ }
+      if (!ok && navigator.clipboard) {
+        navigator.clipboard.writeText(overlayInput.value);
+        ok = true;
+      }
+      if (ok) {
+        var original = copyBtn.textContent;
+        copyBtn.textContent = 'Copied ✓';
+        copyBtn.disabled = true;
+        setTimeout(function () {
+          copyBtn.textContent = original;
+          copyBtn.disabled = false;
+        }, 1500);
+      }
+    });
+  }
 })();
 </script>
 </body>

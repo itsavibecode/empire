@@ -7,5 +7,6 @@ Disallow: /analytics/
 Disallow: /analytics/activity/
 Disallow: /multi/
 Disallow: /voting/
+Disallow: /voting/overlay/
 
 Sitemap: https://ourempirex.com/sitemap.xml

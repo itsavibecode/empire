@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Empire X voting overlay — designed to be added as a browser
+     source in OBS. Transparent body so it composites cleanly over
+     whatever's on the broadcast.
+     Suggested OBS size: 720 wide × 520 tall, but the widget itself
+     is centered + max-width: 640 so it tolerates slight sizing
+     differences from the streamer's scene. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X Voting Overlay</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --gold-dark:  #8B6620;
+    --ink:        #0A0A0A;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.7);
+    --green:      #53FC18;
+    --red:        #FF4D4D;
+    --hairline:   rgba(245,241,235,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    /* Transparent so OBS composites the overlay on the broadcast. */
+    background: transparent;
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1.4rem;
+  }
+
+  /* === MAIN WIDGET ===
+     A self-contained card the streamer can put anywhere in their
+     scene. Max-width keeps it readable at different OBS canvas
+     sizes; semi-transparent backing + heavy text shadows mean it
+     reads on top of busy video. */
+  .widget {
+    width: 100%;
+    max-width: 640px;
+    background: linear-gradient(180deg, rgba(10,10,10,0.92) 0%, rgba(15,12,8,0.88) 100%);
+    border: 1px solid rgba(212,168,67,0.4);
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem 1.2rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.55),
+      0 0 24px rgba(212,168,67,0.18);
+  }
+
+  /* Hidden by default; the script flips display:flex when a poll
+     is active. In the real Firestore-wired version we listen for
+     pollSnapshot.exists to drive visibility. */
+  .widget.is-hidden { display: none; }
+
+  /* === HEADER ROW: brand + status pill === */
+  .widget-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.85rem;
+  }
+  .widget-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .widget-brand img {
+    width: 22px; height: 22px;
+    display: block;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  }
+  .widget-brand-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.32em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  }
+  .widget-brand-name span {
+    color: var(--cream);
+    margin-left: 0.45em;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: rgba(83,252,24,0.16);
+    color: var(--green);
+    border: 1px solid rgba(83,252,24,0.45);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .pill::before {
+    content: "";
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .pill-closed {
+    background: rgba(255,77,77,0.16);
+    color: var(--red);
+    border-color: rgba(255,77,77,0.45);
+  }
+  .pill-closed::before {
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: none;
+  }
+  .countdown-num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  /* === QUESTION === */
+  .question {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    line-height: 1.18;
+    color: #fff;
+    margin: 0 0 0.85rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.5);
+  }
+
+  /* === OPTIONS === */
+  .options { display: flex; flex-direction: column; gap: 0.45rem; }
+  .opt {
+    position: relative;
+    padding: 0.6rem 0.8rem;
+    background: rgba(20,20,20,0.65);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .opt-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(212,168,67,0.34) 0%, rgba(212,168,67,0.08) 100%);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+  }
+  .opt-leader .opt-fill {
+    background: linear-gradient(90deg, rgba(83,252,24,0.32) 0%, rgba(83,252,24,0.08) 100%);
+  }
+  .opt-row {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.7rem;
+  }
+  .opt-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  }
+  .opt-tally {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.82rem;
+    color: var(--cream-dim);
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .opt-tally strong { color: #fff; font-weight: 700; }
+  .opt-leader .opt-tally strong { color: var(--green); }
+
+  /* === FOOT: CTA URL + total === */
+  .widget-foot {
+    margin-top: 0.95rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  }
+  .vote-cta {
+    color: var(--cream-dim);
+  }
+  .vote-cta strong {
+    color: var(--gold);
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  }
+  .vote-total { color: var(--cream); }
+</style>
+</head>
+<body>
+
+<div class="widget" id="widget">
+  <div class="widget-head">
+    <div class="widget-brand">
+      <img src="/logo.png" alt="">
+      <div class="widget-brand-name">EMPIRE X <span>POLL</span></div>
+    </div>
+    <span class="pill" id="pollPill">
+      <span id="pollStatusLabel">Open</span>
+      <span id="pollCountdownWrap"> &middot; <span class="countdown-num" id="pollCountdown">--:--</span></span>
+    </span>
+  </div>
+
+  <p class="question" id="question">Which group throws tonight's party?</p>
+
+  <div class="options" id="options">
+    <div class="opt opt-leader">
+      <div class="opt-fill" style="width: 42%"></div>
+      <div class="opt-row">
+        <span class="opt-label">Sky9 House</span>
+        <span class="opt-tally"><strong>312</strong> &middot; 42%</span>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="opt-fill" style="width: 31%"></div>
+      <div class="opt-row">
+        <span class="opt-label">DTB House</span>
+        <span class="opt-tally"><strong>233</strong> &middot; 31%</span>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="opt-fill" style="width: 18%"></div>
+      <div class="opt-row">
+        <span class="opt-label">Mixtapes House</span>
+        <span class="opt-tally"><strong>134</strong> &middot; 18%</span>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="opt-fill" style="width: 9%"></div>
+      <div class="opt-row">
+        <span class="opt-label">Kozy House</span>
+        <span class="opt-tally"><strong>67</strong> &middot; 9%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="widget-foot">
+    <div class="vote-cta">Vote at <strong>ourempirex.com/voting</strong></div>
+    <div class="vote-total"><strong id="voteTotal">746</strong> votes</div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Voting overlay — prototype scaffolding.
+   Real version subscribes to the active poll's Firestore document
+   (/polls/{currentPollId}) so the question + options + tallies +
+   ends_at update live as votes come in. The widget shows itself
+   only while a poll is in the 'open' or 'just-closed' state.
+
+   No-network mock for now: mocks a 5-min poll starting at page
+   load + ticks the countdown. Tallies are static (real-time
+   tally animation will land when we wire Firestore).
+===================================================================== */
+(function () {
+  var pollEnds = Date.now() + (5 * 60 * 1000);
+  var pollPill = document.getElementById('pollPill');
+  var pollStatusLabel = document.getElementById('pollStatusLabel');
+  var pollCountdownWrap = document.getElementById('pollCountdownWrap');
+  var pollCountdown = document.getElementById('pollCountdown');
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtCountdown(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return h > 0 ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+
+  function tick() {
+    var remaining = pollEnds - Date.now();
+    if (remaining <= 0) {
+      pollPill.classList.add('pill-closed');
+      pollStatusLabel.textContent = 'Closed';
+      pollCountdownWrap.textContent = '';
+      clearInterval(t);
+      return;
+    }
+    pollCountdown.textContent = fmtCountdown(remaining);
+  }
+  tick();
+  var t = setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
