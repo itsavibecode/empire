@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Empire X event rankings overlay — top-bar OBS browser source.
+     Pulls streamers.json, filters to those with a `rank` set in
+     the CMS, sorts by rank, renders as a horizontal row of compact
+     entries (rank pill + Kick avatar + name). Empty until the
+     admin sets ranks during the event.
+     Suggested OBS size: 1920 wide × 130 tall.
+     Place at top or bottom of the broadcast scene. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X — Event Rankings</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@500;600;700&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@500;600;700&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --gold-dark:  #8B6620;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.75);
+    --silver:     #B7B7B7;
+    --bronze:     #B97B4D;
+    --ink:        rgba(10,10,10,0.92);
+    --hairline:   rgba(245,241,235,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: transparent;
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* === BAR ===
+     Full-width strip across the top (or wherever the streamer
+     anchors it). Visually a thin dark glass bar with the EMPIRE X
+     brand mark on the left and the ranked entries flowing right. */
+  .bar {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 100px;
+    background: linear-gradient(180deg, rgba(10,10,10,0.92) 0%, rgba(15,12,8,0.88) 100%);
+    border-bottom: 1px solid rgba(212,168,67,0.4);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 0 18px rgba(212,168,67,0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* === BRAND BLOCK (left) === */
+  .brand {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0 1.2rem;
+    border-right: 1px solid var(--hairline);
+    background: linear-gradient(90deg, rgba(212,168,67,0.12) 0%, transparent 100%);
+  }
+  .brand img {
+    width: 44px; height: 44px;
+    flex: 0 0 auto;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
+  }
+  .brand-text {
+    font-family: 'Bebas Neue', sans-serif;
+    line-height: 1;
+  }
+  .brand-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  }
+  .brand-title {
+    font-size: 1.4rem;
+    letter-spacing: 0.18em;
+    color: var(--cream);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+    margin-top: 2px;
+  }
+
+  /* === ENTRIES (right side, scrolling row) === */
+  .entries {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0 1rem;
+    overflow: hidden;
+    position: relative;
+  }
+  .entries::before, .entries::after {
+    /* Soft fade-out on each edge so the entries appear to flow off-
+       screen instead of clipping mid-card. */
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 32px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .entries::before { left: 0;  background: linear-gradient(90deg, var(--ink), transparent); }
+  .entries::after  { right: 0; background: linear-gradient(270deg, var(--ink), transparent); }
+
+  .entry {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem 0.8rem 0.45rem 0.5rem;
+    background: rgba(20,20,20,0.55);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  }
+  .entry-rank {
+    width: 30px; height: 30px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1a0e02;
+    background: linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.3);
+  }
+  .entry-rank.rank-1 {
+    background: linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
+    border-color: rgba(255,255,255,0.4);
+    animation: leaderPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes leaderPulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.5),  0 0 12px rgba(255,216,106,0.5); }
+    50%      { box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,216,106,0.7), 0 0 22px rgba(255,216,106,0.85); }
+  }
+  .entry-rank.rank-2 { background: linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%); color: #1a1a1a; }
+  .entry-rank.rank-3 { background: linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%); }
+
+  .entry-avatar {
+    width: 38px; height: 38px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    background: linear-gradient(135deg, #2a2018, #1a1208);
+  }
+  .entry-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .entry-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--cream);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    white-space: nowrap;
+    padding-right: 0.2rem;
+  }
+
+  /* === EMPTY STATE ===
+     Shown when no streamers have a rank set yet. Stays invisible
+     during the event itself when the admin starts ranking. -->*/
+  .empty {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    padding: 0 2rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar">
+  <div class="brand">
+    <img src="/logo.png" alt="">
+    <div class="brand-text">
+      <div class="brand-eyebrow">EMPIRE X</div>
+      <div class="brand-title">RANKINGS</div>
+    </div>
+  </div>
+  <div class="entries" id="entries">
+    <div class="empty">Rankings will appear here once the event starts</div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Event rankings ticker — reads streamers.json (same-origin, no auth)
+   to get who's ranked, then pulls real Kick avatars from
+   empire-worker's /live snapshot for each one. Filters to streamers
+   with a numeric `rank` ≥ 1, sorts ascending, takes top 10.
+
+   Re-fetches every 5 minutes so the ticker reflects rank changes
+   the admin makes mid-event without the streamer needing to refresh
+   the OBS scene. (Also fine to enable the OBS "refresh when scene
+   becomes active" toggle for instant updates between scene swaps.)
+
+   End-of-event final-reveal version: a separate page (todo) that
+   shows the same data full-screen with a 10→1 reveal animation
+   for a closing scene. Easy follow-up — same data source, just
+   different render.
+===================================================================== */
+(function () {
+  var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
+  var REFRESH_MS = 5 * 60 * 1000;
+  var TOP_N = 10;
+
+  var entriesEl = document.getElementById('entries');
+
+  function render(ranked, avatarBySlug) {
+    if (!ranked.length) {
+      entriesEl.innerHTML = '<div class="empty">Rankings will appear here once the event starts</div>';
+      return;
+    }
+    var html = ranked.map(function (s) {
+      var slug = (s.slug || '').toLowerCase();
+      var avatar = avatarBySlug[slug] || '';
+      var img = avatar
+        ? '<img src="' + avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        : '';
+      var rankCls = s.rank >= 1 && s.rank <= 3 ? ' rank-' + s.rank : '';
+      return (
+        '<div class="entry">' +
+          '<div class="entry-rank' + rankCls + '">' + s.rank + '</div>' +
+          '<div class="entry-avatar">' + img + '</div>' +
+          '<div class="entry-name">' + escapeHtml(s.name || s.slug) + '</div>' +
+        '</div>'
+      );
+    }).join('');
+    entriesEl.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function refresh() {
+    Promise.all([
+      fetch('/streamers.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }),
+      fetch(WORKER_LIVE, { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
+    ]).then(function (results) {
+      var roster = (results[0] && results[0].streamers) || [];
+      var snap = results[1];
+      var chans = (snap && snap.channels) || {};
+
+      var avatarBySlug = {};
+      Object.keys(chans).forEach(function (k) {
+        if (chans[k] && chans[k].profile_pic) avatarBySlug[k] = chans[k].profile_pic;
+      });
+
+      var ranked = roster
+        .filter(function (s) {
+          var r = parseInt(s.rank, 10);
+          return Number.isFinite(r) && r >= 1;
+        })
+        .map(function (s) {
+          return { slug: s.slug, name: s.name, rank: parseInt(s.rank, 10) };
+        })
+        .sort(function (a, b) { return a.rank - b.rank; })
+        .slice(0, TOP_N);
+
+      render(ranked, avatarBySlug);
+    }).catch(function (err) {
+      console.warn('[rankings] refresh failed:', err);
+    });
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

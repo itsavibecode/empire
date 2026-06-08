@@ -100,6 +100,14 @@ collections:
                 media_folder: '/avatars'
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
+              - name: rank
+                label: 'Event ranking (optional)'
+                widget: number
+                required: false
+                value_type: int
+                min: 1
+                max: 99
+                hint: 'Optional event ranking number. Leave blank to hide the bubble. When set, a small numbered bubble appears in the upper-right corner of this streamer''s card. #1 gets a brighter gold + soft pulse, #2 silver, #3 bronze, #4-10 the standard brand gold. Use during the event to surface live standings.'
               # NOTE: `added_at` is NOT exposed here. The sync workflow
               # auto-fills it with today's date when a brand-new
               # streamer entry has none, then writes streamers.json

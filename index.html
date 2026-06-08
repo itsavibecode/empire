@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, MarkyNextDoor, XenaTheWitch, Chibu, Ice Poseidon, Sasha West, Kimmee, Fabia Alissia, WoodBaby, Jeane Marie, Hanridge, AshWilder, Blame, Shangel, Mia Maxxed, Emzam, Check , Dejayboss, Diamond, JJStream, Nick Lee, FloridaBoy, Letty, Suzie Smalls, TaylorStarlight, Maddy Coles, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, RiddaW, Fanos, KikiKrazy, lifeismizzy, Mando, Dtan, Ozemi, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.20">
+<meta name="version" content="0.13.21">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -1138,6 +1138,66 @@ section{padding:6rem 1.5rem}
   0%, 100% { box-shadow:0 2px 8px rgba(212,168,67,0.4); }
   50%      { box-shadow:0 2px 14px rgba(242,199,100,0.7); }
 }
+/* === RANK BUBBLE (v0.13.21) ==================================
+   Upper-right corner of a streamer card. Set per-streamer via the
+   `rank` field in streamers.json (CMS "Event ranking"). When set,
+   sync-streamers.py renders <div class="streamer-rank rank-N">N</div>
+   inside the card. CSS classes give #1/#2/#3 their own gold/silver/
+   bronze tints; #4-10 share the deep brand-gold style. No rank set
+   -> no bubble at all (no badge, no reserved space). */
+.streamer-rank{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  font-size:0.85rem;
+  letter-spacing:0;
+  color:#1a0e02;
+  background:linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
+  border:1.5px solid rgba(255,255,255,0.18);
+  box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,168,67,0.3);
+  pointer-events:none;
+  z-index:3;
+  text-shadow:0 1px 0 rgba(255,255,255,0.18);
+}
+/* Cards may carry BOTH the JUST ADDED ribbon and a rank bubble.
+   Push the ribbon down so they don't stack on top of each other. */
+.streamer-card .streamer-rank + .streamer-just-added,
+.streamer-card .streamer-just-added + .streamer-rank{
+  /* no-op (kept for future tweaks) */
+}
+.streamer-card:has(.streamer-rank) .streamer-just-added{
+  top:42px;
+}
+/* #1 — brightest gold + soft pulse so it's unmistakable as the leader. */
+.streamer-rank.rank-1{
+  background:linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
+  border-color:rgba(255,255,255,0.4);
+  color:#1a0e02;
+  animation:rank-leader-pulse 2.4s ease-in-out infinite;
+}
+@keyframes rank-leader-pulse{
+  0%, 100% { box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,168,67,0.5),  0 0 14px rgba(255,216,106,0.5); }
+  50%      { box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,216,106,0.7), 0 0 22px rgba(255,216,106,0.85); }
+}
+/* #2 — silver */
+.streamer-rank.rank-2{
+  background:linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%);
+  color:#1a1a1a;
+}
+/* #3 — bronze */
+.streamer-rank.rank-3{
+  background:linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%);
+  color:#1a0e02;
+}
+
 .streamer-card:hover{
   transform:translateY(-4px);
   border-color:var(--green-kick);
@@ -2396,7 +2456,7 @@ section{padding:6rem 1.5rem}
 
 <div class="footer-bar">
   <!-- SPONSOR_FOOTER_BEGIN --><!-- SPONSOR_FOOTER_END -->
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.20</span>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.21</span>
 </div>
 
 <script>

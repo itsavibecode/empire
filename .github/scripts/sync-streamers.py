@@ -66,7 +66,11 @@ def card_html(s, today=None):
 
     Renders a JUST ADDED corner ribbon when the streamer's `added_at`
     is within the last 3 days. Badge is positioned absolute over the
-    top-right corner of the card via CSS (.streamer-just-added)."""
+    top-right corner of the card via CSS (.streamer-just-added).
+
+    v0.13.21 — also renders a rank bubble when `rank` is set in
+    streamers.json. CSS handles the upper-right positioning and the
+    gold / silver / bronze tints for #1 / #2 / #3."""
     badge = ''
     if is_just_added(s, today):
         # Stamp the badge with the date so a JS check at page load can
@@ -76,8 +80,26 @@ def card_html(s, today=None):
         # else changes, JS decays them in the meantime.
         badge = (f'        <div class="streamer-just-added" '
                  f'data-added="{s["added_at"]}">JUST ADDED</div>\n')
+
+    # Rank bubble — render only when `rank` is set (positive int).
+    # Blank / null / 0 / non-numeric all skip rendering. We trust the
+    # admin not to set duplicate ranks, but we don't enforce it (a
+    # tie just renders two same-number bubbles which is fine for
+    # display purposes).
+    rank_badge = ''
+    rank_val = s.get('rank')
+    if rank_val not in (None, '', 0, '0'):
+        try:
+            n = int(rank_val)
+            if n >= 1:
+                rank_badge = (f'        <div class="streamer-rank rank-{n}" '
+                              f'aria-label="Ranked #{n}">{n}</div>\n')
+        except (TypeError, ValueError):
+            pass
+
     return (
         f'<a class="streamer-card" href="{s["url"]}" target="_blank">\n'
+        + rank_badge
         + badge
         + f'        <div class="streamer-avatar" id="av-{s["slug"]}">\n'
         f'          <span class="streamer-initials">{s["initials"]}</span>\n'
