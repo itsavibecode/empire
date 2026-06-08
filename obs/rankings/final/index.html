@@ -13,7 +13,7 @@
      (assuming "Refresh browser when scene becomes active" is on). -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.4">
+<meta name="version" content="0.1.5">
 <title>Empire X — Final Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,6 +139,9 @@
     100% { opacity: 1; transform: scale(1); }
   }
 
+  /* Default style (ranks 4-10): gold ring, transparent inside,
+     number drawn in the same gold as the ring. #1/#2/#3 override
+     this with solid gradient fills below. */
   .row-rank {
     width: 60px; height: 60px;
     border-radius: 50%;
@@ -148,11 +151,10 @@
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
     font-size: 1.7rem;
-    color: #1a0e02;
-    background: linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
-    border: 2px solid rgba(255,255,255,0.22);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.3);
-    text-shadow: 0 1px 0 rgba(255,255,255,0.22);
+    color: var(--gold);
+    background: transparent;
+    border: 2.5px solid var(--gold);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
   }
 
   .row-avatar {
@@ -185,12 +187,17 @@
     text-shadow: 0 1px 3px rgba(0,0,0,0.7);
   }
 
-  /* Top-3 styling: distinct gradients, slightly bigger rank disc + glow. */
+  /* Top-3 styling: solid gradient fills (override the gold-ring
+     default), slightly bigger rank disc + glow. Each one re-sets
+     background, border, AND color so the ring style doesn't leak
+     through. */
   .row-rank.rank-1 {
     width: 76px; height: 76px;
     font-size: 2.15rem;
     background: linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
-    border-color: rgba(255,255,255,0.5);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #1a0e02;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.22);
     box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 24px rgba(255,216,106,0.6);
     animation: leaderShine 2.2s ease-in-out infinite;
   }
@@ -200,11 +207,16 @@
   }
   .row-rank.rank-2 {
     background: linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%);
+    border: 2px solid rgba(255,255,255,0.5);
     color: #1a1a1a;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.3);
     box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(183,183,183,0.5), 0 0 18px rgba(183,183,183,0.4);
   }
   .row-rank.rank-3 {
     background: linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #1a0e02;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.22);
     box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(185,123,77,0.5), 0 0 18px rgba(185,123,77,0.4);
   }
   /* #1 row keeps a slightly larger frame to land the moment, but

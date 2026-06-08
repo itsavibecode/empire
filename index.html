@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, MarkyNextDoor, XenaTheWitch, Chibu, Ice Poseidon, Sasha West, Kimmee, Fabia Alissia, WoodBaby, Jeane Marie, Hanridge, AshWilder, Blame, Shangel, Mia Maxxed, Emzam, Check , Dejayboss, Diamond, JJStream, Nick Lee, FloridaBoy, Letty, Suzie Smalls, TaylorStarlight, Maddy Coles, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, Jackie, SaltyGummiBear, IamTalanya, Cobbruvs, KennyHoopz, RiddaW, Fanos, KikiKrazy, lifeismizzy, Mando, Dtan, Ozemi, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.24">
+<meta name="version" content="0.13.25">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -1143,8 +1143,10 @@ section{padding:6rem 1.5rem}
    `rank` field in streamers.json (CMS "Event ranking"). When set,
    sync-streamers.py renders <div class="streamer-rank rank-N">N</div>
    inside the card. CSS classes give #1/#2/#3 their own gold/silver/
-   bronze tints; #4-10 share the deep brand-gold style. No rank set
-   -> no bubble at all (no badge, no reserved space). */
+   bronze SOLID tints; #4-10 use a "ring" style — gold outline,
+   transparent inside, gold number — so the podium reads loudest at
+   a glance. No rank set -> no bubble at all (no badge, no reserved
+   space). */
 .streamer-rank{
   position:absolute;
   top:6px;
@@ -1159,13 +1161,17 @@ section{padding:6rem 1.5rem}
   font-weight:700;
   font-size:0.85rem;
   letter-spacing:0;
-  color:#1a0e02;
-  background:linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
-  border:1.5px solid rgba(255,255,255,0.18);
-  box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,168,67,0.3);
+  /* Default style (ranks 4-10): gold ring, transparent inside,
+     number drawn in the same gold as the ring. */
+  color:var(--gold);
+  background:transparent;
+  border:2px solid var(--gold);
+  box-shadow:0 2px 8px rgba(0,0,0,0.55);
   pointer-events:none;
   z-index:3;
-  text-shadow:0 1px 0 rgba(255,255,255,0.18);
+  /* Slight black halo so the gold number stays legible if the bubble
+     ever sits over a bright spot on the card photo. */
+  text-shadow:0 1px 3px rgba(0,0,0,0.85);
 }
 /* Cards may carry BOTH the JUST ADDED ribbon and a rank bubble.
    Push the ribbon down so they don't stack on top of each other. */
@@ -1176,11 +1182,16 @@ section{padding:6rem 1.5rem}
 .streamer-card:has(.streamer-rank) .streamer-just-added{
   top:42px;
 }
+/* #1/#2/#3 — solid podium fills override the default ring style.
+   Each one re-sets background + border + number color so the SOLID
+   look reads loud against the gold-ring #4-10 bubbles. */
+
 /* #1 — brightest gold + soft pulse so it's unmistakable as the leader. */
 .streamer-rank.rank-1{
   background:linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
-  border-color:rgba(255,255,255,0.4);
+  border:1.5px solid rgba(255,255,255,0.4);
   color:#1a0e02;
+  text-shadow:0 1px 0 rgba(255,255,255,0.18);
   animation:rank-leader-pulse 2.4s ease-in-out infinite;
 }
 @keyframes rank-leader-pulse{
@@ -1190,12 +1201,18 @@ section{padding:6rem 1.5rem}
 /* #2 — silver */
 .streamer-rank.rank-2{
   background:linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%);
+  border:1.5px solid rgba(255,255,255,0.4);
   color:#1a1a1a;
+  text-shadow:0 1px 0 rgba(255,255,255,0.3);
+  box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(183,183,183,0.4);
 }
 /* #3 — bronze */
 .streamer-rank.rank-3{
   background:linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%);
+  border:1.5px solid rgba(255,255,255,0.4);
   color:#1a0e02;
+  text-shadow:0 1px 0 rgba(255,255,255,0.18);
+  box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 1px rgba(185,123,77,0.4);
 }
 
 .streamer-card:hover{

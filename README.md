@@ -17,6 +17,18 @@ The changelog below is chronological and tags each entry with its scope.
 
 ## Changelog
 
+### Site v0.13.25 — 2026-06-08 — Rank bubble ring style for #4-#10
+
+The rank bubbles previously read as a uniform field of deep-gold discs with only #1/#2/#3 standing out via brighter gradients. With the field stretched to ten ranks that's still too much visual weight on the also-rans. The podium needed to read loudest at a glance.
+
+Switched ranks 4-10 to a **ring style** across all three places the bubble renders:
+
+- `index.html` streamer cards (`.streamer-rank`)
+- `/obs/rankings/` ticker overlay (`.entry-rank`)
+- `/obs/rankings/final/` reveal overlay (`.row-rank`)
+
+Default style is now a **gold outline circle, transparent inside, with the number drawn in the same gold as the ring**. The solid gradient fills are kept exclusively for #1 (bright gold), #2 (silver), #3 (bronze) — so the podium pops against a quieter chorus. Each of those three rules explicitly re-sets `background`, `border`, AND `color` so the new transparent default doesn't bleed through.
+
 ### Site v0.13.14 — 2026-05-19 — empire-worker live-status proxy
 
 `/obs/` and `/multi/` were racing three public CORS proxies (`allorigins.win`, `corsproxy.io`) to read `kick.com/api/v2/channels/<slug>` because Kick doesn't send CORS headers. Two compounding problems made that approach fall apart:
