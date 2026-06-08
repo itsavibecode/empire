@@ -770,6 +770,27 @@ collections:
         name: rankings_file
         format: json
         fields:
+          - name: ticker
+            label: 'Ticker overlay behavior'
+            widget: object
+            collapsed: false
+            hint: 'Controls how the /obs/rankings/ ticker behaves on the broadcast.'
+            fields:
+              - name: scroll
+                label: 'Scroll the ticker left across the screen'
+                widget: boolean
+                default: false
+                hint: 'When ON, the rankings continuously scroll right-to-left in a seamless loop (good when you have more entries than fit on screen). When OFF, the ticker shows what fits and stays still.'
+              - name: speed
+                label: 'Scroll speed'
+                widget: select
+                default: 'medium'
+                options:
+                  - { label: 'Slow (90s per loop)', value: 'slow' }
+                  - { label: 'Medium (60s per loop)', value: 'medium' }
+                  - { label: 'Fast (40s per loop)', value: 'fast' }
+                  - { label: 'Very fast (25s per loop)', value: 'very-fast' }
+                hint: 'Only applies when scroll is ON. The duration is for one full loop around the track regardless of how many entries you have.'
           - name: rankings
             label: Ranked streamers
             label_singular: 'Ranked streamer'

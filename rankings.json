@@ -1,3 +1,7 @@
 {
+  "ticker": {
+    "scroll": false,
+    "speed": "medium"
+  },
   "rankings": []
 }

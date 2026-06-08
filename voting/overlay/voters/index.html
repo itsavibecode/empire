@@ -14,7 +14,7 @@
      so it composites cleanly. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.2">
+<meta name="version" content="0.1.3">
 <title>Empire X Voting — Live Voters</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,61 +202,52 @@
 
 <script>
 /* =====================================================================
-   Live voters ticker — prototype v0.1.2.
+   Live voters ticker — prototype v0.1.3.
 
-   v0.1.2 fix: previously this pool was drawn from Empire X streamers
-   themselves (real slugs + their real Kick avatars), which was
-   misleading -- in production the voters are VIEWERS, not the
-   streamers. Now we mock the voter pool with realistic viewer-style
-   usernames and generated avatars (initials on a colored disc via
-   ui-avatars.com, same approach Kick uses for users without a
-   custom profile pic). Avatar color is hashed from the username so
-   it's stable per-voter across re-renders.
+   v0.1.3 — voter pool now uses REAL Kick chatter names (mixed with
+   plausibly-real handles). Avatars are pulled live from Kick via
+   empire-worker's new /user/<slug> endpoint, which fetches the
+   user's actual Kick profile_pic and caches it in the Cloudflare
+   edge Cache API for 24 hours so the same name never re-hits Kick.
 
-   In production this overlay reads avatar URLs straight off each
-   Firestore vote document -- captured from the OAuth response when
-   the viewer signed in to vote. The render path doesn't change;
-   only the avatar URL source does.
+   When a username doesn't resolve to a Kick account (typo or made-up),
+   we fall back to a generated avatar from ui-avatars.com -- same
+   visual treatment Kick uses for users without a custom profile pic.
+
+   In production this overlay reads avatar URLs off the vote document
+   (captured from Kick OAuth profile_pic at sign-in time). Render
+   path is the same; only the source of the URL changes.
 ===================================================================== */
 (function () {
+  var WORKER_USER_URL = 'https://empire-worker.sevendwarfs.workers.dev/user/';
   var CHOICES = ['Sky9 House', 'DTB House', 'Mixtapes House', 'Kozy House'];
 
-  // Realistic Kick viewer usernames -- mix of obvious fans, casual
-  // handles, numbered defaults, and lurker-style accounts so the
-  // ticker reads like an actual audience rather than a celebrity
-  // panel. Capitalization varies to match how Kick handles display
-  // them on Kick's own UI.
+  // Voter pool. The first three are real Kick chatters confirmed
+  // to have profile pics; the rest are plausible viewer handles
+  // (some may exist on Kick, some won't — the fallback handles
+  // both cases).
   var USERNAMES = [
-    'cobbruvs_fan22', 'EmpireSzn', 'shangelpolice', 'IRL_lurker', 'kickwatcher',
-    'glorpkick', 'StreamGuy_98', 'Polish_Pete', 'midnightviewer', 'tunedin_2026',
-    'EmpireGoer', 'sky9_4ever', 'mixtapesfanboi', 'dailyDTB', 'sundayviewer',
-    'user_28194', 'iceshorts', 'mikejr4lyfe', 'briewstan', 'kennyhoopzfan',
-    'KozyBois', 'late_night_listener', 'florida_kicker', 'jjwatching',
-    'lurk_more', 'AnDriahLee_22', 'cb_sees_all', 'rid_w_dub', 'feedjunkie',
-    'PHX_Streams', 'CHIstreams', 'NYC_watching', 'firsttime_caller', 'longtimewatcher',
-    'EmpireXlurker', 'PartyHouseFan', 'theBaddest_OG', 'BlacksUnitedBU', 'kozygrl',
-    'mixtapesQueen', 'late_to_stream', 'just_here_4_drama', 'voter_4_2_8',
-    'EmpireXdaily', 'streamdotcom', 'gimme_clips', 'lurker_no_more', 'EmpireFirstTime',
-    'DTBriders', 'allpursuitAP', 'ChibuFollower', 'iceP_for_pres'
+    // Confirmed-real Kick chatters:
+    'SRTMarcus', 'bestfriend_x', 'baezyx',
+    // Speculative — gets a real avatar if the name exists on Kick,
+    // otherwise falls back to ui-avatars.com:
+    'cobbruvs_fan22', 'EmpireSzn', 'shangelpolice', 'IRL_lurker',
+    'kickwatcher', 'StreamGuy_98', 'midnightviewer', 'tunedin_2026',
+    'user_28194', 'late_night_listener', 'longtimewatcher',
+    'EmpireXlurker', 'PartyHouseFan', 'kozygrl', 'just_here_4_drama',
+    'EmpireXdaily', 'gimme_clips', 'lurker_no_more', 'EmpireFirstTime',
+    'dailyDTB', 'mixtapesQueen', 'voter_4_2_8'
   ];
 
-  // Generate an avatar URL via ui-avatars.com with a color picked
-  // deterministically from a small palette by hashing the username.
-  // Mirrors how Kick renders default avatars: bold initials on a
-  // saturated background.
+  // ui-avatars fallback palette + builder (used when /user/<slug>
+  // doesn't find a Kick account for the name).
   var PALETTE = [
-    ['D4A843', '0a0a0a'],   // brand gold
-    ['8B5CF6', 'ffffff'],   // purple
-    ['EC4899', 'ffffff'],   // pink
-    ['10B981', 'ffffff'],   // green
-    ['F59E0B', '0a0a0a'],   // amber
-    ['3B82F6', 'ffffff'],   // blue
-    ['EF4444', 'ffffff'],   // red
-    ['8B6620', 'F5F1EB'],   // dark gold
-    ['06B6D4', '0a0a0a'],   // cyan
-    ['F472B6', '0a0a0a'],   // light pink
+    ['D4A843', '0a0a0a'], ['8B5CF6', 'ffffff'], ['EC4899', 'ffffff'],
+    ['10B981', 'ffffff'], ['F59E0B', '0a0a0a'], ['3B82F6', 'ffffff'],
+    ['EF4444', 'ffffff'], ['8B6620', 'F5F1EB'], ['06B6D4', '0a0a0a'],
+    ['F472B6', '0a0a0a']
   ];
-  function avatarFor(name) {
+  function uiAvatar(name) {
     var hash = 0;
     for (var i = 0; i < name.length; i++) {
       hash = (hash * 31 + name.charCodeAt(i)) | 0;
@@ -266,6 +257,40 @@
          + '&background=' + p[0]
          + '&color=' + p[1]
          + '&name=' + encodeURIComponent(name);
+  }
+
+  // Avatar cache: name -> URL. Starts with ui-avatars fallbacks so
+  // the ticker can render immediately; gets upgraded with real Kick
+  // URLs as the per-user fetches resolve. Already-rendered rows
+  // self-update when their voter's real avatar arrives.
+  var avatarCache = {};
+  USERNAMES.forEach(function (name) {
+    avatarCache[name] = uiAvatar(name);
+  });
+
+  // Background-upgrade real Kick avatars. Fire 'em all in parallel
+  // — the worker caches each in the CF edge so this is a one-time
+  // batch per cold browser session.
+  USERNAMES.forEach(function (name) {
+    fetch(WORKER_USER_URL + encodeURIComponent(name.toLowerCase()), { cache: 'no-cache' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.found && data.profile_pic) {
+          avatarCache[name] = data.profile_pic;
+          // Upgrade any already-rendered rows for this voter.
+          document.querySelectorAll('[data-voter-name="' + cssEscape(name) + '"] .voter-avatar img').forEach(function (img) {
+            if (img.src !== data.profile_pic) img.src = data.profile_pic;
+          });
+        }
+      })
+      .catch(function () { /* swallow — keep the ui-avatars fallback */ });
+  });
+
+  function cssEscape(s) {
+    // Minimal escape for attribute-selector use; CSS.escape exists in
+    // modern browsers but we keep this small for OBS browser sources
+    // that might be running older Chromium builds.
+    return String(s).replace(/(["\\])/g, '\\$1');
   }
 
   var listEl  = document.getElementById('voterList');
@@ -279,9 +304,10 @@
   function buildRow(name, choice) {
     var row = document.createElement('li');
     row.className = 'voter-row';
+    row.setAttribute('data-voter-name', name);
     row.innerHTML =
       '<div class="voter-avatar">' +
-        '<img src="' + avatarFor(name) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
+        '<img src="' + avatarCache[name] + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
       '</div>' +
       '<div class="voter-name">' + name + '</div>' +
       '<div class="voter-choice">' + choice + '</div>';
@@ -310,8 +336,9 @@
     setTimeout(function () { addVote(); schedule(); }, ms);
   }
 
-  /* Paint the initial 5 rows then start the ticker. No async fetch
-     anymore -- everything's local. */
+  /* Paint initial 5 rows then start the ticker. Avatars start with
+     ui-avatars fallbacks and self-upgrade to real Kick pics as the
+     /user/<slug> fetches resolve. */
   for (var i = 0; i < 5; i++) {
     listEl.appendChild(buildRow(pickVoter(), pickChoice()));
   }

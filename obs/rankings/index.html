@@ -12,7 +12,7 @@
      Place at top or bottom of the broadcast scene. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.2">
+<meta name="version" content="0.1.3">
 <title>Empire X — Event Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -113,6 +113,36 @@
   }
   .entries::before { left: 0;  background: linear-gradient(90deg, var(--ink), transparent); }
   .entries::after  { right: 0; background: linear-gradient(270deg, var(--ink), transparent); }
+
+  /* === SCROLLING MODE (v0.1.3) ===================================
+     When the CMS ticker setting is scroll=true, entries get wrapped
+     in an .entries-track that animates leftward in a seamless loop.
+     The track contains the entries TWICE (rendered by JS) so that
+     when transform hits translateX(-50%) it looks like the start
+     position again. Speed comes from the --scroll-duration custom
+     property, set on .entries-track from the CMS speed selection
+     (slow/medium/fast/very-fast). */
+  .entries.scrolling {
+    /* The whole strip becomes the marquee viewport; the track
+       handles its own gap + horizontal layout. */
+    padding: 0;
+  }
+  .entries.scrolling .entries-track {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: max-content;
+    padding: 0 1rem;
+    animation: tickerScroll var(--scroll-duration, 40s) linear infinite;
+  }
+  @keyframes tickerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  /* Pause the marquee if someone (a curious preview viewer) hovers.
+     OBS browser sources don't get hover events so this is purely a
+     QoL for /preview/. */
+  .entries.scrolling:hover .entries-track { animation-play-state: paused; }
 
   .entry {
     flex: 0 0 auto;
@@ -232,12 +262,13 @@
 
   var entriesEl = document.getElementById('entries');
 
-  function render(ranked) {
+  function render(ranked, ticker) {
     if (!ranked.length) {
+      entriesEl.className = 'entries';
       entriesEl.innerHTML = '<div class="empty">Rankings will appear here once the event starts</div>';
       return;
     }
-    var html = ranked.map(function (s) {
+    var entryHtml = ranked.map(function (s) {
       var img = s.avatar
         ? '<img src="' + s.avatar + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
         : '';
@@ -250,7 +281,21 @@
         '</div>'
       );
     }).join('');
-    entriesEl.innerHTML = html;
+
+    var scroll = !!(ticker && ticker.scroll);
+    if (scroll && ranked.length > 1) {
+      // Scrolling marquee: duplicate the entries so a seamless
+      // translateX(-50%) loop never looks like it's restarting.
+      var duration = SPEED_MAP[(ticker && ticker.speed) || 'medium'] || SPEED_MAP.medium;
+      entriesEl.className = 'entries scrolling';
+      entriesEl.innerHTML =
+        '<div class="entries-track" style="--scroll-duration:' + duration + '">' +
+          entryHtml + entryHtml +
+        '</div>';
+    } else {
+      entriesEl.className = 'entries';
+      entriesEl.innerHTML = entryHtml;
+    }
   }
 
   function escapeHtml(s) {
@@ -261,27 +306,39 @@
       .replace(/"/g, '&quot;');
   }
 
-  // v0.1.2 — ?demo=1 loads a hardcoded sample ranking from real
-  // Empire X streamers so /obs/rankings/preview/ can show what the
-  // overlay looks like populated, before the client has set any
-  // actual standings.
+  // v0.1.3 — speed → CSS animation-duration. The CMS exposes a
+  // human-readable "Speed" dropdown that maps to one of these values
+  // at render time. "very-fast" can read tickerlike on long rosters;
+  // most events will probably want "medium".
+  var SPEED_MAP = {
+    slow:        '90s',
+    medium:      '60s',
+    fast:        '40s',
+    'very-fast': '25s',
+  };
+
+  // ?demo=1 loads a hardcoded sample ranking from real Empire X
+  // streamers (used by /obs/rankings/preview/). Demo also forces
+  // ticker.scroll=true so the preview shows the scrolling behavior.
   var DEMO_RANKINGS = [
     { slug: 'shangel' }, { slug: 'cobbruvs' }, { slug: 'mikesmallsjr' },
     { slug: 'markynextdoor' }, { slug: 'iceposeidon' }, { slug: 'nicklee' },
     { slug: 'dtanmanb' }, { slug: 'kennyhoopz' }, { slug: 'xenathewitch' },
     { slug: 'briewylde' },
   ];
+  var DEMO_TICKER = { scroll: true, speed: 'medium' };
   var isDemo = new URLSearchParams(location.search).get('demo') === '1';
 
   function refresh() {
     Promise.all([
       isDemo
-        ? Promise.resolve({ rankings: DEMO_RANKINGS })
+        ? Promise.resolve({ rankings: DEMO_RANKINGS, ticker: DEMO_TICKER })
         : fetch('/rankings.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch('/streamers.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }),
       fetch(WORKER_LIVE, { cache: 'no-cache' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
     ]).then(function (results) {
       var ranksFile = results[0] || {};
+      var ticker = ranksFile.ticker || null;
       var roster = (results[1] && results[1].streamers) || [];
       var snap = results[2];
       var chans = (snap && snap.channels) || {};
@@ -315,7 +372,7 @@
         });
       }
 
-      render(ranked);
+      render(ranked, ticker);
     }).catch(function (err) {
       console.warn('[rankings] refresh failed:', err);
     });
