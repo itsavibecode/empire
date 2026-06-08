@@ -12,7 +12,7 @@
      Place at top or bottom of the broadcast scene. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.5">
+<meta name="version" content="0.1.6">
 <title>Empire X — Event Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,6 +143,41 @@
      OBS browser sources don't get hover events so this is purely a
      QoL for /preview/. */
   .entries.scrolling:hover .entries-track { animation-play-state: paused; }
+
+  /* === LOOP SEPARATOR (v0.1.6) ===
+     When the ticker scrolls, the entries cycle continuously and the
+     gap between #10 and the next loop's #1 isn't obvious — both
+     numbers read as "low" / "high" depending on order, and the
+     viewer can miss that a full lap just completed. This separator
+     element sits between the original entries and their duplicate
+     copy in the track so the viewer sees a clear "end of list"
+     marker before the cycle restarts. Empire X mark flanked by
+     thin gold lines for brand continuity. */
+  .entry-divider {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 1.1rem;
+    opacity: 0.9;
+  }
+  .entry-divider .div-line {
+    width: 30px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(212,168,67,0.75) 50%, transparent 100%);
+  }
+  .entry-divider .div-mark {
+    width: 30px; height: 30px;
+    display: block;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.55));
+  }
+  .entry-divider .div-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.35em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  }
 
   .entry {
     flex: 0 0 auto;
@@ -286,11 +321,21 @@
     if (scroll && ranked.length > 1) {
       // Scrolling marquee: duplicate the entries so a seamless
       // translateX(-50%) loop never looks like it's restarting.
+      // Separator between the two copies (and at the end of the
+      // duplicated set) tells the viewer "the list just looped".
       var duration = SPEED_MAP[(ticker && ticker.speed) || 'medium'] || SPEED_MAP.medium;
+      var separator =
+        '<div class="entry-divider" aria-hidden="true">' +
+          '<div class="div-line"></div>' +
+          '<img src="/logo.png" alt="" class="div-mark">' +
+          '<span class="div-label">EMPIRE&nbsp;X</span>' +
+          '<img src="/logo.png" alt="" class="div-mark">' +
+          '<div class="div-line"></div>' +
+        '</div>';
       entriesEl.className = 'entries scrolling';
       entriesEl.innerHTML =
         '<div class="entries-track" style="--scroll-duration:' + duration + '">' +
-          entryHtml + entryHtml +
+          entryHtml + separator + entryHtml + separator +
         '</div>';
     } else {
       entriesEl.className = 'entries';

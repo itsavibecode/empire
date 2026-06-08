@@ -101,13 +101,13 @@ collections:
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
               - name: rank
-                label: 'Poll Ranking (optional)'
+                label: 'Poll Ranking (1–10, optional)'
                 widget: number
                 required: false
                 value_type: int
                 min: 1
-                max: 99
-                hint: 'Optional poll-ranking number. Set this after each poll closes — leave blank to hide. When set, a small numbered bubble appears in the upper-right of this streamer''s card AND they appear on the /obs/rankings/ overlay. #1 gets brighter gold + pulse, #2 silver, #3 bronze, #4-10 standard gold.'
+                max: 10
+                hint: 'Optional poll-ranking number 1 through 10. Set this after each poll closes — leave blank to hide. When set, a small numbered bubble appears in the upper-right of this streamer''s card AND they appear on the /obs/rankings/ overlays. #1 gets brighter gold + pulse, #2 silver, #3 bronze, #4-10 standard gold.'
               # NOTE: `added_at` is NOT exposed here. The sync workflow
               # auto-fills it with today's date when a brand-new
               # streamer entry has none, then writes streamers.json

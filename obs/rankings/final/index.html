@@ -13,7 +13,7 @@
      (assuming "Refresh browser when scene becomes active" is on). -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.3">
+<meta name="version" content="0.1.4">
 <title>Empire X — Final Rankings</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,64 +92,76 @@
   }
 
   /* === LIST ===
-     The reveal happens row by row from #10 → #1 via staggered
-     animation-delays computed at runtime by JS based on each
-     row's data-index attribute. Each row starts hidden and slides
-     up + fades in. #1 lands with a slightly bigger pop. */
+     v0.1.4 — rows now scroll up from below into their final
+     positions instead of stacking statically. The whole list starts
+     way below the visible area (translateY ~60vh) and the LIST
+     itself animates upward to its rest position over ~14 seconds.
+     Each individual row STILL gets a staggered fade-in + scale
+     animation tied to its rank (computed at runtime via
+     --reveal-delay) so the dramatic countdown order stays intact —
+     #10 reveals first as it scrolls into view from below, #1 last
+     when the list comes to rest. Slimmer row sizing (-rank/-avatar
+     down to 64px) so all 10 fit on a 1080p OBS canvas with room
+     for the header and footer. */
   .list {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 1vh;
+    gap: 0.75vh;
     max-width: 1100px;
     margin: 0 auto;
     width: 100%;
+    /* Whole list slides up over the reveal phase. */
+    transform: translateY(60vh);
+    animation: listScrollUp 14s cubic-bezier(0.32, 0.04, 0.34, 1) 0.8s forwards;
   }
+  @keyframes listScrollUp {
+    to { transform: translateY(0); }
+  }
+
   .row {
     display: grid;
-    grid-template-columns: 92px 80px 1fr auto;
-    gap: 1.6rem;
+    grid-template-columns: 72px 64px 1fr auto;
+    gap: 1.1rem;
     align-items: center;
-    padding: 1vh 1.4rem;
+    padding: 0.55vh 1.1rem;
     background: rgba(20,20,20,0.55);
     border: 1px solid var(--hairline);
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
     opacity: 0;
-    transform: translateY(28px) scale(0.94);
-    animation: rowReveal 0.7s cubic-bezier(0.18, 0.85, 0.25, 1) forwards;
+    animation: rowReveal 0.9s cubic-bezier(0.18, 0.85, 0.25, 1) forwards;
     animation-delay: var(--reveal-delay, 0s);
   }
   @keyframes rowReveal {
-    0%   { opacity: 0; transform: translateY(28px) scale(0.94); }
-    60%  { opacity: 1; transform: translateY(-4px) scale(1.02); }
-    100% { opacity: 1; transform: translateY(0)    scale(1); }
+    0%   { opacity: 0; transform: scale(0.94); }
+    60%  { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   .row-rank {
-    width: 76px; height: 76px;
+    width: 60px; height: 60px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 2.2rem;
+    font-size: 1.7rem;
     color: #1a0e02;
     background: linear-gradient(135deg, #D4A843 0%, #A17A28 100%);
     border: 2px solid rgba(255,255,255,0.22);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.3);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,168,67,0.3);
     text-shadow: 0 1px 0 rgba(255,255,255,0.22);
   }
 
   .row-avatar {
-    width: 80px; height: 80px;
+    width: 64px; height: 64px;
     border-radius: 50%;
     overflow: hidden;
     border: 2px solid var(--hairline);
     background: linear-gradient(135deg, #2a2018, #1a1208);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
   }
   .row-avatar img {
     width: 100%; height: 100%;
@@ -159,52 +171,53 @@
   .row-name {
     font-family: 'DM Sans', sans-serif;
     font-weight: 700;
-    font-size: 1.8rem;
+    font-size: 1.45rem;
     color: #fff;
     text-shadow: 0 2px 6px rgba(0,0,0,0.8);
     letter-spacing: -0.005em;
   }
   .row-meta {
     font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--cream-dim);
     text-shadow: 0 1px 3px rgba(0,0,0,0.7);
   }
 
-  /* Top-3 styling: distinct gradients, bigger rank disc, glow ring. */
+  /* Top-3 styling: distinct gradients, slightly bigger rank disc + glow. */
   .row-rank.rank-1 {
-    width: 100px; height: 100px;
-    font-size: 2.8rem;
+    width: 76px; height: 76px;
+    font-size: 2.15rem;
     background: linear-gradient(135deg, #FFD86A 0%, #D4A843 50%, #8B6620 100%);
     border-color: rgba(255,255,255,0.5);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 28px rgba(255,216,106,0.6);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 24px rgba(255,216,106,0.6);
     animation: leaderShine 2.2s ease-in-out infinite;
   }
   @keyframes leaderShine {
-    0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 28px rgba(255,216,106,0.6); }
-    50%      { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.9), 0 0 42px rgba(255,216,106,0.95); }
+    0%, 100% { box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.6), 0 0 24px rgba(255,216,106,0.6); }
+    50%      { box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,216,106,0.9), 0 0 38px rgba(255,216,106,0.95); }
   }
   .row-rank.rank-2 {
     background: linear-gradient(135deg, #EEEEEE 0%, #B7B7B7 50%, #7A7A7A 100%);
     color: #1a1a1a;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(183,183,183,0.5), 0 0 20px rgba(183,183,183,0.4);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(183,183,183,0.5), 0 0 18px rgba(183,183,183,0.4);
   }
   .row-rank.rank-3 {
     background: linear-gradient(135deg, #E1A47F 0%, #B97B4D 50%, #7C4A22 100%);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(185,123,77,0.5), 0 0 20px rgba(185,123,77,0.4);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 0 2px rgba(185,123,77,0.5), 0 0 18px rgba(185,123,77,0.4);
   }
-  /* #1 row gets a slightly larger frame to land the moment. */
+  /* #1 row keeps a slightly larger frame to land the moment, but
+     trimmed enough that 10 rows still fit. */
   .row.is-leader {
-    padding: 1.4vh 1.4rem;
+    padding: 0.9vh 1.1rem;
     background: linear-gradient(90deg, rgba(212,168,67,0.18) 0%, rgba(212,168,67,0.05) 100%);
     border-color: rgba(212,168,67,0.45);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.55), 0 0 28px rgba(212,168,67,0.25);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.55), 0 0 22px rgba(212,168,67,0.25);
   }
-  .row.is-leader .row-name { font-size: 2.1rem; }
-  .row.is-leader .row-avatar { width: 96px; height: 96px; }
-  .row.is-leader { grid-template-columns: 108px 96px 1fr auto; }
+  .row.is-leader .row-name { font-size: 1.7rem; }
+  .row.is-leader .row-avatar { width: 76px; height: 76px; }
+  .row.is-leader { grid-template-columns: 88px 76px 1fr auto; }
 
   /* === EMPTY STATE === */
   .empty {
@@ -260,9 +273,13 @@
 (function () {
   var WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
   var TOP_N = 10;
-  var BASE_DELAY_S = 0.9;  // first reveal starts after the header lands
-  var STEP_S = 1.0;        // gap between successive reveals (10→1)
-  var FINALE_PAUSE_S = 1.2; // extra dwell before #1 lands
+  // v0.1.4 — timings now align with the 14s list scroll-up animation
+  // (defined in CSS). Each row's reveal triggers roughly when its
+  // position scrolls into the visible area, so the dramatic countdown
+  // happens AS the list rises into view rather than after.
+  var BASE_DELAY_S = 1.6;   // when #10 (bottom of list) crosses into view
+  var STEP_S = 1.25;        // gap between successive row reveals
+  var FINALE_PAUSE_S = 1.0; // extra dwell before #1 lands at the top
 
   var listEl = document.getElementById('list');
 
