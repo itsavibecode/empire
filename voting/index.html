@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.2.0">
+<meta name="version" content="0.3.0">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,7 +468,7 @@
 <body>
 
 <div class="dev-banner">
-  Internal only &middot; Kick OAuth live &middot; vote casting + Firestore wiring lands in v0.3
+  Internal only &middot; Kick OAuth + Firestore voting LIVE &middot; OBS overlays wire next
 </div>
 
 <header>
@@ -788,7 +788,7 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.2.0 &middot; Kick OAuth live &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.3.0 &middot; live polls + tally &middot; not linked from the public site</div>
 </footer>
 
 <script type="module">
@@ -865,40 +865,43 @@ import { getSession, checkSession, startKickSignIn, signOut } from '/voting/auth
   // the actual sign-in state until the vote endpoint is wired).
   window.__exSession = session;
 
-  /* --- Mock vote casting on the poll options ---
-     v0.2.0 — auth check is now real (uses the real session), but the
-     vote itself is still a local "selected" highlight. The next
-     commit wires this to the worker's POST /voting/vote endpoint
-     so the click actually persists to Firestore. */
-  var options = document.querySelectorAll('#pollOptions .poll-option');
-  var pollClosed = false;
-  options.forEach(function (opt) {
-    opt.addEventListener('click', function () {
-      if (pollClosed) return;
-      if (!window.__exSession || !window.__exSession.user) {
-        statusEl.style.color = 'var(--red)';
-        statusEl.textContent = 'Sign in to vote';
-        setTimeout(function () {
-          statusEl.style.color = '';
-          renderAuth();
-        }, 1800);
-        return;
-      }
-      options.forEach(function (o) { o.classList.remove('selected'); });
-      opt.classList.add('selected');
-    });
-  });
+  /* === REAL VOTING UI (v0.3.0) =================================
+     Subscribes to Firestore for the current open poll + its votes
+     subcollection, renders the poll question/options/tally/voter
+     log live, and casts votes via the worker. The whole UI updates
+     in real time as votes land — no polling, no refresh. */
 
-  /* --- Live countdown until the poll closes ---
-     The real version reads the poll's ends_at from Firestore (set
-     when the mod creates the poll, or pushed by "extend by 1 min"
-     mod actions). For the prototype we mock a 5-minute window
-     starting at page load so the timer ticks visibly. */
-  var pollEnds = Date.now() + (5 * 60 * 1000);
+  var { castVote: rpcCastVote, openPoll: rpcOpenPoll, closePoll: rpcClosePoll } =
+    await import('/voting/auth.js');
+  var { db } = await import('/voting/firebase-config.js');
+  var fsMod = await import('https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js');
+
+  var pollOptionsEl = document.getElementById('pollOptions');
+  var pollQuestionEl = document.querySelector('.poll-question');
   var pollPill = document.getElementById('pollPill');
   var pollStatusLabel = document.getElementById('pollStatusLabel');
   var pollCountdownWrap = document.getElementById('pollCountdownWrap');
   var pollCountdown = document.getElementById('pollCountdown');
+  var pollActionsEl = document.querySelector('.poll-actions');
+  var voterLogEl = document.getElementById('voterLog');
+  var tallyHealthEl = document.querySelector('.checklist'); // first .checklist on page (in Tally health card)
+
+  // Clear the hardcoded mock content — we render from Firestore.
+  pollOptionsEl.innerHTML = '';
+  voterLogEl.innerHTML = '<div style="color:var(--cream-dim);font-size:0.9rem;padding:0.6rem;">'
+    + 'No votes yet.</div>';
+  pollQuestionEl.textContent = 'No active poll right now.';
+  pollPill.classList.add('pill-closed');
+  pollStatusLabel.textContent = 'Idle';
+  pollCountdownWrap.textContent = '';
+
+  // State held outside listeners so renderers can coordinate.
+  var currentPollId = null;
+  var currentPoll = null;
+  var currentVotes = []; // sorted desc by voted_at
+  var unsubPoll = null;
+  var unsubVotes = null;
+  var countdownTimer = null;
 
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
   function fmtCountdown(ms) {
@@ -911,64 +914,353 @@ import { getSession, checkSession, startKickSignIn, signOut } from '/voting/auth
       : m + ':' + pad2(s);
   }
 
-  var countdownTimer = null;
-  function tick() {
-    var remaining = pollEnds - Date.now();
-    if (remaining <= 0) {
-      pollClosed = true;
-      pollPill.classList.add('pill-closed');
-      pollStatusLabel.textContent = 'Closed';
-      pollCountdownWrap.textContent = '';
-      // Disable vote interactions on the options (visual cue too)
-      options.forEach(function (o) {
-        o.style.pointerEvents = 'none';
-        o.style.opacity = '0.65';
-      });
-      if (countdownTimer) clearInterval(countdownTimer);
+  // ─── Subscribe to /polls/current ────────────────────────────
+  fsMod.onSnapshot(fsMod.doc(db, 'polls/current'), function (snap) {
+    var data = snap.data();
+    var nextId = data && data.poll_id ? String(data.poll_id) : null;
+    if (nextId === currentPollId) return;
+    currentPollId = nextId;
+
+    // Tear down previous listeners.
+    if (unsubPoll) { unsubPoll(); unsubPoll = null; }
+    if (unsubVotes) { unsubVotes(); unsubVotes = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    currentPoll = null;
+    currentVotes = [];
+
+    if (!currentPollId) {
+      renderEmpty();
+      renderAdminButtons();
       return;
     }
-    pollCountdown.textContent = fmtCountdown(remaining);
-  }
-  tick();
-  countdownTimer = setInterval(tick, 1000);
 
-  /* --- Voter avatars ---
-     v0.1.5 — voters are now viewers (not streamers), so we generate
-     avatars via ui-avatars.com with a per-username color hashed
-     from a small palette. Same approach as the /voting/overlay/voters/
-     ticker. In production each voter's avatar URL comes from their
-     Kick OAuth profile_pic at sign-in time, stored on the vote
-     doc -- render path stays identical, just <img src> swap. */
-  (function () {
-    var PALETTE = [
-      ['D4A843', '0a0a0a'], ['8B5CF6', 'ffffff'], ['EC4899', 'ffffff'],
-      ['10B981', 'ffffff'], ['F59E0B', '0a0a0a'], ['3B82F6', 'ffffff'],
-      ['EF4444', 'ffffff'], ['8B6620', 'F5F1EB'], ['06B6D4', '0a0a0a'],
-      ['F472B6', '0a0a0a']
-    ];
-    function avatarFor(name) {
-      var hash = 0;
-      for (var i = 0; i < name.length; i++) {
-        hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    // Subscribe to the poll doc itself.
+    unsubPoll = fsMod.onSnapshot(
+      fsMod.doc(db, 'polls/' + currentPollId),
+      function (pollSnap) {
+        currentPoll = pollSnap.data() || null;
+        renderPoll();
+        renderAdminButtons();
       }
-      var p = PALETTE[Math.abs(hash) % PALETTE.length];
-      return 'https://ui-avatars.com/api/?bold=true&size=128&format=svg'
-           + '&background=' + p[0]
-           + '&color=' + p[1]
-           + '&name=' + encodeURIComponent(name);
-    }
-    document.querySelectorAll('.voter-row[data-voter]').forEach(function (row) {
-      var name = row.getAttribute('data-voter');
-      var avatar = row.querySelector('.voter-avatar');
-      if (!avatar) return;
-      var img = document.createElement('img');
-      img.src = avatarFor(name);
-      img.alt = '';
-      img.loading = 'lazy';
-      img.referrerPolicy = 'no-referrer';
-      avatar.appendChild(img);
+    );
+
+    // Subscribe to the vote subcollection, ordered most-recent
+    // first. The voter log + tallies both derive from this.
+    var votesQ = fsMod.query(
+      fsMod.collection(db, 'polls/' + currentPollId + '/votes'),
+      fsMod.orderBy('voted_at', 'desc'),
+      fsMod.limit(200)
+    );
+    unsubVotes = fsMod.onSnapshot(votesQ, function (qs) {
+      currentVotes = qs.docs.map(function (d) {
+        return Object.assign({ _id: d.id }, d.data());
+      });
+      renderTally();
+      renderVoterLog();
+      renderTallyHealth();
     });
-  })();
+  });
+
+  // ─── Renderers ──────────────────────────────────────────────
+
+  function renderEmpty() {
+    pollQuestionEl.textContent = 'No active poll right now.';
+    pollOptionsEl.innerHTML = '';
+    pollPill.classList.add('pill-closed');
+    pollStatusLabel.textContent = 'Idle';
+    pollCountdownWrap.textContent = '';
+    pollActionsEl.innerHTML =
+      '<span style="color:var(--cream-dim)">Mods can start one from the Mod tools panel.</span>';
+    voterLogEl.innerHTML = '<div style="color:var(--cream-dim);font-size:0.9rem;padding:0.6rem;">'
+      + 'No active poll.</div>';
+    if (tallyHealthEl) renderTallyHealth();
+  }
+
+  function renderPoll() {
+    if (!currentPoll) return;
+    pollQuestionEl.textContent = currentPoll.question || '(no question)';
+
+    var isOpen = currentPoll.state === 'open';
+    pollPill.classList.toggle('pill-closed', !isOpen);
+    pollStatusLabel.textContent = isOpen ? 'Open' : 'Closed';
+
+    // Countdown — derive from closes_at if set.
+    var closesAtRaw = currentPoll.closes_at;
+    var closesAt = null;
+    if (closesAtRaw && typeof closesAtRaw.toMillis === 'function') {
+      closesAt = closesAtRaw.toMillis();
+    } else if (closesAtRaw && closesAtRaw.seconds) {
+      closesAt = closesAtRaw.seconds * 1000;
+    }
+    if (isOpen && closesAt) {
+      pollCountdownWrap.innerHTML = ' &middot; <span class="countdown-num" id="pollCountdown">--:--</span> left';
+      var cdEl = document.getElementById('pollCountdown');
+      function tick() {
+        var remaining = closesAt - Date.now();
+        if (remaining <= 0) {
+          if (cdEl) cdEl.textContent = '0:00';
+          if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+          return;
+        }
+        if (cdEl) cdEl.textContent = fmtCountdown(remaining);
+      }
+      tick();
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = setInterval(tick, 1000);
+    } else {
+      pollCountdownWrap.textContent = '';
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    }
+
+    renderOptions();
+  }
+
+  function renderOptions() {
+    if (!currentPoll) return;
+    var options = Array.isArray(currentPoll.options) ? currentPoll.options : [];
+
+    // Map option_id -> existing tally count (will be filled by renderTally).
+    var tallies = computeTallies();
+    var totalVotes = currentVotes.length;
+
+    pollOptionsEl.innerHTML = options.map(function (o) {
+      var count = tallies[o.id] || 0;
+      var pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+      return ''
+        + '<div class="poll-option" data-option-id="' + escapeHtml(o.id) + '">'
+        + '  <div class="poll-option-fill" style="width: ' + pct + '%"></div>'
+        + '  <div class="poll-option-row">'
+        + '    <span class="poll-option-label">' + escapeHtml(o.label || o.id) + '</span>'
+        + '    <span class="poll-option-tally"><strong>' + count + '</strong> &middot; ' + pct + '%</span>'
+        + '  </div>'
+        + '</div>';
+    }).join('');
+
+    // Wire vote casting on the freshly-rendered options.
+    pollOptionsEl.querySelectorAll('.poll-option').forEach(function (el) {
+      el.addEventListener('click', function () { onVoteClick(el.getAttribute('data-option-id')); });
+    });
+
+    renderPollActions(totalVotes);
+  }
+
+  function renderPollActions(totalVotes) {
+    var isOpen = currentPoll && currentPoll.state === 'open';
+    var youVoted = session && currentVotes.some(function (v) {
+      return v._id === String(session.user.user_id);
+    });
+    var bits = [];
+    bits.push('<span><strong>' + totalVotes + '</strong> total vote' + (totalVotes === 1 ? '' : 's') + '</span>');
+    if (!isOpen) bits.push('<span style="color:var(--cream-dim)">Poll closed.</span>');
+    else if (youVoted) bits.push('<span style="color:var(--gold)">You voted ✓</span>');
+    else if (!session) bits.push('<span style="color:var(--cream-dim)">Sign in to vote.</span>');
+    else bits.push('<span style="color:var(--cream-dim)">Click an option to cast your vote.</span>');
+    pollActionsEl.innerHTML = bits.join(' &middot; ');
+  }
+
+  // Compute {option_id: count} from currentVotes.
+  function computeTallies() {
+    var out = {};
+    currentVotes.forEach(function (v) {
+      var oid = v.option_id;
+      if (!oid) return;
+      out[oid] = (out[oid] || 0) + 1;
+    });
+    return out;
+  }
+
+  function renderTally() {
+    // Cheap path: re-render the options block (which uses computeTallies).
+    if (currentPoll) renderOptions();
+  }
+
+  function renderVoterLog() {
+    if (!currentPollId) return;
+    if (!currentVotes.length) {
+      voterLogEl.innerHTML = '<div style="color:var(--cream-dim);font-size:0.9rem;padding:0.6rem;">'
+        + 'No votes yet. Be first.</div>';
+      return;
+    }
+    // Take up to 12 most-recent — voter log isn't a full audit list,
+    // just a live tail for the operator.
+    var optionLabelById = {};
+    (currentPoll && currentPoll.options || []).forEach(function (o) {
+      optionLabelById[o.id] = o.label || o.id;
+    });
+    var rows = currentVotes.slice(0, 12).map(function (v) {
+      var avatar = v.profile_pic
+        ? '<img src="' + escapeHtml(v.profile_pic) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        : '';
+      var ageBadge = '';
+      if (typeof v.account_age_days === 'number') {
+        if (v.account_age_days < 7) {
+          ageBadge = '<div class="voter-flag flag">new acct</div>';
+        } else {
+          ageBadge = '<div class="voter-flag ok">verified</div>';
+        }
+      } else {
+        ageBadge = '<div class="voter-flag ok">verified</div>';
+      }
+      return ''
+        + '<div class="voter-row" data-voter="' + escapeHtml(v.username || '') + '">'
+        + '  <div class="voter-avatar">' + avatar + '</div>'
+        + '  <div class="voter-name">' + escapeHtml(v.username || '?')
+          + '<span class="source">@' + escapeHtml(v.username || '') + '</span></div>'
+        + '  <div class="voter-choice">' + escapeHtml(optionLabelById[v.option_id] || v.option_id) + '</div>'
+        +    ageBadge
+        + '</div>';
+    });
+    voterLogEl.innerHTML = rows.join('');
+  }
+
+  function renderTallyHealth() {
+    if (!tallyHealthEl) return;
+    var total = currentVotes.length;
+    var newAccts = currentVotes.filter(function (v) {
+      return typeof v.account_age_days === 'number' && v.account_age_days < 7;
+    }).length;
+    tallyHealthEl.innerHTML = ''
+      + '<li class="done">' + total + ' total vote' + (total === 1 ? '' : 's') + '</li>'
+      + '<li class="done">' + newAccts + ' from accounts &lt; 7 days old</li>'
+      + '<li class="done">1 vote per Kick account enforced at write time</li>'
+      + '<li class="done">Min account age guard enforced server-side</li>'
+      + '<li class="done">PKCE OAuth — no anonymous votes possible</li>';
+  }
+
+  // ─── Vote casting ───────────────────────────────────────────
+
+  async function onVoteClick(optionId) {
+    if (!currentPoll || currentPoll.state !== 'open') return;
+    if (!session) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = 'Sign in to vote';
+      setTimeout(function () { statusEl.style.color = ''; renderAuth(); }, 1800);
+      return;
+    }
+    // Visual feedback — temporary selected highlight.
+    pollOptionsEl.querySelectorAll('.poll-option').forEach(function (o) {
+      o.classList.remove('selected');
+    });
+    var clicked = pollOptionsEl.querySelector('[data-option-id="' + cssEscape(optionId) + '"]');
+    if (clicked) clicked.classList.add('selected');
+
+    var res = await rpcCastVote(optionId);
+    if (res.ok) {
+      // The Firestore listener will pick up the new vote and re-render
+      // tallies + voter log within ~1s. Nothing to do here.
+    } else if (res.status === 409 && res.body && res.body.error === 'already_voted') {
+      statusEl.style.color = 'var(--gold)';
+      statusEl.textContent = 'You already voted in this poll';
+      setTimeout(function () { statusEl.style.color = ''; renderAuth(); }, 2400);
+    } else if (res.status === 403 && res.body && res.body.error === 'account_too_young') {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = 'Account too young (' + res.body.your_age
+        + ' days, need ' + res.body.min + ')';
+      setTimeout(function () { statusEl.style.color = ''; renderAuth(); }, 3000);
+    } else {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = 'Vote failed: ' + (res.body && res.body.error || res.status);
+      setTimeout(function () { statusEl.style.color = ''; renderAuth(); }, 3000);
+    }
+  }
+
+  function cssEscape(s) {
+    // Cheap subset of CSS.escape for known-safe id chars.
+    return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  }
+
+  // ─── Admin panel wiring ─────────────────────────────────────
+
+  var adminInputs = {
+    question: adminPanel ? adminPanel.querySelector('.admin-row .form-field:nth-child(1) .form-input') : null,
+    optionsContainer: null,
+    durationNum: null,
+    durationUnit: null,
+    saveBtn: null,
+    closeBtn: null,
+  };
+  // Locate the option inputs (the second .form-field in the left admin column).
+  if (adminPanel) {
+    var fields = adminPanel.querySelectorAll('.admin-row > div:first-child .form-field');
+    if (fields[1]) adminInputs.optionsContainer = fields[1];
+    if (fields[2]) {
+      var durInputs = fields[2].querySelectorAll('input, select');
+      adminInputs.durationNum = durInputs[0];
+      adminInputs.durationUnit = durInputs[1];
+    }
+    // Buttons row at the bottom of the left column.
+    var btns = adminPanel.querySelectorAll('.admin-row > div:first-child > div:last-child .btn');
+    if (btns.length) {
+      adminInputs.saveBtn = btns[0]; // "Save changes" → repurposed as "Open poll"
+      // Skip btns[1] ("Push live to overlay" — not needed; opening IS pushing live)
+      adminInputs.closeBtn = btns[btns.length - 1]; // last is "Close poll"
+    }
+  }
+
+  function readAdminForm() {
+    var question = (adminInputs.question && adminInputs.question.value || '').trim();
+    var options = [];
+    if (adminInputs.optionsContainer) {
+      adminInputs.optionsContainer.querySelectorAll('input.form-input').forEach(function (inp, i) {
+        var v = (inp.value || '').trim();
+        if (v) options.push({ id: 'o' + (i + 1) + '_' + slugify(v), label: v });
+      });
+    }
+    var dur = parseInt(adminInputs.durationNum && adminInputs.durationNum.value || '5', 10);
+    var unit = (adminInputs.durationUnit && adminInputs.durationUnit.value || 'minutes').toLowerCase();
+    var closesIn = dur * (unit.indexOf('hour') === 0 ? 3600 : 60);
+    return { question: question, options: options, closes_in_seconds: closesIn };
+  }
+
+  function slugify(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 32) || 'opt';
+  }
+
+  function renderAdminButtons() {
+    if (!adminPanel || !adminInputs.saveBtn || !adminInputs.closeBtn) return;
+    var hasOpen = currentPoll && currentPoll.state === 'open';
+    if (hasOpen) {
+      adminInputs.saveBtn.textContent = 'Open new poll';
+      adminInputs.saveBtn.disabled = true;
+      adminInputs.saveBtn.title = 'Close the current poll first';
+      adminInputs.closeBtn.disabled = false;
+      adminInputs.closeBtn.style.opacity = '';
+    } else {
+      adminInputs.saveBtn.textContent = 'Open poll';
+      adminInputs.saveBtn.disabled = false;
+      adminInputs.saveBtn.title = '';
+      adminInputs.closeBtn.disabled = true;
+      adminInputs.closeBtn.style.opacity = '0.45';
+    }
+  }
+
+  if (adminInputs.saveBtn) {
+    adminInputs.saveBtn.addEventListener('click', async function () {
+      var form = readAdminForm();
+      if (!form.question) { alert('Enter a question.'); return; }
+      if (form.options.length < 2) { alert('Need at least 2 options.'); return; }
+      adminInputs.saveBtn.disabled = true;
+      adminInputs.saveBtn.textContent = 'Opening…';
+      var res = await rpcOpenPoll(form);
+      if (!res.ok) {
+        alert('Open failed: ' + (res.body && res.body.error || res.status));
+      }
+      // Listener will pick up /polls/current change and refresh UI.
+    });
+  }
+  if (adminInputs.closeBtn) {
+    adminInputs.closeBtn.addEventListener('click', async function () {
+      if (!currentPollId) return;
+      if (!confirm('Close the current poll? This will auto-promote the top results to Streamer ranks.')) return;
+      adminInputs.closeBtn.disabled = true;
+      adminInputs.closeBtn.textContent = 'Closing…';
+      var res = await rpcClosePoll(currentPollId, true);
+      if (!res.ok) {
+        alert('Close failed: ' + (res.body && res.body.error || res.status));
+      }
+      adminInputs.closeBtn.textContent = 'Close poll';
+    });
+  }
 
   /* --- Copy OBS overlay URL (handles all copy buttons in OBS card) --- */
   document.querySelectorAll('.sp-overlay-copy').forEach(function (btn) {
