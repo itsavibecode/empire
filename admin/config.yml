@@ -115,6 +115,69 @@ collections:
               # streamer just gets them a 5-day "JUST ADDED" badge
               # automatically, dated to the day of save.
 
+  - name: event_rankings
+    label: Event Rankings
+    description: |
+      Optional drag-to-reorder workflow for managing the event standings.
+      Two ways to set ranks — pick whichever feels easier:
+
+        1. Per-streamer "Event ranking" field inside Featured Kick
+           Streamers (most direct: edit one streamer at a time).
+        2. This collection — drag streamer entries into rank order
+           (fastest when reshuffling a lot of ranks at once based on
+           poll results). First entry is #1, second is #2, etc.
+
+      If a streamer has a rank set in BOTH places, the per-streamer
+      field in Featured Kick Streamers wins.
+
+      Saving here triggers the GitHub Action that regenerates the rank
+      bubbles in index.html (~30 seconds). The /obs/rankings/ overlay
+      re-reads every 5 minutes (and on scene switch in OBS).
+    files:
+      - file: rankings.json
+        label: Event rankings
+        name: rankings_file
+        format: json
+        fields:
+          - name: ticker
+            label: 'Ticker overlay behavior'
+            widget: object
+            collapsed: false
+            hint: 'Controls how the /obs/rankings/ ticker behaves on the broadcast.'
+            fields:
+              - name: scroll
+                label: 'Scroll the ticker left across the screen'
+                widget: boolean
+                default: false
+                hint: 'When ON, the rankings continuously scroll right-to-left in a seamless loop (good when you have more entries than fit on screen). When OFF, the ticker shows what fits and stays still.'
+              - name: speed
+                label: 'Scroll speed'
+                widget: select
+                default: 'medium'
+                options:
+                  - { label: 'Slow (90s per loop)', value: 'slow' }
+                  - { label: 'Medium (60s per loop)', value: 'medium' }
+                  - { label: 'Fast (40s per loop)', value: 'fast' }
+                  - { label: 'Very fast (25s per loop)', value: 'very-fast' }
+                hint: 'Only applies when scroll is ON. The duration is for one full loop around the track regardless of how many entries you have.'
+          - name: rankings
+            label: Ranked streamers
+            label_singular: 'Ranked streamer'
+            widget: list
+            collapsed: false
+            summary: '{{fields.slug}}'
+            hint: 'Drag to reorder. The top entry is #1.'
+            fields:
+              - name: slug
+                label: 'Streamer'
+                widget: relation
+                collection: roster
+                file: streamers_file
+                search_fields: ['streamers.*.name', 'streamers.*.slug']
+                value_field: 'streamers.*.slug'
+                display_fields: ['streamers.*.name']
+                hint: 'Pick from the Featured Kick Streamers list.'
+
   - name: featured_streamers
     label: Featured Our.Empire Streamers
     description: |
@@ -748,66 +811,3 @@ collections:
             widget: string
             required: false
             hint: 'Description of the logo for screen readers. Defaults to the sponsor name if left blank.'
-
-  - name: event_rankings
-    label: Event Rankings
-    description: |
-      Optional drag-to-reorder workflow for managing the event standings.
-      Two ways to set ranks — pick whichever feels easier:
-
-        1. Per-streamer "Event ranking" field inside Featured Kick
-           Streamers (most direct: edit one streamer at a time).
-        2. This collection — drag streamer entries into rank order
-           (fastest when reshuffling a lot of ranks at once based on
-           poll results). First entry is #1, second is #2, etc.
-
-      If a streamer has a rank set in BOTH places, the per-streamer
-      field in Featured Kick Streamers wins.
-
-      Saving here triggers the GitHub Action that regenerates the rank
-      bubbles in index.html (~30 seconds). The /obs/rankings/ overlay
-      re-reads every 5 minutes (and on scene switch in OBS).
-    files:
-      - file: rankings.json
-        label: Event rankings
-        name: rankings_file
-        format: json
-        fields:
-          - name: ticker
-            label: 'Ticker overlay behavior'
-            widget: object
-            collapsed: false
-            hint: 'Controls how the /obs/rankings/ ticker behaves on the broadcast.'
-            fields:
-              - name: scroll
-                label: 'Scroll the ticker left across the screen'
-                widget: boolean
-                default: false
-                hint: 'When ON, the rankings continuously scroll right-to-left in a seamless loop (good when you have more entries than fit on screen). When OFF, the ticker shows what fits and stays still.'
-              - name: speed
-                label: 'Scroll speed'
-                widget: select
-                default: 'medium'
-                options:
-                  - { label: 'Slow (90s per loop)', value: 'slow' }
-                  - { label: 'Medium (60s per loop)', value: 'medium' }
-                  - { label: 'Fast (40s per loop)', value: 'fast' }
-                  - { label: 'Very fast (25s per loop)', value: 'very-fast' }
-                hint: 'Only applies when scroll is ON. The duration is for one full loop around the track regardless of how many entries you have.'
-          - name: rankings
-            label: Ranked streamers
-            label_singular: 'Ranked streamer'
-            widget: list
-            collapsed: false
-            summary: '{{fields.slug}}'
-            hint: 'Drag to reorder. The top entry is #1.'
-            fields:
-              - name: slug
-                label: 'Streamer'
-                widget: relation
-                collection: roster
-                file: streamers_file
-                search_fields: ['streamers.*.name', 'streamers.*.slug']
-                value_field: 'streamers.*.slug'
-                display_fields: ['streamers.*.name']
-                hint: 'Pick from the Featured Kick Streamers list.'
