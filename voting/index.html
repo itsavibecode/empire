@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.1.2">
+<meta name="version" content="0.1.3">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -325,25 +325,23 @@
     border-bottom: 1px solid var(--hairline);
     align-items: center;
   }
-  /* Kick user avatar — real version pulls from Kick's user API
-     (channel response carries user.profile_pic). For the prototype
-     these are initials in a brand-colored disc, kept in their own
-     element so swapping to <img> later is a one-liner. */
+  /* Kick user avatar disc. v0.1.3 — prototype now uses ui-avatars.com
+     to render circular initials-on-color discs that look like real
+     avatars. Real version replaces the <img> src with the user's
+     actual Kick profile-pic URL (captured at vote-time from the
+     Kick OAuth response and stored alongside the vote in Firestore).
+     The .suspect ring variant tints the border red so flagged
+     voters read at a glance even before the flag pill is read. */
   .voter-avatar {
     width: 34px; height: 34px;
     border-radius: 50%;
     background: linear-gradient(135deg, #2a2018, #1a1208);
     border: 1px solid var(--hairline);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 700;
-    font-size: 0.75rem;
-    color: var(--gold-light);
     overflow: hidden;
     flex: 0 0 auto;
+    display: block;
   }
+  .voter-avatar.suspect { border-color: rgba(255,77,77,0.55); box-shadow: 0 0 6px rgba(255,77,77,0.25); }
   .voter-avatar img {
     width: 100%;
     height: 100%;
@@ -554,54 +552,57 @@
       </p>
       <div class="voter-log" id="voterLog">
         <!-- Each voter row: avatar | name+source | choice | flag.
-             The real version fills .voter-avatar with an <img> from
-             Kick's user profile (cached via empire-worker). For the
-             prototype these are initials so the layout intent is
-             clear without external image loads. -->
+             v0.1.3 — prototype now uses ui-avatars.com so the
+             discs look like real circular avatars instead of bare
+             initials. Real version replaces these <img> tags with
+             the user's actual Kick profile-pic URL, captured at
+             vote-time from the Kick OAuth response and stored
+             alongside the vote in Firestore. Suspect rows still
+             get the red ring via .voter-avatar.suspect. -->
         <div class="voter-row">
-          <div class="voter-avatar">CF</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=cobbruvs_fan22&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
           <div class="voter-name">cobbruvs_fan22<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar">DT</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=DTBforever&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
           <div class="voter-name">DTBforever<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar">U8</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=user_8821&bold=true&size=128&format=svg&background=8B6620&color=F5F1EB" alt=""></div>
           <div class="voter-name">user_8821<span class="source">via riddaw stream</span></div>
           <div class="voter-choice">Mixtapes</div>
           <div class="voter-flag flag">new acct</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar">E4</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=empire_4lyfe&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
           <div class="voter-name">empire_4lyfe<span class="source">via nicklee stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag ok">follower</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">B9</div>
+          <div class="voter-avatar suspect"><img src="https://ui-avatars.com/api/?name=bot_acct_91&bold=true&size=128&format=svg&background=4a1a1a&color=FF4D4D" alt=""></div>
           <div class="voter-name">bot_acct_91<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">3 IPs</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar">LP</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=layla_pres&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
           <div class="voter-name">layla_pres<span class="source">via dtanmanb stream</span></div>
           <div class="voter-choice">DTB</div>
           <div class="voter-flag ok">verified</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar" style="color:var(--red); background:linear-gradient(135deg, #2a1818, #1a0a0a);">TX</div>
+          <div class="voter-avatar suspect"><img src="https://ui-avatars.com/api/?name=throwaway_xx&bold=true&size=128&format=svg&background=4a1a1a&color=FF4D4D" alt=""></div>
           <div class="voter-name">throwaway_xx<span class="source">via cobbruvs stream</span></div>
           <div class="voter-choice">Sky9</div>
           <div class="voter-flag suspect">acct &lt; 2h</div>
         </div>
         <div class="voter-row">
-          <div class="voter-avatar">EV</div>
+          <div class="voter-avatar"><img src="https://ui-avatars.com/api/?name=empirexvibes&bold=true&size=128&format=svg&background=D4A843&color=0a0a0a" alt=""></div>
           <div class="voter-name">empirexvibes<span class="source">via shangel stream</span></div>
           <div class="voter-choice">Kozy</div>
           <div class="voter-flag ok">verified</div>
@@ -626,43 +627,79 @@
 
   </div>
 
-  <!-- ============== OBS OVERLAY ============== -->
-  <!-- Streamers add this URL as an OBS Browser Source so the live
-       poll appears on top of their broadcast. The overlay page
-       itself is at /voting/overlay/ (transparent background, fits
-       in a corner of the scene). -->
+  <!-- ============== OBS OVERLAYS ============== -->
+  <!-- Two separate browser-source URLs streamers can add. They can
+       use one or both depending on how much screen real estate
+       they want to spend on the voting UI. Both are transparent
+       so they composite on top of the broadcast cleanly. -->
   <section class="card" style="margin-top: 1.5rem;">
     <h2 class="card-title">
-      OBS Overlay
+      OBS Overlays
       <span class="pill" style="background:rgba(212,168,67,0.15);color:var(--gold);border-color:rgba(212,168,67,0.4);">
         for streamers
       </span>
     </h2>
-    <p style="color: var(--cream-dim); font-size: 0.92rem; margin: 0 0 1rem; line-height: 1.5;">
-      Add this URL as a <strong style="color:var(--cream)">Browser Source</strong> in OBS. The poll widget
-      will appear on the broadcast whenever a poll is active and auto-hide between polls. Transparent
-      background — composites cleanly over your video.
+    <p style="color: var(--cream-dim); font-size: 0.92rem; margin: 0 0 1.2rem; line-height: 1.5;">
+      Add either URL as a <strong style="color:var(--cream)">Browser Source</strong> in OBS. Both have
+      transparent backgrounds and auto-hide between polls. Pick one or stack both side-by-side.
     </p>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom: 0.9rem;">
-      <input id="overlayUrl" class="form-input" type="text" readonly
-             value="https://ourempirex.com/voting/overlay/"
-             style="flex:1 1 320px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem;">
-      <button class="btn btn-gold" type="button" id="copyOverlayBtn">Copy URL</button>
-      <a class="btn btn-ghost" href="/voting/overlay/" target="_blank" rel="noopener">Preview</a>
+
+    <!-- Overlay A: poll widget -->
+    <div style="margin-bottom: 1.3rem;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; margin-bottom: 0.45rem;">
+        <h3 style="font-family:'Oswald',sans-serif; font-size:0.82rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold-light); margin:0;">
+          Poll widget
+        </h3>
+        <span style="font-size: 0.78rem; color: var(--cream-dim);">Suggested OBS size: 720 × 560</span>
+      </div>
+      <p style="color: var(--cream-dim); font-size: 0.85rem; margin: 0 0 0.6rem; line-height: 1.5;">
+        The full poll: question, vote options with live bar tallies, countdown, total. The big one your
+        viewers actually read.
+      </p>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <input class="form-input sp-overlay-url" type="text" readonly
+               value="https://ourempirex.com/voting/overlay/"
+               style="flex:1 1 320px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem;">
+        <button class="btn btn-gold sp-overlay-copy" type="button">Copy URL</button>
+        <a class="btn btn-ghost" href="/voting/overlay/" target="_blank" rel="noopener">Preview</a>
+      </div>
     </div>
-    <details style="margin-top: 0.4rem;">
+
+    <!-- Overlay B: live voters ticker -->
+    <div style="margin-bottom: 0.6rem;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; margin-bottom: 0.45rem;">
+        <h3 style="font-family:'Oswald',sans-serif; font-size:0.82rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold-light); margin:0;">
+          Live voters ticker
+        </h3>
+        <span style="font-size: 0.78rem; color: var(--cream-dim);">Suggested OBS size: 480 × 480</span>
+      </div>
+      <p style="color: var(--cream-dim); font-size: 0.85rem; margin: 0 0 0.6rem; line-height: 1.5;">
+        A small running list of the latest votes — each row shows the voter's Kick avatar, username, and
+        their choice. Adds energy + social proof to the broadcast. Works great below or beside the poll
+        widget.
+      </p>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <input class="form-input sp-overlay-url" type="text" readonly
+               value="https://ourempirex.com/voting/overlay/voters/"
+               style="flex:1 1 320px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem;">
+        <button class="btn btn-gold sp-overlay-copy" type="button">Copy URL</button>
+        <a class="btn btn-ghost" href="/voting/overlay/voters/" target="_blank" rel="noopener">Preview</a>
+      </div>
+    </div>
+
+    <details style="margin-top: 0.8rem;">
       <summary style="cursor:pointer; font-family: 'Oswald', sans-serif; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-light);">
         OBS setup &mdash; recommended settings
       </summary>
       <ul style="margin: 0.6rem 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--cream-dim); line-height: 1.7;">
         <li>Source type: <strong style="color:var(--cream)">Browser</strong></li>
-        <li>URL: paste the URL above</li>
-        <li>Width: <strong style="color:var(--cream)">720</strong>, Height: <strong style="color:var(--cream)">560</strong></li>
-        <li>Check <strong style="color:var(--cream)">"Refresh browser when scene becomes active"</strong> (so the
-          overlay always shows the current poll when you switch back to the scene)</li>
-        <li>Position: anywhere &mdash; bottom-left and lower-third are popular</li>
-        <li>The widget centers itself within the source bounds and only renders during active polls,
-          so it's safe to leave in all scenes</li>
+        <li>URL: paste either URL above</li>
+        <li>Use the size noted next to each overlay (the widget centers within those bounds)</li>
+        <li>Check <strong style="color:var(--cream)">"Refresh browser when scene becomes active"</strong> so the
+          overlay always shows the current poll state when you switch scenes</li>
+        <li>Position: bottom-left or lower-third for the poll widget; bottom-right for the ticker
+          is a common pairing</li>
+        <li>Both overlays only render during active polls — safe to leave in every scene</li>
       </ul>
     </details>
   </section>
@@ -749,7 +786,7 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.1.2 &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.1.3 &middot; not linked from the public site</div>
 </footer>
 
 <script>
@@ -867,31 +904,30 @@
   tick();
   countdownTimer = setInterval(tick, 1000);
 
-  /* --- Copy OBS overlay URL --- */
-  var overlayInput = document.getElementById('overlayUrl');
-  var copyBtn = document.getElementById('copyOverlayBtn');
-  if (overlayInput && copyBtn) {
-    copyBtn.addEventListener('click', function () {
-      overlayInput.select();
+  /* --- Copy OBS overlay URL (handles all copy buttons in OBS card) --- */
+  document.querySelectorAll('.sp-overlay-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      // Sibling input within the same row
+      var input = btn.parentNode.querySelector('.sp-overlay-url');
+      if (!input) return;
+      input.select();
       var ok = false;
-      try {
-        ok = document.execCommand('copy');
-      } catch (e) { /* ignore — fall through to clipboard API */ }
+      try { ok = document.execCommand('copy'); } catch (e) {}
       if (!ok && navigator.clipboard) {
-        navigator.clipboard.writeText(overlayInput.value);
+        navigator.clipboard.writeText(input.value);
         ok = true;
       }
       if (ok) {
-        var original = copyBtn.textContent;
-        copyBtn.textContent = 'Copied ✓';
-        copyBtn.disabled = true;
+        var original = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        btn.disabled = true;
         setTimeout(function () {
-          copyBtn.textContent = original;
-          copyBtn.disabled = false;
+          btn.textContent = original;
+          btn.disabled = false;
         }, 1500);
       }
     });
-  }
+  });
 })();
 </script>
 </body>

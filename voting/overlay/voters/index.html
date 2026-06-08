@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Empire X live-voters ticker — separate OBS browser source from
+     the poll widget. Shows the most recent N votes as they land:
+     Kick avatar + username + their choice. Each new vote slides
+     in at the top with a soft entry animation; the oldest row
+     fades out at the bottom. Designed to sit alongside (or below)
+     the poll widget overlay during active polls.
+
+     Suggested OBS size: 480 wide × 480 tall. Body is transparent
+     so it composites cleanly. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="version" content="0.1.0">
+<title>Empire X Voting — Live Voters</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap"></noscript>
+<style>
+  :root {
+    --gold:       #D4A843;
+    --gold-light: #F0D68A;
+    --cream:      #F5F1EB;
+    --cream-dim:  rgba(245,241,235,0.7);
+    --green:      #53FC18;
+    --red:        #FF4D4D;
+    --hairline:   rgba(245,241,235,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: transparent;
+    color: var(--cream);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1.2rem;
+  }
+
+  /* === WIDGET CARD === */
+  .ticker {
+    width: 100%;
+    max-width: 460px;
+    background: linear-gradient(180deg, rgba(10,10,10,0.92) 0%, rgba(15,12,8,0.88) 100%);
+    border: 1px solid rgba(212,168,67,0.4);
+    border-radius: 14px;
+    padding: 0.9rem 1rem 0.85rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 24px rgba(212,168,67,0.18);
+  }
+
+  /* === HEAD === */
+  .ticker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+  }
+  .brand img {
+    width: 22px; height: 22px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  }
+  .brand span { color: var(--cream); margin-left: 0.4em; }
+  .total {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  }
+  .total strong { color: var(--gold-light); font-weight: 600; }
+  .live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--green);
+    margin-right: 0.4em;
+    vertical-align: middle;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* === LIST === */
+  .voter-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* Limit height so the oldest entries scroll out cleanly. */
+    max-height: 360px;
+    overflow: hidden;
+  }
+  .voter-row {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 0.7rem;
+    align-items: center;
+    padding: 0.45rem 0.1rem;
+    border-bottom: 1px solid var(--hairline);
+    /* Each row enters via slide-in from above. */
+    animation: rowIn 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .voter-row:last-child { border-bottom: 0; }
+  @keyframes rowIn {
+    from { transform: translateY(-8px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+  }
+  /* When a row is leaving (fadeOut class added by JS) it eases out. */
+  .voter-row.fadeOut {
+    animation: rowOut 0.35s ease both;
+  }
+  @keyframes rowOut {
+    to { transform: translateY(8px); opacity: 0; max-height: 0; padding: 0; border: 0; }
+  }
+
+  .voter-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2a2018, #1a1208);
+    border: 1px solid var(--hairline);
+    overflow: hidden;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .voter-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .voter-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .voter-name small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+    letter-spacing: 0.04em;
+    margin-top: 1px;
+  }
+  .voter-choice {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="ticker" id="ticker">
+  <div class="ticker-head">
+    <div class="brand">
+      <img src="/logo.png" alt="">
+      EMPIRE X<span>LIVE VOTES</span>
+    </div>
+    <div class="total">
+      <span class="live-dot"></span><strong id="totalVotes">746</strong> total
+    </div>
+  </div>
+  <ul class="voter-list" id="voterList">
+    <!-- JS renders rows. Initial fill happens on first tick(). -->
+  </ul>
+</div>
+
+<script>
+/* =====================================================================
+   Live voters ticker — prototype.
+   Real version subscribes to a Firestore query that orders the
+   votes subcollection by cast_at desc, limit N. New documents push
+   into the snapshot, we render them at the top of the list and
+   age out the oldest row.
+
+   For the prototype we cycle through a fake feed every ~2-3 seconds
+   so the entry/exit animations are visible.
+
+   Avatars: real Kick avatars come back on the OAuth response when
+   the user signs in to vote. The vote write stores avatarUrl
+   alongside the vote, so this overlay just renders <img src> per
+   row. For the prototype we mock with ui-avatars.com (free,
+   deterministic, CORS-enabled SVG generator) so the design intent
+   reads correctly without external image deps that might fail.
+===================================================================== */
+(function () {
+  /* Mock voter pool — username + choice. ui-avatars.com renders
+     circular avatars with initials on the gold brand color, which
+     looks close enough to real Kick avatars to convey the design. */
+  function avatarUrl(name) {
+    return 'https://ui-avatars.com/api/?bold=true&size=128&format=svg'
+         + '&background=D4A843&color=0a0a0a'
+         + '&name=' + encodeURIComponent(name);
+  }
+  var POOL = [
+    { name: 'cobbruvs_fan22',  via: 'shangel stream',   choice: 'Sky9 House' },
+    { name: 'DTBforever',       via: 'cobbruvs stream',  choice: 'DTB House' },
+    { name: 'empire_4lyfe',     via: 'nicklee stream',   choice: 'Sky9 House' },
+    { name: 'layla_pres',       via: 'dtanmanb stream',  choice: 'DTB House' },
+    { name: 'empirexvibes',     via: 'shangel stream',   choice: 'Kozy House' },
+    { name: 'kozysadie',        via: 'kozy stream',      choice: 'Kozy House' },
+    { name: 'mixtape_marquise', via: 'mixtapes stream',  choice: 'Mixtapes House' },
+    { name: 'sky9foreva',       via: 'cobbruvs stream',  choice: 'Sky9 House' },
+    { name: 'briewfan',         via: 'briewylde stream', choice: 'Mixtapes House' },
+    { name: 'streamerstan',     via: 'nicklee stream',   choice: 'DTB House' },
+    { name: 'humza_hype',       via: 'shangel stream',   choice: 'Sky9 House' },
+    { name: 'AdrianahFan22',    via: 'adrianahlee stream', choice: 'DTB House' },
+  ];
+
+  var listEl  = document.getElementById('voterList');
+  var totalEl = document.getElementById('totalVotes');
+  var MAX_ROWS = 6;
+  var total = 746;
+
+  function buildRow(v) {
+    var row = document.createElement('li');
+    row.className = 'voter-row';
+    row.innerHTML =
+      '<div class="voter-avatar">' +
+        '<img src="' + avatarUrl(v.name) + '" alt="" loading="lazy">' +
+      '</div>' +
+      '<div class="voter-name">' + v.name +
+        '<small>via ' + v.via + '</small>' +
+      '</div>' +
+      '<div class="voter-choice">' + v.choice + '</div>';
+    return row;
+  }
+
+  /* Initial paint — 5 rows so the ticker looks full on first frame. */
+  for (var i = 0; i < 5; i++) {
+    var v = POOL[Math.floor(Math.random() * POOL.length)];
+    listEl.appendChild(buildRow(v));
+  }
+
+  function addVote() {
+    var v = POOL[Math.floor(Math.random() * POOL.length)];
+    var row = buildRow(v);
+    listEl.insertBefore(row, listEl.firstChild);
+    total += 1;
+    totalEl.textContent = total;
+    /* Trim the tail when over MAX_ROWS. Add a fadeOut class so the
+       exit animation runs, then remove. */
+    while (listEl.children.length > MAX_ROWS) {
+      var oldest = listEl.lastElementChild;
+      oldest.classList.add('fadeOut');
+      (function (el) {
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
+      })(oldest);
+      /* Stop after marking one so subsequent ticks pace the trim. */
+      break;
+    }
+  }
+
+  /* Vary the interval between 1.6 and 3.4 seconds so it feels
+     organic rather than metronome-y. */
+  function schedule() {
+    var ms = 1600 + Math.random() * 1800;
+    setTimeout(function () { addVote(); schedule(); }, ms);
+  }
+  schedule();
+})();
+</script>
+</body>
+</html>
