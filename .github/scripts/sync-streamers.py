@@ -17,12 +17,6 @@ REPO = os.environ.get('REPO_PATH', os.path.dirname(os.path.dirname(os.path.dirna
 INDEX = os.path.join(REPO, 'index.html')
 LLMS = os.path.join(REPO, 'llms.txt')
 SJSON = os.path.join(REPO, 'streamers.json')
-# v0.13.22 — separate rankings file. Streamer records in streamers.json
-# stay focused on identity + display order; the client's curated event
-# ranking lives independently. Position in rankings.json's array = rank
-# (first entry is #1, second is #2, etc.) so the admin just drags to
-# reorder rather than juggling rank numbers.
-RANKINGS_JSON = os.path.join(REPO, 'rankings.json')
 
 KICK_SVG = ('<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)">'
             '<rect x="4" y="2" width="4" height="20" rx="1"/>'
@@ -68,37 +62,13 @@ def is_just_added(s, today=None):
 
 
 def load_rankings(streamers=None):
-    """Build {slug: rank_number} mapping from two sources, merged:
-
-      1. rankings.json (drag-to-reorder collection in Decap). Position
-         in the `rankings` array determines rank (first = #1).
-      2. Per-streamer `rank` field on each entry in streamers.json
-         (number widget in Decap's Featured Kick Streamers). Wins
-         over rankings.json when both are set for the same slug.
-
-    Either source can be absent / empty. With nothing set, returns
-    {} and no bubbles render."""
+    """Build {slug: rank_number} mapping from the per-streamer `rank`
+    field on each entry in streamers.json (CMS: "Poll Ranking").
+    v0.13.24 — collapsed to a single source after the drag-to-reorder
+    Event Rankings collection was removed; admins now set poll ranks
+    inline on each streamer in Featured Kick Streamers. With no
+    ranks set, returns {} and no bubbles render."""
     out = {}
-
-    # Source A — rankings.json (lower priority)
-    try:
-        with open(RANKINGS_JSON, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        entries = data.get('rankings') or []
-        for i, e in enumerate(entries):
-            if isinstance(e, dict):
-                slug = (e.get('slug') or '').strip().lower()
-            elif isinstance(e, str):
-                slug = e.strip().lower()
-            else:
-                continue
-            if slug and slug not in out:
-                out[slug] = i + 1
-    except (FileNotFoundError, json.JSONDecodeError):
-        pass
-
-    # Source B — per-streamer `rank` field on streamers.json entries.
-    # Overrides anything from rankings.json for the same slug.
     if streamers:
         for s in streamers:
             try:
@@ -109,7 +79,6 @@ def load_rankings(streamers=None):
                 slug = (s.get('slug') or '').strip().lower()
                 if slug:
                     out[slug] = n
-
     return out
 
 

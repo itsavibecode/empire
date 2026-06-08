@@ -101,13 +101,13 @@ collections:
                 public_folder: '/avatars'
                 hint: 'Square works best. JPG or PNG. Will be saved under /avatars/.'
               - name: rank
-                label: 'Event ranking (optional)'
+                label: 'Poll Ranking (optional)'
                 widget: number
                 required: false
                 value_type: int
                 min: 1
                 max: 99
-                hint: 'Optional event-standing number. Leave blank to hide. When set, a small numbered bubble appears in the upper-right of this streamer''s card AND they appear on the /obs/rankings/ overlay. #1 gets brighter gold + pulse, #2 silver, #3 bronze, #4-10 standard gold. Two ways to manage ranks -- this per-streamer field, or the "Event Rankings" collection (drag-to-reorder). If both are set for the same streamer, the value here wins.'
+                hint: 'Optional poll-ranking number. Set this after each poll closes — leave blank to hide. When set, a small numbered bubble appears in the upper-right of this streamer''s card AND they appear on the /obs/rankings/ overlay. #1 gets brighter gold + pulse, #2 silver, #3 bronze, #4-10 standard gold.'
               # NOTE: `added_at` is NOT exposed here. The sync workflow
               # auto-fills it with today's date when a brand-new
               # streamer entry has none, then writes streamers.json
@@ -115,27 +115,17 @@ collections:
               # streamer just gets them a 5-day "JUST ADDED" badge
               # automatically, dated to the day of save.
 
-  - name: event_rankings
-    label: Event Rankings
+  - name: rankings_overlay
+    label: Rankings Overlay
     description: |
-      Optional drag-to-reorder workflow for managing the event standings.
-      Two ways to set ranks — pick whichever feels easier:
+      Settings for the rankings overlay at /obs/rankings/ — controls
+      how the live poll-ranking ticker behaves on the broadcast.
 
-        1. Per-streamer "Event ranking" field inside Featured Kick
-           Streamers (most direct: edit one streamer at a time).
-        2. This collection — drag streamer entries into rank order
-           (fastest when reshuffling a lot of ranks at once based on
-           poll results). First entry is #1, second is #2, etc.
-
-      If a streamer has a rank set in BOTH places, the per-streamer
-      field in Featured Kick Streamers wins.
-
-      Saving here triggers the GitHub Action that regenerates the rank
-      bubbles in index.html (~30 seconds). The /obs/rankings/ overlay
-      re-reads every 5 minutes (and on scene switch in OBS).
+      The ranking numbers themselves are set per-streamer in the
+      "Poll Ranking" field inside Featured Kick Streamers above.
     files:
       - file: rankings.json
-        label: Event rankings
+        label: Ticker settings
         name: rankings_file
         format: json
         fields:
@@ -149,7 +139,7 @@ collections:
                 label: 'Scroll the ticker left across the screen'
                 widget: boolean
                 default: false
-                hint: 'When ON, the rankings continuously scroll right-to-left in a seamless loop (good when you have more entries than fit on screen). When OFF, the ticker shows what fits and stays still.'
+                hint: 'When ON, the rankings continuously scroll right-to-left in a seamless loop (good when you have more ranked streamers than fit on screen). When OFF, the ticker shows what fits and stays still.'
               - name: speed
                 label: 'Scroll speed'
                 widget: select
@@ -160,23 +150,6 @@ collections:
                   - { label: 'Fast (40s per loop)', value: 'fast' }
                   - { label: 'Very fast (25s per loop)', value: 'very-fast' }
                 hint: 'Only applies when scroll is ON. The duration is for one full loop around the track regardless of how many entries you have.'
-          - name: rankings
-            label: Ranked streamers
-            label_singular: 'Ranked streamer'
-            widget: list
-            collapsed: false
-            summary: '{{fields.slug}}'
-            hint: 'Drag to reorder. The top entry is #1.'
-            fields:
-              - name: slug
-                label: 'Streamer'
-                widget: relation
-                collection: roster
-                file: streamers_file
-                search_fields: ['streamers.*.name', 'streamers.*.slug']
-                value_field: 'streamers.*.slug'
-                display_fields: ['streamers.*.name']
-                hint: 'Pick from the Featured Kick Streamers list.'
 
   - name: featured_streamers
     label: Featured Our.Empire Streamers
