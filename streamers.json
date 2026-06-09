@@ -237,7 +237,8 @@
       "name": "Ryan Heinz",
       "url": "https://kick.com/ryanheinz/about",
       "initials": "RH",
-      "avatar": "/avatars/screenshot-2026-06-08-204115.png"
+      "avatar": "/avatars/screenshot-2026-06-08-204115.png",
+      "added_at": "2026-06-09"
     },
     {
       "slug": "kennyhoopz",
@@ -284,7 +285,8 @@
       "name": "Boost Bri",
       "url": "https://kick.com/boostbri",
       "initials": "BB",
-      "avatar": "/avatars/screenshot-2026-06-08-203709.png"
+      "avatar": "/avatars/screenshot-2026-06-08-203709.png",
+      "added_at": "2026-06-09"
     }
   ]
 }
