@@ -25,22 +25,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "chibu",
-      "name": "Chibu",
-      "url": "https://kick.com/chibu",
-      "initials": "CB",
-      "avatar": "/avatars/screenshot-2026-05-23-162940.png",
-      "added_at": "2026-05-23"
-    },
-    {
-      "slug": "iceposeidon",
-      "name": "Ice Poseidon",
-      "url": "https://kick.com/iceposeidon",
-      "initials": "IP",
-      "avatar": "/avatars/screenshot-2026-05-07-212940.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
       "slug": "sashawest",
       "name": "Sasha West",
       "url": "https://kick.com/sashawest",
@@ -65,14 +49,6 @@
       "added_at": "2026-05-28"
     },
     {
-      "slug": "woodbaby",
-      "name": "WoodBaby",
-      "url": "https://kick.com/woodbaby",
-      "initials": "WB",
-      "avatar": "avatars/woodbaby.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
       "slug": "jeanemarie",
       "name": "Jeane Marie",
       "url": "https://kick.com/jeanemarie",
@@ -81,35 +57,11 @@
       "added_at": "2026-05-25"
     },
     {
-      "slug": "hanridge",
-      "name": "Hanridge",
-      "url": "https://kick.com/hanridge",
-      "initials": "HR",
-      "avatar": "/avatars/screenshot-2026-04-28-132027.jpg",
-      "added_at": "2026-04-28"
-    },
-    {
       "slug": "ashwilder",
       "name": "AshWilder",
       "url": "https://kick.com/ashwilder",
       "initials": "AW",
       "avatar": "avatars/ashwilder.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
-      "slug": "blame",
-      "name": "Blame",
-      "url": "https://kick.com/blame",
-      "initials": "BL",
-      "avatar": "/avatars/screenshot-2026-05-07-163638.jpg",
-      "added_at": "2026-05-07"
-    },
-    {
-      "slug": "shangel",
-      "name": "Shangel",
-      "url": "https://kick.com/shangel",
-      "initials": "SH",
-      "avatar": "/avatars/screenshot-2026-04-26-152009.jpg",
       "added_at": "2026-04-20"
     },
     {
@@ -135,14 +87,6 @@
       "initials": "CTS",
       "avatar": "/avatars/screenshot-2026-05-24-155527.png",
       "added_at": "2026-05-24"
-    },
-    {
-      "slug": "dejayboss",
-      "name": "Dejayboss",
-      "url": "https://kick.com/Dejayboss",
-      "initials": "DJB",
-      "avatar": "/avatars/screenshot-2026-05-06-162442.jpg",
-      "added_at": "2026-05-06"
     },
     {
       "slug": "diamondthebarbie",
@@ -177,14 +121,6 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "lettyvision",
-      "name": "Letty",
-      "url": "https://kick.com/lettyvision",
-      "initials": "LV",
-      "avatar": "/avatars/screenshot-2026-04-29-173238.jpg",
-      "added_at": "2026-04-29"
-    },
-    {
       "slug": "suziesmalls",
       "name": "Suzie Smalls",
       "url": "https://kick.com/suziesmalls",
@@ -198,6 +134,14 @@
       "url": "https://kick.com/taylorstarlight",
       "initials": "TS",
       "avatar": "avatars/taylorstarlight.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
+      "slug": "cobbruvs",
+      "name": "Cobbruvs",
+      "url": "https://kick.com/cobbruvs",
+      "initials": "CB",
+      "avatar": "/avatars/screenshot-2026-06-08-204237.png",
       "added_at": "2026-04-20"
     },
     {
@@ -249,11 +193,27 @@
       "added_at": "2026-04-20"
     },
     {
+      "slug": "kikikrazy",
+      "name": "KikiKrazy",
+      "url": "https://kick.com/kikikrazy",
+      "initials": "KK",
+      "avatar": "/avatars/allat.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
       "slug": "jackie",
       "name": "Jackie",
       "url": "https://kick.com/jackie",
       "initials": "JA",
       "avatar": "avatars/jackie.jpg",
+      "added_at": "2026-04-20"
+    },
+    {
+      "slug": "dtanmanb",
+      "name": "Dtan",
+      "url": "https://kick.com/dtanmanb",
+      "initials": "DT",
+      "avatar": "avatars/dtanmanb.png",
       "added_at": "2026-04-20"
     },
     {
@@ -273,12 +233,11 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "cobbruvs",
-      "name": "Cobbruvs",
-      "url": "https://kick.com/cobbruvs",
-      "initials": "CB",
-      "avatar": "avatars/cobbruvs.jpg",
-      "added_at": "2026-04-20"
+      "slug": "ryanheinz",
+      "name": "Ryan Heinz",
+      "url": "https://kick.com/ryanheinz/about",
+      "initials": "RH",
+      "avatar": "/avatars/screenshot-2026-06-08-204115.png"
     },
     {
       "slug": "kennyhoopz",
@@ -305,11 +264,11 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "kikikrazy",
-      "name": "KikiKrazy",
-      "url": "https://kick.com/kikikrazy",
-      "initials": "KK",
-      "avatar": "/avatars/allat.jpg",
+      "slug": "ozemi",
+      "name": "Ozemi",
+      "url": "https://kick.com/ozemi",
+      "initials": "OZ",
+      "avatar": "/avatars/img_7160.png",
       "added_at": "2026-04-20"
     },
     {
@@ -321,28 +280,11 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "Mando",
-      "name": "Mando",
-      "url": "https://kick.com/mando",
-      "initials": "MD",
-      "avatar": "/avatars/screenshot-2026-05-27-132849.png",
-      "added_at": "2026-05-27"
-    },
-    {
-      "slug": "dtanmanb",
-      "name": "Dtan",
-      "url": "https://kick.com/dtanmanb",
-      "initials": "DT",
-      "avatar": "avatars/dtanmanb.png",
-      "added_at": "2026-04-20"
-    },
-    {
-      "slug": "ozemi",
-      "name": "Ozemi",
-      "url": "https://kick.com/ozemi",
-      "initials": "OZ",
-      "avatar": "/avatars/img_7160.png",
-      "added_at": "2026-04-20"
+      "slug": "boostbri",
+      "name": "Boost Bri",
+      "url": "https://kick.com/boostbri",
+      "initials": "BB",
+      "avatar": "/avatars/screenshot-2026-06-08-203709.png"
     }
   ]
 }
