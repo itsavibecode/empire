@@ -7,7 +7,7 @@
      Not linked from anywhere on the public site. -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="version" content="0.3.0">
+<meta name="version" content="0.3.1">
 <title>Empire X &mdash; Voting (Prototype)</title>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -205,6 +205,14 @@
     animation: pulse 1.5s ease-in-out infinite;
   }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  /* Kick-green pulsing dot used in the live-status pill when the
+     poll card sits in its empty state and Empire X streamers are
+     live. Combines a slight scale + shadow swell so the dot reads
+     as "broadcasting" even at 8px. */
+  @keyframes exLivePulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 6px rgba(83,252,24,0.6); }
+    50%      { transform: scale(1.25); box-shadow: 0 0 14px rgba(83,252,24,0.95); }
+  }
 
   /* Pill variants — open (green pulse) vs closed (red, no pulse). */
   .card-title .pill-closed {
@@ -788,7 +796,7 @@
   <div class="footer-line">
     Empire X &bull; <a href="https://ourempirex.com">ourempirex.com</a> &bull; internal voting prototype
   </div>
-  <div class="footer-version">Voting v0.3.0 &middot; live polls + tally &middot; not linked from the public site</div>
+  <div class="footer-version">Voting v0.3.1 &middot; live polls + Kick live banner &middot; not linked from the public site</div>
 </footer>
 
 <script type="module">
@@ -967,13 +975,95 @@ import { getSession, checkSession, startKickSignIn, signOut } from '/voting/auth
     pollQuestionEl.textContent = 'No active poll right now.';
     pollOptionsEl.innerHTML = '';
     pollPill.classList.add('pill-closed');
+    // Replace the dead "Idle · 0:00 left" pill with something
+    // useful: a live-on-Kick status pulled from the empire-worker
+    // /live endpoint. When streamers are live we show a green dot +
+    // count; when offline we show a quieter "Stream offline" pill.
     pollStatusLabel.textContent = 'Idle';
     pollCountdownWrap.textContent = '';
-    pollActionsEl.innerHTML =
-      '<span style="color:var(--cream-dim)">Mods can start one from the Mod tools panel.</span>';
     voterLogEl.innerHTML = '<div style="color:var(--cream-dim);font-size:0.9rem;padding:0.6rem;">'
       + 'No active poll.</div>';
     if (tallyHealthEl) renderTallyHealth();
+    refreshLiveStatus();
+  }
+
+  /* --- Empire X live-on-Kick status banner ---
+     When there's no active poll, the poll card's empty state becomes
+     a "watch the show on Kick" CTA instead of a dead countdown. We
+     fetch /live (the worker's pre-warmed snapshot of all Empire X
+     channels) and render a green pulse + count when anyone is live,
+     or a quiet offline pill when the roster is dark. Refreshes every
+     30 seconds so the banner reflects current state across long
+     idle periods. */
+  var liveStatusTimer = null;
+  async function refreshLiveStatus() {
+    // Initial paint while fetching.
+    pollActionsEl.innerHTML =
+      '<span style="color:var(--cream-dim)">Checking live status&hellip;</span>';
+    try {
+      var res = await fetch(
+        'https://empire-worker.sevendwarfs.workers.dev/live',
+        { cache: 'no-cache' }
+      );
+      var data = await res.json();
+      var chans = (data && data.channels) || {};
+      var liveSlugs = Object.keys(chans).filter(function (s) { return chans[s] && chans[s].isLive; });
+      paintLiveBanner(liveSlugs);
+    } catch (e) {
+      paintLiveBanner(null);
+    }
+    // Schedule the next refresh; cancel any prior timer to avoid
+    // stacking timers across re-renders of the empty state.
+    if (liveStatusTimer) clearInterval(liveStatusTimer);
+    liveStatusTimer = setInterval(function () {
+      // Only refresh while still in empty state. If a poll opened,
+      // currentPoll is set and the empty-state banner isn't visible —
+      // cancel the timer to save background work.
+      if (currentPoll) {
+        if (liveStatusTimer) { clearInterval(liveStatusTimer); liveStatusTimer = null; }
+        return;
+      }
+      refreshLiveStatus();
+    }, 30000);
+  }
+
+  function paintLiveBanner(liveSlugs) {
+    var statusPillHost = pollPill;
+    if (liveSlugs === null) {
+      // Fetch failed.
+      pollActionsEl.innerHTML =
+        '<span style="color:var(--cream-dim)">No active poll right now. '
+        + 'Mods can start one from Mod tools.</span>';
+      return;
+    }
+    var liveCount = liveSlugs.length;
+    if (liveCount === 0) {
+      // Roster is dark.
+      pollStatusLabel.textContent = 'Roster offline';
+      pollActionsEl.innerHTML =
+        '<span style="color:var(--cream-dim)">'
+        + 'No Empire X streams live right now. Polls go live during broadcasts. '
+        + 'Mods can pre-stage a poll from Mod tools.</span>';
+      return;
+    }
+    // Update the pill label to a live state too so the whole row
+    // reads "LIVE NOW · N streamers" not just sterile "Idle".
+    pollStatusLabel.innerHTML =
+      '<span style="display:inline-block;width:8px;height:8px;background:#53FC18;'
+      + 'border-radius:50%;margin-right:0.45rem;'
+      + 'box-shadow:0 0 8px rgba(83,252,24,0.85);'
+      + 'animation:exLivePulse 1.6s ease-in-out infinite;"></span>LIVE on Kick';
+    statusPillHost.classList.remove('pill-closed');
+
+    pollActionsEl.innerHTML =
+      '<span style="color:var(--cream)"><strong>' + liveCount + '</strong> Empire X streamer'
+      + (liveCount === 1 ? '' : 's') + ' live on Kick right now.</span>'
+      + '&nbsp;&nbsp;'
+      + '<a href="/multi/" target="_blank" rel="noopener" class="btn btn-gold" '
+      +   'style="padding:0.35rem 0.95rem;font-size:0.8rem;letter-spacing:0.08em;">'
+      +   'Watch on Kick &rarr;</a>'
+      + '<span style="color:var(--cream-dim);margin-left:0.8rem;font-size:0.85rem;">'
+      + 'Next poll opens when a mod starts one.</span>';
   }
 
   function renderPoll() {
