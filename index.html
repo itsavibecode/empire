@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, MarkyNextDoor, XenaTheWitch, Sasha West, Kimmee, Fabia Alissia, Jeane Marie, AshWilder, Mia Maxxed, Emzam, Check , Diamond, JJStream, Nick Lee, FloridaBoy, Suzie Smalls, TaylorStarlight, Cobbruvs, Maddy Coles, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, KikiKrazy, Jackie, Dtan, SaltyGummiBear, IamTalanya, Ryan Heinz, KennyHoopz, RiddaW, Fanos, Ozemi, lifeismizzy, Boost Bri, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.26">
+<meta name="version" content="0.13.27">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -470,6 +470,95 @@ section{padding:6rem 1.5rem}
   letter-spacing:0.25em;
   text-transform:uppercase;
   color:rgba(245,241,235,0.5);
+}
+/* === LIVE-NOW state (v0.13.27) ============================
+   When the countdown hits zero (the event window has opened),
+   the .countdown grid swaps for this hero block. Shows a pulsing
+   Kick-green "LIVE NOW" indicator + the current live-streamer
+   count + a Watch on Kick CTA. The streamer count comes from
+   the worker /live snapshot; refreshes every 30s. */
+.countdown-live{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:1.1rem;
+  margin-top:1rem;
+}
+.cd-live-pulse{
+  display:inline-flex;
+  align-items:center;
+  gap:0.75rem;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:clamp(2.4rem, 6vw, 3.6rem);
+  letter-spacing:0.05em;
+  color:#53FC18;
+  text-shadow:0 0 18px rgba(83,252,24,0.35);
+  line-height:1;
+}
+.cd-live-dot{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#53FC18;
+  box-shadow:0 0 14px rgba(83,252,24,0.7);
+  animation:cdLivePulse 1.4s ease-in-out infinite;
+}
+@keyframes cdLivePulse{
+  0%, 100% { transform:scale(1);    box-shadow:0 0 14px rgba(83,252,24,0.6); }
+  50%      { transform:scale(1.3);  box-shadow:0 0 24px rgba(83,252,24,0.95); }
+}
+.cd-live-count{
+  font-family:'Oswald', sans-serif;
+  font-size:0.95rem;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:rgba(245,241,235,0.78);
+}
+.cd-live-count strong{
+  color:var(--gold);
+  font-weight:600;
+}
+.cd-live-cta{
+  display:inline-block;
+  padding:0.85rem 1.8rem;
+  background:#53FC18;
+  color:#0a0a0a;
+  border-radius:8px;
+  font-family:'Oswald', sans-serif;
+  font-weight:700;
+  font-size:0.92rem;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  text-decoration:none;
+  box-shadow:0 6px 22px rgba(83,252,24,0.28);
+  transition:transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.cd-live-cta:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 30px rgba(83,252,24,0.45);
+  filter:brightness(1.05);
+}
+/* Roster-dark fallback — the event window has opened but no
+   streamers are live at this exact moment. Quieter palette so we
+   don't lie about a live broadcast that isn't happening. */
+.countdown-live.is-offline .cd-live-pulse{
+  color:var(--gold);
+  text-shadow:none;
+}
+.countdown-live.is-offline .cd-live-dot{
+  background:var(--gold);
+  box-shadow:0 0 10px rgba(212,168,67,0.45);
+  animation:none;
+}
+.countdown-live.is-offline .cd-live-cta{
+  background:transparent;
+  color:var(--gold);
+  border:1.5px solid var(--gold);
+  box-shadow:none;
+}
+.countdown-live.is-offline .cd-live-cta:hover{
+  background:rgba(212,168,67,0.12);
+  filter:none;
 }
 
 /* === WRISTBAND === */
@@ -1618,14 +1707,22 @@ section{padding:6rem 1.5rem}
   </div>
 </section>
 
-<!-- COUNTDOWN -->
+<!-- COUNTDOWN — swaps to a LIVE NOW hero once the event window opens.
+     The label, the countdown grid, and the live hero are all in the
+     DOM at once; the JS below toggles hidden between them based on
+     whether the target date is in the future. -->
 <div class="countdown-section">
-  <div class="section-label" style="text-align:center">The Countdown Is On</div>
+  <div class="section-label" id="cdLabel" style="text-align:center">The Countdown Is On</div>
   <div class="countdown" id="countdown">
     <div class="countdown-item"><span class="countdown-num" id="cd-days">--</span><span class="countdown-label">Days</span></div>
     <div class="countdown-item"><span class="countdown-num" id="cd-hours">--</span><span class="countdown-label">Hours</span></div>
     <div class="countdown-item"><span class="countdown-num" id="cd-mins">--</span><span class="countdown-label">Minutes</span></div>
     <div class="countdown-item"><span class="countdown-num" id="cd-secs">--</span><span class="countdown-label">Seconds</span></div>
+  </div>
+  <div class="countdown-live" id="cdLive" hidden>
+    <div class="cd-live-pulse"><span class="cd-live-dot"></span><span id="cdLiveText">LIVE NOW ON KICK</span></div>
+    <div class="cd-live-count" id="cdLiveCount">Checking the roster&hellip;</div>
+    <a class="cd-live-cta" id="cdLiveCta" href="/multi/" target="_blank" rel="noopener">Watch on Kick &rarr;</a>
   </div>
 </div>
 
@@ -2409,23 +2506,50 @@ section{padding:6rem 1.5rem}
 
 <div class="footer-bar">
   <!-- SPONSOR_FOOTER_BEGIN --><!-- SPONSOR_FOOTER_END -->
-  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.24</span>
+  &copy; 2026 Our Empire &bull; Empire X &bull; Where Project X Meets IRL Streaming Competition<br><a href="disclaimer.html" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-right:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Disclaimer</a><a href="privacy.html" style="color:rgba(245,241,235,0.65);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Privacy Policy</a><a href="http://ourempirex.com/promo" style="color:rgba(245,241,235,0.65);text-decoration:none;margin-left:1.5rem;transition:color 0.2s;" onmouseover="this.style.color='#D4A843'" onmouseout="this.style.color='rgba(245,241,235,0.65)'">Overlay Promo</a><br><span style="color:rgba(245,241,235,0.5);font-size:0.65rem;letter-spacing:0.15em;font-family:'Oswald',sans-serif;display:inline-block;margin-top:0.6rem;">Site v0.13.27</span>
 </div>
 
 <script>
-// Countdown
+// Countdown — pre-event ticks down to the event start; post-event
+// swaps for a LIVE NOW hero block driven by the worker /live snapshot.
 (function(){
   const target = new Date('2026-06-11T16:00:00-04:00').getTime();
-  function update(){
-    const now = Date.now();
-    const diff = target - now;
-    if(diff <= 0){
-      document.getElementById('cd-days').textContent = '0';
-      document.getElementById('cd-hours').textContent = '0';
-      document.getElementById('cd-mins').textContent = '0';
-      document.getElementById('cd-secs').textContent = '0';
-      return;
+  const cdGrid = document.getElementById('countdown');
+  const cdLive = document.getElementById('cdLive');
+  const cdLabel = document.getElementById('cdLabel');
+  const cdLiveCount = document.getElementById('cdLiveCount');
+  const cdLiveCta = document.getElementById('cdLiveCta');
+  const WORKER_LIVE = 'https://empire-worker.sevendwarfs.workers.dev/live';
+
+  let countdownTimer = null;
+  let liveRefreshTimer = null;
+  let mode = null; // 'pre' or 'live'
+
+  function setMode(next){
+    if (mode === next) return;
+    mode = next;
+    if (next === 'live') {
+      cdGrid.hidden = true;
+      cdLive.hidden = false;
+      cdLabel.textContent = 'Empire X Is Live';
+      // Stop the per-second countdown tick — pointless past zero.
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      // Begin polling /live every 30s for the streamer count.
+      refreshLive();
+      if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+      liveRefreshTimer = setInterval(refreshLive, 30000);
+    } else {
+      cdLive.hidden = true;
+      cdGrid.hidden = false;
+      cdLabel.textContent = 'The Countdown Is On';
+      if (liveRefreshTimer) { clearInterval(liveRefreshTimer); liveRefreshTimer = null; }
+      if (!countdownTimer) countdownTimer = setInterval(tickCountdown, 1000);
     }
+  }
+
+  function tickCountdown(){
+    const diff = target - Date.now();
+    if (diff <= 0) { setMode('live'); return; }
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
@@ -2435,8 +2559,43 @@ section{padding:6rem 1.5rem}
     document.getElementById('cd-mins').textContent = m;
     document.getElementById('cd-secs').textContent = s;
   }
-  update();
-  setInterval(update, 1000);
+
+  async function refreshLive(){
+    try {
+      const res = await fetch(WORKER_LIVE, { cache: 'no-cache' });
+      const data = await res.json();
+      const chans = (data && data.channels) || {};
+      const liveSlugs = Object.keys(chans).filter(function(s){ return chans[s] && chans[s].isLive; });
+      paintLive(liveSlugs);
+    } catch (_) {
+      // Don't downgrade to "offline" on a fetch error — keep the
+      // last good state. If we never had one, fall through with 0.
+      paintLive([]);
+    }
+  }
+
+  function paintLive(liveSlugs){
+    const n = liveSlugs.length;
+    if (n === 0) {
+      cdLive.classList.add('is-offline');
+      document.getElementById('cdLiveText').textContent = 'Event window open';
+      cdLiveCount.innerHTML = 'No streamers live this moment &mdash; check back soon';
+      cdLiveCta.textContent = 'See the roster →';
+      cdLiveCta.href = '#streamers';
+      cdLiveCta.target = '_self';
+    } else {
+      cdLive.classList.remove('is-offline');
+      document.getElementById('cdLiveText').textContent = 'LIVE NOW ON KICK';
+      cdLiveCount.innerHTML = '<strong>' + n + '</strong> Empire X streamer' + (n === 1 ? '' : 's') + ' broadcasting now';
+      cdLiveCta.textContent = 'Watch on Kick →';
+      cdLiveCta.href = '/multi/';
+      cdLiveCta.target = '_blank';
+    }
+  }
+
+  // Boot — set initial mode and kick off whichever timer applies.
+  if (Date.now() >= target) setMode('live');
+  else { setMode('pre'); tickCountdown(); }
 })();
 
 // Scroll reveal
