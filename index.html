@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://ourempirex.com/">
 <meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, MarkyNextDoor, XenaTheWitch, Sasha West, Kimmee, Fabia Alissia, Jeane Marie, AshWilder, Mia Maxxed, Emzam, Check , Diamond, JJStream, Nick Lee, FloridaBoy, Suzie Smalls, TaylorStarlight, Cobbruvs, Maddy Coles, Feef, AdrianahLee, BlackAssDave, NanaPips, BrieWylde, KikiKrazy, Jackie, Dtan, SaltyGummiBear, IamTalanya, Ryan Heinz, KennyHoopz, RiddaW, Fanos, Ozemi, lifeismizzy, Boost Bri, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
-<meta name="version" content="0.13.25">
+<meta name="version" content="0.13.26">
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph -->
@@ -1132,18 +1132,23 @@ section{padding:6rem 1.5rem}
   50%      { box-shadow:0 2px 14px rgba(242,199,100,0.7); }
 }
 /* === RANK BUBBLE (v0.13.21) ==================================
-   Upper-right corner of a streamer card. Set per-streamer via the
+   Upper-LEFT corner of a streamer card. Set per-streamer via the
    `rank` field in streamers.json (CMS "Event ranking"). When set,
    sync-streamers.py renders <div class="streamer-rank rank-N">N</div>
    inside the card. CSS classes give #1/#2/#3 their own gold/silver/
    bronze SOLID tints; #4-10 use a "ring" style — gold outline,
    transparent inside, gold number — so the podium reads loudest at
    a glance. No rank set -> no bubble at all (no badge, no reserved
-   space). */
+   space).
+
+   v0.13.26 — moved from upper-RIGHT to upper-LEFT so the JUST ADDED
+   ribbon (also upper-right) has the corner to itself. Previously the
+   two competed for the same real estate and JUST ADDED had to drop
+   to top:42px when a rank was present. */
 .streamer-rank{
   position:absolute;
   top:6px;
-  right:6px;
+  left:6px;
   width:28px;
   height:28px;
   border-radius:50%;
@@ -1166,15 +1171,9 @@ section{padding:6rem 1.5rem}
      ever sits over a bright spot on the card photo. */
   text-shadow:0 1px 3px rgba(0,0,0,0.85);
 }
-/* Cards may carry BOTH the JUST ADDED ribbon and a rank bubble.
-   Push the ribbon down so they don't stack on top of each other. */
-.streamer-card .streamer-rank + .streamer-just-added,
-.streamer-card .streamer-just-added + .streamer-rank{
-  /* no-op (kept for future tweaks) */
-}
-.streamer-card:has(.streamer-rank) .streamer-just-added{
-  top:42px;
-}
+/* As of v0.13.26 the rank bubble lives in the upper-LEFT corner and
+   the JUST ADDED ribbon in the upper-RIGHT, so they no longer share
+   real estate and don't need the old top:42px push-down. */
 /* #1/#2/#3 — solid podium fills override the default ring style.
    Each one re-sets background + border + number color so the SOLID
    look reads loud against the gold-ring #4-10 bubbles. */
