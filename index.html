@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Empire X — Live-streamed reality experience June 11-15, 2026 in Kissimmee, FL. Streaming groups compete for social influence and a cash prize, live on Kick.">
 <link rel="canonical" href="https://ourempirex.com/">
-<meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Fabia Alissia, Cobbruvs, Mia Maxxed, Emzam, JJStream, Suzie Smalls, TaylorStarlight, Feef, AdrianahLee, NanaPips, BrieWylde, KikiKrazy, Jackie, Ozemi, Dtan, SaltyGummiBear, Gabe, IamTalanya, KennyHoopz, RiddaW, Scar Grace, Jason Sweets, lifeismizzy, Boost Bri, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
+<meta name="keywords" content="EmpireX, Empire X, Our Empire, ECX, live streaming event, IRL streaming, Kick.com, Kick streaming, reality streaming, ProjectX meets streaming, Kissimmee Florida, Kissimmee FL, Davenport FL, Four Corners FL, Orlando area, Florida streaming event, June 2026, streamer competition, cash prize, social influence, Airbnb party, content creator event, MikeSmallsJr, Fabia Alissia, Cobbruvs, Mia Maxxed, Emzam, JJStream, Suzie Smalls, TaylorStarlight, Feef, AdrianahLee, NanaPips, BrieWylde, KikiKrazy, Jackie, Ozemi, Dtan, SaltyGummiBear, Gabe, IamTalanya, KennyHoopz, RiddaW, Scar Grace, Jason Sweets, Muva , lifeismizzy, Boost Bri, The Baddest TB, The Vibe Gate Way, DTB Part 2, The Twinz, Blacks United BU, All Pursuit AP, Dynamic Dynasty, Kozy, Pretty Reckless PR, Sky9">
 <meta name="author" content="Our Empire">
 <meta name="version" content="0.13.27">
 <meta name="robots" content="index, follow">
@@ -95,6 +95,7 @@
     {"@type": "Person", "name": "RiddaW", "url": "https://kick.com/riddaw"},
     {"@type": "Person", "name": "Scar Grace", "url": "https://kick.com/scargraceee"},
     {"@type": "Person", "name": "Jason Sweets", "url": "https://kick.com/jasonsweets/"},
+    {"@type": "Person", "name": "Muva ", "url": "https://kick.com/fineemuva"},
     {"@type": "Person", "name": "lifeismizzy", "url": "https://kick.com/lifeismizzy"},
     {"@type": "Person", "name": "Boost Bri", "url": "https://kick.com/boostbri"}
   ]
@@ -1911,6 +1912,15 @@ section{padding:6rem 1.5rem}
         <div class="streamer-name">Jason Sweets</div>
         <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
         <div class="streamer-status" id="status-jasonsweets"><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
+      </a><a class="streamer-card" href="https://kick.com/fineemuva" target="_blank">
+        <div class="streamer-just-added" data-added="2026-06-25">JUST ADDED</div>
+        <div class="streamer-avatar" id="av-fineemuva ">
+          <span class="streamer-initials">FM</span>
+          <img class="streamer-img" src="/avatars/screenshot-2026-06-25-161930.png" alt="Muva " loading="lazy">
+        </div>
+        <div class="streamer-name">Muva </div>
+        <div class="streamer-platform"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green-kick)"><rect x="4" y="2" width="4" height="20" rx="1"/><rect x="10" y="6" width="4" height="12" rx="1"/><rect x="16" y="2" width="4" height="20" rx="1"/></svg> KICK</div>
+        <div class="streamer-status" id="status-fineemuva "><div class="streamer-status-dot"></div><span class="streamer-status-text"></span><span class="streamer-viewers"></span></div>
       </a><a class="streamer-card" href="https://kick.com/lifeismizzy" target="_blank">
         <div class="streamer-avatar" id="av-lifeismizzy">
           <span class="streamer-initials">LM</span>
@@ -2537,7 +2547,7 @@ section{padding:6rem 1.5rem}
 
 // Check Kick live status for all streamers
 (function(){
-  const streamers = ["mikesmallsjr", "fabiaalissia", "cobbruvs", "miamaxxed", "emzam", "jjstream", "suziesmalls", "taylorstarlight", "feef", "adrianahlee", "nanapips", "briewylde", "kikikrazy", "jackie", "ozemi", "dtanmanb", "saltygummibear", "gabeisgiant", "iamTalanya", "kennyhoopz", "riddaw", "scargraceee", "jasonsweets", "lifeismizzy", "boostbri"];
+  const streamers = ["mikesmallsjr", "fabiaalissia", "cobbruvs", "miamaxxed", "emzam", "jjstream", "suziesmalls", "taylorstarlight", "feef", "adrianahlee", "nanapips", "briewylde", "kikikrazy", "jackie", "ozemi", "dtanmanb", "saltygummibear", "gabeisgiant", "iamTalanya", "kennyhoopz", "riddaw", "scargraceee", "jasonsweets", "fineemuva ", "lifeismizzy", "boostbri"];
   
   streamers.forEach(function(username){
     const statusEl = document.getElementById('status-' + username);
