@@ -17,6 +17,14 @@
       "added_at": "2026-05-28"
     },
     {
+      "slug": "cobbruvs",
+      "name": "Cobbruvs",
+      "url": "https://kick.com/cobbruvs",
+      "initials": "CB",
+      "avatar": "/avatars/screenshot-2026-06-08-204237.png",
+      "added_at": "2026-04-20"
+    },
+    {
       "slug": "miamaxxed",
       "name": "Mia Maxxed",
       "url": "https://kick.com/miamaxxed",
@@ -54,14 +62,6 @@
       "url": "https://kick.com/taylorstarlight",
       "initials": "TS",
       "avatar": "avatars/taylorstarlight.jpg",
-      "added_at": "2026-04-20"
-    },
-    {
-      "slug": "cobbruvs",
-      "name": "Cobbruvs",
-      "url": "https://kick.com/cobbruvs",
-      "initials": "CB",
-      "avatar": "/avatars/screenshot-2026-06-08-204237.png",
       "added_at": "2026-04-20"
     },
     {
@@ -113,6 +113,14 @@
       "added_at": "2026-04-20"
     },
     {
+      "slug": "ozemi",
+      "name": "Ozemi",
+      "url": "https://kick.com/ozemi",
+      "initials": "OZ",
+      "avatar": "/avatars/img_7160.png",
+      "added_at": "2026-04-20"
+    },
+    {
       "slug": "dtanmanb",
       "name": "Dtan",
       "url": "https://kick.com/dtanmanb",
@@ -127,6 +135,13 @@
       "initials": "SG",
       "avatar": "avatars/saltygummibear.jpg",
       "added_at": "2026-04-20"
+    },
+    {
+      "slug": "gabeisgiant",
+      "name": "Gabe",
+      "url": "https://kick.com/gabeisgiant",
+      "initials": "GR",
+      "avatar": "/avatars/screenshot-2026-06-25-160417.png"
     },
     {
       "slug": "iamTalanya",
@@ -153,12 +168,18 @@
       "added_at": "2026-04-20"
     },
     {
-      "slug": "ozemi",
-      "name": "Ozemi",
-      "url": "https://kick.com/ozemi",
-      "initials": "OZ",
-      "avatar": "/avatars/img_7160.png",
-      "added_at": "2026-04-20"
+      "slug": "scargraceee",
+      "name": "Scar Grace",
+      "url": "https://kick.com/scargraceee",
+      "initials": "SG",
+      "avatar": "/avatars/screenshot-2026-06-25-160550.png"
+    },
+    {
+      "slug": "jasonsweets",
+      "name": "Jason Sweets",
+      "url": "https://kick.com/jasonsweets/",
+      "initials": "js",
+      "avatar": "/avatars/screenshot-2026-06-25-160844.png"
     },
     {
       "slug": "lifeismizzy",
