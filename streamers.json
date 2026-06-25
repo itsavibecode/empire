@@ -141,7 +141,8 @@
       "name": "Gabe",
       "url": "https://kick.com/gabeisgiant",
       "initials": "GR",
-      "avatar": "/avatars/screenshot-2026-06-25-160417.png"
+      "avatar": "/avatars/screenshot-2026-06-25-160417.png",
+      "added_at": "2026-06-25"
     },
     {
       "slug": "iamTalanya",
@@ -172,14 +173,16 @@
       "name": "Scar Grace",
       "url": "https://kick.com/scargraceee",
       "initials": "SG",
-      "avatar": "/avatars/screenshot-2026-06-25-160550.png"
+      "avatar": "/avatars/screenshot-2026-06-25-160550.png",
+      "added_at": "2026-06-25"
     },
     {
       "slug": "jasonsweets",
       "name": "Jason Sweets",
       "url": "https://kick.com/jasonsweets/",
       "initials": "js",
-      "avatar": "/avatars/screenshot-2026-06-25-160844.png"
+      "avatar": "/avatars/screenshot-2026-06-25-160844.png",
+      "added_at": "2026-06-25"
     },
     {
       "slug": "lifeismizzy",
