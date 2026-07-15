@@ -19,3 +19,7 @@ desktop.ini
 # locally for future swap-ins, but don't bloat the public repo with
 # 59 MB of near-identical 4128x1024 PNGs.
 run/img/bg/concept-pano/
+
+# Local operations documents — internal-only, never publish. This is a
+# public repo; ops docs describing accounts/infrastructure stay local.
+HANDOVER.pdf
